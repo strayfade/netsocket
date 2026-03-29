@@ -1,0 +1,8 @@
+version: "3.8"
+services:
+  netsocket:
+    image: strayfade/netsocket:latest
+    container_name: netsocket
+    ports:
+      - 4675:4675
+    restart: always

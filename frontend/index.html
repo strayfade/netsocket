@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="An easy nodegraph-based automation manager">
+    <meta property="og:description" content="An easy nodegraph-based automation manager">
+    <meta property="twitter:description" content="An easy nodegraph-based automation manager">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="keywords" content="automation, AI, nodegraph, netsocket">
+    <meta name="author" content="strayfade">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:site_name" content="netsocket.strayfade.com">
+    <meta property="og:url" content="netsocket.strayfade.com">
+    <meta name="twitter:url" content="netsocket.strayfade.com">
+    <meta property="og:title" content="netsocket">
+    <meta property="twitter:title" content="netsocket">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Caladea:ital,wght@0,400;0,700;1,400;1,700&family=Geist:wght@100..900&family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&family=Instrument+Serif:ital@0;1&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/css/homepage.css">
+    <link rel="stylesheet" href="/css/hero.css">
+    <link rel="stylesheet" href="/css/login.css">
+    <title>netsocket</title>
+</head>
+
+<body>
+    <header>
+        <a href="/">
+            <img class="logo" src="/logo.png" style="filter: invert();">
+        </a>
+    </header>
+    <div class="section-separator"></div>
+
+    <section>
+        <!-- From Uiverse.io by JohnnyCSilva -->
+        <form class="form">
+            <div id="loginNotice" class="login-notice" hidden role="status" aria-live="polite">
+                <span id="loginNoticeText" class="login-notice-text"></span>
+                <button type="button" id="loginNoticeDismiss" class="login-notice-dismiss" aria-label="Dismiss message">×</button>
+            </div>
+            <div class="flex-column">
+                <label>Username</label>
+            </div>
+            <div class="inputForm">
+                <input id="username" name="username" placeholder="Enter your username" class="input" type="text" autocomplete="username">
+            </div>
+
+            <div class="flex-column">
+                <label>Password</label>
+            </div>
+            <div class="inputForm">
+                <input id="password" name="password" placeholder="Enter your password" class="input" type="password" autocomplete="current-password">
+            </div>
+            <div id="passwordConfirmRow" class="login-extra hidden">
+                <div class="flex-column">
+                    <label>Confirm password</label>
+                </div>
+                <div class="inputForm">
+                    <input id="passwordConfirm" placeholder="Re-enter your password" class="input" type="password" autocomplete="new-password">
+                </div>
+            </div>
+            <button type="submit" class="button-submit" id="submitBtn">Sign In</button>
+            <script>
+                let needsRegistration = false;
+
+                function showLoginNotice(message, variant) {
+                    const el = document.getElementById('loginNotice');
+                    const text = document.getElementById('loginNoticeText');
+                    text.textContent = message;
+                    el.classList.remove('login-notice--error', 'login-notice--info');
+                    el.classList.add(variant === 'info' ? 'login-notice--info' : 'login-notice--error');
+                    el.removeAttribute('hidden');
+                    el.setAttribute('role', variant === 'info' ? 'status' : 'alert');
+                    el.setAttribute('aria-live', variant === 'info' ? 'polite' : 'assertive');
+                }
+
+                function hideLoginNotice() {
+                    const el = document.getElementById('loginNotice');
+                    el.setAttribute('hidden', '');
+                    document.getElementById('loginNoticeText').textContent = '';
+                    el.classList.remove('login-notice--error', 'login-notice--info');
+                }
+
+                async function applyAuthState() {
+                    const r = await fetch('/v1/auth-state');
+                    if (!r.ok) return;
+                    const data = await r.json();
+                    needsRegistration = !!data.needsRegistration;
+                    document.getElementById('passwordConfirmRow').classList.toggle('hidden', !needsRegistration);
+                    document.getElementById('submitBtn').textContent = needsRegistration ? 'Create account' : 'Sign In';
+                    document.getElementById('footerHint').classList.toggle('hidden', needsRegistration);
+                }
+
+                async function login(event) {
+                    event.preventDefault();
+                    hideLoginNotice();
+                    const username = document.getElementById('username').value.trim();
+                    const password = document.getElementById('password').value;
+                    const passwordConfirm = document.getElementById('passwordConfirm').value;
+                    if (!username || !password) {
+                        showLoginNotice('Enter a username and password.');
+                        return;
+                    }
+                    if (needsRegistration) {
+                        if (password !== passwordConfirm) {
+                            showLoginNotice('Passwords do not match.');
+                            return;
+                        }
+                    }
+                    const body = needsRegistration
+                        ? { username, password, passwordConfirm }
+                        : { username, password };
+                    const response = await fetch('/login', {
+                        method: 'POST',
+                        body: JSON.stringify(body),
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+                    if (response.status === 200) {
+                        window.location.href = '/dashboard';
+                        return;
+                    }
+                    if (response.status === 400) {
+                        try {
+                            const err = await response.json();
+                            if (err.error === 'password_mismatch') {
+                                showLoginNotice('Passwords do not match.');
+                                return;
+                            }
+                        } catch (_) { /* ignore */ }
+                    }
+                    showLoginNotice(needsRegistration
+                        ? 'Could not create account. Check your input and try again.'
+                        : 'Invalid username or password.');
+                }
+            </script>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', login);
+            document.getElementById('loginNoticeDismiss').addEventListener('click', hideLoginNotice);
+            applyAuthState();
+        </script>
+    </section>
+
+    <div class="section-separator"></div>
+    <footer>
+        <nav>
+            <div>
+                <img class="logo" src="/favicon.png" style="filter: invert();">
+            </div>
+        </nav>
+    </footer>
+</body>
+
+</html>

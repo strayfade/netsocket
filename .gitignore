@@ -1,0 +1,17 @@
+/node_modules
+/.vscode
+.DS_Store
+
+# Build files
+/extensions/overlay/netsocketoverlay-*
+.env
+.credentials.json
+/extensions/overlay/node_modules
+frontend/public/nodes/constructNodes.js
+/extensions/overlay-cpp/Debug
+/extensions/overlay-cpp/netsocket/Debug
+/extensions/overlay-cpp/netsocket/x64
+/extensions/overlay-cpp/x64
+/extensions/overlay-electron/netsocketoverlay*
+/extensions/overlay-electron/node_modules*
+/extensions/overlay-cpp/.vs

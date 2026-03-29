@@ -1,0 +1,21 @@
+.hero h1 {
+    font-weight: normal;
+    font-size: 50px;
+    transition-duration: 0.25s;
+    line-height: 1.5;
+}
+@media screen and (max-width: 720px) {
+    .hero h1 {
+        font-size: 36px;
+    }
+}
+.hero h1 strong {
+    border-bottom: 5px solid black;
+    font-weight: 700;
+    cursor: pointer;
+    transition-duration: 0.25s;
+}
+.section-separator {
+    margin: auto;
+    border-bottom: var(--border);
+}

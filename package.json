@@ -1,0 +1,31 @@
+{
+  "name": "netsocket",
+  "version": "1.0.0",
+  "description": "Nodegraph-based automation management frontend",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "develop": "node server/index.js",
+    "develop-noauth": "npm i && node server/index.js --skip-auth",
+    "reset-credentials": "node server/scripts/resetCredentials.js"
+  },
+  "keywords": [],
+  "author": "strayfade",
+  "license": "GPLv3",
+  "type": "commonjs",
+  "dependencies": {
+    "ai": "^5.0.109",
+    "axios": "^1.13.2",
+    "bcrypt": "^6.0.0",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
+    "hi-base32": "^0.5.1",
+    "node-hue-api": "^5.0.0-beta.16",
+    "ollama-ai-provider-v2": "^1.5.5",
+    "otplib": "^13.3.0",
+    "serialport": "^13.0.0",
+    "uglify-js": "^3.19.3",
+    "ws": "^8.18.3"
+  }
+}

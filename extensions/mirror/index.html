@@ -1,0 +1,621 @@
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <style>
+        :root {
+            --window-width: 800;
+            --window-height: 480;
+            --window-width-px: 800px;
+            --window-height-px: 480px;
+            --grid-columns: 4;
+            --grid-rows: calc(var(--grid-columns) * var(--window-height) / var(--window-width));
+        }
+
+        body {
+            margin: 0;
+            background-color: black;
+            font-family: 'Roboto Condensed', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .content-aspect {
+            aspect-ratio: var(--window-width)/var(--window-height);
+            width: var(--window-height-px);
+            height: max-content;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translateX(-50%) translateY(-50%);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(var(--grid-columns), calc(var(--window-width-px) / var(--grid-columns)));
+            grid-template-rows: repeat(var(--grid-rows), calc(var(--window-height-px) / var(--grid-rows)));
+            width: max-content;
+            height: max-content;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-50%);
+        }
+
+        :root {
+            --widget-width: calc(var(--window-width-px) / var(--grid-columns));
+            --widget-height: calc(var(--window-height-px) / var(--grid-rows));
+            --widget-padding: 10px;
+        }
+
+        .widget {
+            width: calc(1 * var(--widget-width) - var(--widget-padding) * 2);
+            height: calc(1 * var(--widget-height) - var(--widget-padding) * 2);
+            padding: var(--widget-padding);
+        }
+
+        .widget-filler {
+            width: calc(1 * var(--widget-width));
+            height: calc(1 * var(--widget-height));
+        }
+
+        .widget-2h {
+            width: calc(1 * var(--widget-width) - var(--widget-padding) * 2);
+            height: calc(2 * var(--widget-height) - var(--widget-padding) * 2);
+        }
+
+        .widget-2w {
+            width: calc(2 * var(--widget-width) - var(--widget-padding) * 2);
+            height: calc(1 * var(--widget-height) - var(--widget-padding) * 2);
+        }
+
+        .widget-inner {
+            width: calc(100% - 30px);
+            height: calc(100% - 30px);
+            box-shadow: inset 0px 0px 0px 0px rgb(255, 255, 255);
+            border-radius: 1em;
+            color: white;
+            padding: 15px;
+            position: relative;
+        }
+
+        span {
+            display: inline-block;
+        }
+
+        p {
+            margin: 0;
+            width: max-content;
+            height: max-content;
+        }
+
+        .api-error {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translateX(-50%) translateY(-50%);
+            font-size: 35px;
+            font-style: italic;
+            color: red;
+        }
+
+        #fancy-details {
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+    </style>
+    <canvas id="fancy-details"></canvas>
+    <div class="content-aspect">
+        <div class="grid-container">
+            <div class="widget" data-widget-type="clock"></div>
+            <div class="widget widget-2w" data-widget-type="weather"></div>
+            <div class="widget-filler"></div>
+            <div class="widget" data-widget-type="stock" data-widget-stock-symbol="NVDA"></div>
+            <div class="widget widget-2w" data-widget-type="fact"></div>
+            <div class="widget-filler"></div>
+            <div class="widget widget-2w" data-widget-type="stock" data-widget-stock-symbol="MU"></div>
+        </div>
+    </div>
+    <style>
+        .clock-time {
+            margin-top: -4px;
+            font-size: 33px;
+        }
+
+        .clock-ampm {
+            font-size: 20px;
+            padding-left: 3px;
+        }
+
+        .clock-day {
+            margin-top: 60px;
+            font-size: 26px;
+        }
+
+        .clock-date {
+            font-size: 18px;
+        }
+
+        .weather-temperature {
+            width: 40%;
+        }
+
+        .weather-fahrenheit {
+            font-size: 33px;
+        }
+
+        .weather-celcius {
+            font-size: 16px;
+            padding-left: 5px;
+        }
+
+        .weather-condition {
+            display: flex;
+            align-items: center;
+            width: max-content;
+            margin-left: auto;
+        }
+
+        .weather-condition img {
+            filter: saturate(0) brightness(999);
+            margin-right: 8px;
+            margin-left: -10px;
+        }
+
+        .weather-condition p {
+            font-size: 33px;
+        }
+
+        .weather-container {
+            display: flex;
+            align-items: center;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100%;
+        }
+
+        .weather-sunset-sunrise {
+            display: flex;
+            align-items: center;
+        }
+
+        .weather-sunset-sunrise p {
+            margin-left: 4px;
+            font-size: 20px;
+        }
+
+        .weather-divider {
+            width: 100%;
+            padding-top: 10px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid white;
+        }
+
+        .fact {
+            position: absolute;
+            width: calc(100% - 30px);
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .fact-info {
+            width: 100%;
+            text-align: center;
+            font-style: italic;
+            font-size: 18px;
+        }
+
+        .fact-source {
+            margin-top: 15px;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+        }
+
+        .stock-title {
+            position: absolute;
+        }
+
+        .stock-change {
+            position: absolute;
+            right: 15px;
+        }
+
+        .stock-canvas {
+            position: absolute;
+            top: 35px;
+        }
+    </style>
+    <script>
+        async function modifyWeatherDescription(description) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            return description.charAt(0).toUpperCase() + description.slice(1);
+        }
+
+        async function getCurrentWeather() {
+            const API_KEY = "a995a70969d725eaf8a2de97926f0bb6";
+            const LAT = 38.422974;
+            const LON = -82.429167;
+
+            const url = `https://api.openweathermap.org/data/2.5/weather` +
+                `?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=imperial`;
+
+            try {
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+
+                // Extract base weather data
+                const weatherCondition = data.weather[0].main;
+                const weatherIcon = data.weather[0].icon;
+                const rawDescription = data.weather[0].description;
+
+                // Run description through async helper
+                const modifiedDescription = await modifyWeatherDescription(rawDescription);
+
+                const temperature = data.main.temp;
+                const feelsLike = data.main.feels_like;
+                const windSpeed = data.wind.speed;
+
+                const sunrise = data.sys.sunrise
+                const sunset = data.sys.sunset
+
+                const kToF = (k) => {
+                    return (k - 273.15) * 1.8 + 32
+                }
+                const fToC = (f) => {
+                    return (f - 32) * 5 / 9
+                }
+                const cToF = (c) => {
+                    return c * 9 / 5 + 32
+                }
+
+                // Return structured JSON
+                return {
+                    weather: {
+                        condition: weatherCondition,
+                        icon: weatherIcon,
+                        description: modifiedDescription
+                    },
+                    temperature: {
+                        current: Math.round(temperature),
+                        celcius: Math.round(fToC(temperature)),
+                        feels_like: Math.round(feelsLike)
+                    },
+                    wind: {
+                        speed: windSpeed
+                    },
+                    sunrise,
+                    sunset
+                };
+            } catch (error) {
+                console.error("Failed to fetch weather data:", error);
+                throw error;
+            }
+        }
+    </script>
+    <script>
+        const setupWidgets = async () => {
+            const widgets = document.getElementsByClassName("widget");
+            for (let i = 0; i < widgets.length; i++) {
+                const formatTime12Hour = (timestamp, includeSeconds = false, includeAMPM = true) => {
+                    if (timestamp < 1000000000000)
+                        timestamp *= 1000
+                    const date = new Date(timestamp);
+
+                    let hours = date.getHours();
+                    const minutes = date.getMinutes();
+                    const ampm = hours >= 12 ? "PM" : "AM";
+
+                    hours = hours % 12 || 12; // convert 0 → 12
+
+                    const paddedMinutes = minutes.toString().padStart(2, "0");
+                    const paddedSeconds = date.getSeconds().toString().padStart(2, "0");
+
+                    if (includeSeconds) {
+                        if (includeAMPM) {
+                            return `${hours}:${paddedMinutes}:${paddedSeconds} ${ampm}`;
+                        }
+                        return `${hours}:${paddedMinutes}:${paddedSeconds}`;
+                    }
+                    else {
+                        if (includeAMPM) {
+                            return `${hours}:${paddedMinutes} ${ampm}`;
+                        }
+                        return `${hours}:${paddedMinutes}`;
+                    }
+                }
+                const widgetInner = document.createElement("div")
+                widgetInner.classList.add("widget-inner")
+                if (widgets[i].hasAttribute("data-widget-type")) {
+                    switch (widgets[i].getAttribute("data-widget-type")) {
+                        case "clock":
+                            const clockTextElem = document.createElement("p")
+                            const dayTextElem = document.createElement("p")
+                            const dateTextElem = document.createElement("p")
+                            const pad = (val, len = 2) => {
+                                while (val.toString().length < len) {
+                                    val = "0" + val
+                                }
+                                return val
+                            }
+                            const setTime = () => {
+                                const now = new Date(Date.now());
+                                const idx = now.toLocaleString().indexOf(" ");
+                                clockTextElem.innerHTML = `<span class="clock-time">${formatTime12Hour(Date.now(), true, false)
+                                    }</span> <span class="clock-ampm">${now.toLocaleTimeString().substring(now.toLocaleTimeString().indexOf(" ") + 1)
+                                    }</span>`
+                                const days = [
+                                    "Sunday",
+                                    "Monday",
+                                    "Tuesday",
+                                    "Wednesday",
+                                    "Thursday",
+                                    "Friday",
+                                    "Saturday"
+                                ]
+                                const months = [
+                                    "January",
+                                    "February",
+                                    "March",
+                                    "April",
+                                    "May",
+                                    "June",
+                                    "July",
+                                    "August",
+                                    "September",
+                                    "October",
+                                    "November",
+                                    "December"
+                                ]
+                                dayTextElem.innerHTML = `<span class="clock-day">${days[now.getDay()]}</span>`
+                                dateTextElem.innerHTML = `<span class="clock-date">${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}</span>`
+                            }
+                            setInterval(setTime, 1)
+                            widgetInner.appendChild(clockTextElem)
+                            widgetInner.appendChild(dayTextElem)
+                            widgetInner.appendChild(dateTextElem)
+                            break;
+                        case "weather":
+                            const setWeather = async () => {
+                                const weatherData = await getCurrentWeather()
+                                if (!weatherData)
+                                    widgetInner.innerHTML = `<p class="api-error">API Error</p>`
+                                else {
+                                    widgetInner.innerHTML = `
+                                    <div class="weather-container">
+                                        <div class="weather-temperature">
+                                            <p>
+                                                <span class="weather-fahrenheit">${weatherData.temperature.current}°</span><span class="weather-celcius">(${weatherData.temperature.celcius}° C)</span>
+                                            </p>
+                                            ${weatherData.temperature.current != weatherData.temperature.feels_like ? `
+                                            <p>
+                                                <span class="weather-feelslike">Feels like ${weatherData.temperature.feels_like}°</span>
+                                            </p>
+                                            ` : ``}
+                                            <div class="weather-divider">
+                                            </div>
+                                            <div class="weather-sunset-sunrise">
+                                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="m734-556-56-58 86-84 56 56-86 86ZM80-160v-80h800v80H80Zm360-520v-120h80v120h-80ZM226-558l-84-86 56-56 86 86-58 56Zm71 158h366q-23-54-72-87t-111-33q-62 0-111 33t-72 87Zm-97 80q0-117 81.5-198.5T480-600q117 0 198.5 81.5T760-320H200Zm280-80Z"/></svg>
+                                                <p>${formatTime12Hour(weatherData.sunrise)}</p>
+                                            </div>
+                                            <div class="weather-sunset-sunrise">
+                                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="M600-640 480-760l120-120 120 120-120 120Zm200 120-80-80 80-80 80 80-80 80ZM483-80q-84 0-157.5-32t-128-86.5Q143-253 111-326.5T79-484q0-146 93-257.5T409-880q-18 99 11 193.5T520-521q71 71 165.5 100T879-410q-26 144-138 237T483-80Zm0-80q88 0 163-44t118-121q-86-8-163-43.5T463-465q-61-61-97-138t-43-163q-77 43-120.5 118.5T159-484q0 135 94.5 229.5T483-160Zm-20-305Z"/></svg>
+                                                <p>${formatTime12Hour(weatherData.sunset)}</p>
+                                            </div>
+                                        </div>
+                                        <div class="weather-condition">
+                                            <p>${weatherData.weather.condition}</p>
+                                            <img src="https://openweathermap.org/img/wn/${weatherData.weather.icon}@2x.png"/>
+                                        </div>
+                                    </div>
+                                `
+                                }
+                            }
+                            setInterval(setWeather, 1000 * 60 * 5) // Every 5 minutes
+                            setWeather()
+                            break;
+                        case "fact":
+                            const updateFact = async () => {
+                                try {
+                                    const response = await fetch(`https://uselessfacts.jsph.pl/api/v2/facts/random`)
+                                    const data = await response.json()
+                                    widgetInner.innerHTML = `
+                                <div class="fact">
+                                    <p class="fact-info">${data.text}</p>
+                                    <p class="fact-source">${data.source}</p>
+                                </div>
+                                `
+                                }
+                                catch {
+                                    widgetInner.innerHTML = `<p class="api-error">API Error</p>`
+                                }
+                            }
+                            setInterval(updateFact, 1000 * 60 * 60 * 1);
+                            updateFact()
+                            break;
+                        case "stock":
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                            const getData = async () => {
+                                try {
+                                    const symbol = widgets[i].getAttribute("data-widget-stock-symbol");
+                                    const apikey = "E1GQ40N977OUX0JW"
+                                    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${apikey}`
+                                    const response = await fetch(url)
+                                    const json = (await response.json())["Time Series (Daily)"]
+
+                                    let labels = Object.keys(json)
+                                        .sort()
+                                        .map(date => date);
+                                    labels = labels.slice(-(widgetInner.getBoundingClientRect().width / 2));
+                                    const closePrices = labels.map(date =>
+                                        parseFloat(json[date]["4. close"])
+                                    );
+
+                                    // Create canvas and append to target element
+                                    const canvas = document.createElement("canvas");
+                                    canvas.width = widgetInner.getBoundingClientRect().width - 30
+                                    canvas.height = widgetInner.getBoundingClientRect().height - 40
+                                    canvas.classList.add("stock-canvas")
+                                    const title = document.createElement("p")
+                                    title.classList.add("stock-title")
+                                    title.textContent = symbol
+
+                                    const dates = Object.keys(json).sort();
+                                    const prevClose = parseFloat(json[dates[dates.length - 2]]["4. close"]);
+                                    const lastClose = parseFloat(json[dates[dates.length - 1]]["4. close"]);
+                                    const percentChange = ((lastClose - prevClose) / prevClose) * 100;
+                                    const change = document.createElement("p");
+                                    change.classList.add("stock-change");
+                                    change.textContent = `${percentChange >= 0 ? "+" : ""}${percentChange.toFixed(2)}%`;
+
+                                    widgetInner.appendChild(title)
+                                    widgetInner.appendChild(change)
+                                    widgetInner.appendChild(canvas);
+
+                                    // Create the chart
+                                    new Chart(canvas, {
+                                        type: "line",
+                                        data: {
+                                            labels,
+                                            datasets: [{
+                                                label: "",
+                                                data: closePrices,
+                                                borderColor: "#00000000",
+                                                borderWidth: 2,
+                                                backgroundColor: "white",
+                                                tension: 0,
+                                                fill: true,
+                                                pointRadius: 0
+                                            }]
+                                        },
+                                        options: {
+                                            responsive: false,
+                                            plugins: {
+                                                legend: {
+                                                    display: false
+                                                }
+                                            },
+                                            scales: {
+                                                x: {
+                                                    display: true,
+                                                    ticks: {
+                                                        color: "#ffffff",
+                                                        font: {
+                                                            size: 10
+                                                        },
+                                                        callback: (value, index) => {
+                                                            // value is index, use label
+                                                            const date = labels[index]; // "2026-01-09"
+                                                            return date.slice(5);       // "01-09"
+                                                        }
+                                                    },
+                                                    grid: {
+                                                        display: false
+                                                    },
+                                                    border: {
+                                                        display: false
+                                                    }
+                                                },
+                                                y: {
+                                                    display: false
+                                                }
+                                            }
+                                        }
+                                    });
+                                }
+                                catch {
+                                    widgetInner.innerHTML = `<p class="api-error">API Error</p>`
+                                }
+                            }
+                            setInterval(getData, 1000 * 60 * 60 * 1)
+                            getData()
+                            break;
+                    }
+                }
+                widgets[i].appendChild(widgetInner)
+            }
+        }
+        setupWidgets()
+    </script>
+    <script>
+        const renderFancyDetails = () => {
+            const canvas = document.getElementById("fancy-details")
+            const ctx = canvas.getContext("2d")
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const drawLine = (x1, y1, x2, y2) => {
+                ctx.beginPath()
+                ctx.moveTo(x1, y1)
+                ctx.lineTo(x2, y2)
+                ctx.lineWidth = 2
+                ctx.strokeStyle = "white"
+                ctx.stroke();
+            }
+
+            // Corner segment length
+            const csl = 40
+            // Angle segment length
+            const asl = {
+                x: 10,
+                y: 10
+            }
+            const drawBounds = (x, y, w, h) => {
+
+                drawLine(x, y, x + csl, y)
+                drawLine(x + w, y, x + w - csl, y)
+                drawLine(x, y, x, y + csl)
+                drawLine(x + w, y, x + w, y + csl)
+                drawLine(x, y + h, x, y + h - csl)
+                drawLine(x + w, y + h, x + w, y + h - csl)
+                drawLine(x, y + h, x + csl, y + h)
+                drawLine(x + w, y + h, x + w - csl, y + h)
+
+                /*
+                drawLine(x + csl, y, x + csl + asl.x, y + asl.y)
+                drawLine(x + w - csl, y, x + w - csl - asl.x, y + asl.y)
+                drawLine(x + w - csl - asl.x, y + asl.y, x + csl + asl.x, y + asl.y)
+                drawLine(x, y + csl, x + asl.x, y + csl + asl.y)
+                drawLine(x, y + h - csl, x + asl.x, y + h - csl - asl.y)
+                drawLine(x + asl.x, y + csl + asl.y, x + asl.x, y + h - csl - asl.y)
+                drawLine(x + w, y + csl, x + w - asl.x, y + csl + asl.y)
+                drawLine(x + w, y + h - csl, x + w - asl.x, y + h - csl - asl.y)
+                drawLine(x + w - asl.x, y + csl + asl.y, x + w - asl.x, y + h - csl - asl.y)
+                drawLine(x + csl, y + h, x + csl + asl.x, y + h - asl.y)
+                drawLine(x + w - csl, y + h, x + w - csl - asl.x, y + h - asl.y)
+                drawLine(x + csl + asl.x, y + h - asl.y, x + w - csl - asl.x, y + h - asl.y)
+                */
+            }
+
+            const widgets = document.getElementsByClassName("widget")
+            for (let i = 0; i < widgets.length; i++) {
+                let rect2 = widgets[i].getBoundingClientRect();
+                let rect = {
+                    left: rect2.left,
+                    right: rect2.right,
+                    top: rect2.top,
+                    bottom: rect2.bottom
+                }
+                let offset = -5
+                rect.left -= offset
+                rect.right += offset
+                rect.top -= offset
+                rect.bottom += offset
+                drawBounds(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
+            }
+        }
+        document.addEventListener("change", renderFancyDetails)
+        renderFancyDetails()
+    </script>
+</body>

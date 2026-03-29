@@ -1,0 +1,9 @@
+Package: com.strayfade.netsocket
+Name: netsocket
+Version: 1.2.4
+Architecture: iphoneos-arm
+Description: Compatibility with netsocket service
+Maintainer: strayfade
+Author: strayfade
+Section: Tweaks
+Depends: mobilesubstrate (>= 0.9.5000)

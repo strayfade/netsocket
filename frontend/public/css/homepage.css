@@ -1,0 +1,197 @@
+html {
+    scroll-behavior: smooth;
+}
+
+:root {
+    --transition-duration: 0s;
+    --border: 1px dashed #000;
+    --white: white;
+    --black: black;
+    --hero-weight: 100;
+}
+
+* {
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    font-optical-sizing: auto;
+}
+
+body {
+    margin: 0;
+    background-color: var(--white);
+    color: black;
+    overflow: hidden;
+    overflow-y: auto;
+    font-weight: normal;
+    min-height: 200px;
+    max-width: 1200px;
+    margin: auto;
+    color: var(--black);
+    padding: 0px 20px;
+    font-family: 'Caladea', Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+}
+body, ::placeholder, input, textarea, select, button {
+    font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+h1,h2,h3,h4,h5,h6,p {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+a {
+    font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+body::-webkit-scrollbar,
+html::-webkit-scrollbar {
+    display: none;
+}
+
+header {
+    display: flex;
+    background-color: var(--white);
+    align-items: center;
+    justify-content: center;
+}
+
+header a,
+header a:visited {
+    color: black;
+    padding: 20px;
+    font-size: 13px;
+    text-decoration: none;
+    font-weight: 500;
+    height: max-content;
+}
+
+header a:first-of-type {
+    margin-right: auto;
+    display: block;
+    padding-left: 0px;
+}
+
+header a:last-of-type {
+    padding-right: 0px;
+}
+
+header .cta {
+    color: var(--white);
+    background-color: var(--black);
+    padding: 6.5px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+section {
+    margin: auto;
+    padding: 40px;
+}
+section:first-of-type {
+    padding: 0px;
+}
+
+section img {
+    max-width: 100%;
+}
+
+.flex-side {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-side>* {
+    width: calc(50% - 20px);
+}
+
+.flex-side>*:first-child {
+    margin-right: 20px;
+}
+
+.flex-side>*:last-child {
+    margin-left: 20px;
+}
+
+.flex-side img {
+    max-height: 300px;
+    border-radius: 10px;
+    object-fit: cover;
+    box-shadow: 0px 10px 60px 5px #00000030;
+}
+.flex-side code {
+    border-radius: 10px;
+    box-shadow: 0px 10px 60px 5px #00000060;
+}
+pre {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+@media screen and (max-width: 720px) {
+    .flex-side {
+        display: block;
+    }
+
+    .flex-side>* {
+        width: 100%;
+    }
+
+    .flex-side>*:first-child {
+        margin-right: 0px;
+    }
+
+    .flex-side>*:last-child {
+        margin-left: 0px;
+    }
+}
+
+footer nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: auto;
+    min-height: 200px;
+}
+
+footer nav div {
+    width: max-content;
+    margin: 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+footer nav div:first-of-type {
+    margin-right: auto;
+    margin-left: 0px;
+}
+
+footer nav div:last-of-type {
+    margin-right: 0px;
+}
+
+footer nav div a {
+    display: block;
+    text-decoration: none;
+    color: black;
+    font-size: 12px;
+    margin-bottom: 12px;
+}
+
+footer nav div a:last-of-type {
+    margin-bottom: 0px;
+}
+
+.logo {
+    height: 30px;
+}
+
+footer .logo {
+    aspect-ratio: 1/1;
+}

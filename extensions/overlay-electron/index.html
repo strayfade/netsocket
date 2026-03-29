@@ -1,0 +1,344 @@
+<body>
+    <style>
+        body {
+            overflow: hidden;
+        }
+
+        .overlay {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .glass {
+                background-color: #252525;
+                color: #f4f4f4;
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            .glass {
+                background-color: #f4f4f4;
+                color: #252525;
+            }
+        }
+
+        .glass {
+            --inset-amt: -0.5px;
+            --offset-amt: 0.5px;
+            box-shadow: var(--inset-amt) var(--offset-amt) 0px 0px rgba(0, 0, 0, 0.5), var(--offset-amt) var(--inset-amt) 0px 0px rgba(0, 0, 0, 0.5), var(--inset-amt) var(--inset-amt) 0px 0px rgba(255, 255, 255, 0.5), var(--offset-amt) var(--offset-amt) 0px 0px rgba(255, 255, 255, 0.5);
+            backdrop-filter: brightness(0.5) blur(10px);
+        }
+
+        .notification {
+            width: max-content;
+            height: max-content;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-weight: 400;
+            margin-top: 100px;
+            font-size: 26px;
+            margin-left: auto;
+            margin-right: auto;
+            border: none;
+            transition-duration: 0.25s;
+            transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+            opacity: 1;
+            transform: scaleX(100%) scaleY(100%);
+            box-shadow: 0px 10px 20px #000000C0;
+            max-width: 60vw;
+        }
+
+        .notification-hidden {
+            filter: brightness(500%) blur(5px);
+            opacity: 0;
+            transform: scaleX(120%) scaleY(95%);
+        }
+        #notification-actions {
+            display: flex;
+            font-size: 10px;
+            opacity: 0.5;
+            padding-top: 4px;
+            margin-top: 4px;
+        }
+        #notification-actions > div {
+            width: max-content;
+            display: flex;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        #notification-actions > div::target-text {
+            margin-top: 20px;
+        }
+        .action-keybind {
+            border: 1px solid rgb(255, 255, 255, 0.5);
+            border-radius: 4px;
+            padding: 2px 4px;
+            margin-right: 4px;
+        }
+        .action-text {
+            margin-top: 3px;
+        }
+
+        .input-area {
+            position: absolute;
+            left: 50%;
+            top: 40%;
+            transform: translate(-50%, -50%);
+            width: max-content;
+            padding: 20px;
+            border-radius: 30px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-weight: 400;
+            font-size: 26px;
+            border: none;
+            transition-duration: 0.25s;
+            transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+            opacity: 1;
+            transform: translate(-50%, -50%) scaleX(100%) scaleY(100%);
+            box-shadow: 0px 10px 20px #000000C0;
+            max-width: 60vw;
+            min-width: 40vw;
+            height: 75px;
+            overflow-y: hidden;
+            overflow-x: auto;
+            resize: none;
+            outline: none;
+        }
+
+        .input-area-hidden {
+            filter: brightness(500%) blur(5px);
+            opacity: 0;
+            transform: translate(-50%, -50%) scaleX(120%) scaleY(95%);
+        }
+    </style>
+    <div class="overlay">
+        <textarea id="input-area" class="glass input-area input-area-hidden" placeholder="Enter command..."></textarea>
+        <div id="notification" class="glass notification notification-hidden">
+            <div id="notification-text"></div>
+            <div id="notification-actions">
+                <div id="action-copy">
+                    <div class="action-keybind" id="copy-keybind">
+                    </div>
+                    <div class="action-text">Copy</div>
+                </div>
+                <div id="action-type">
+                    <div class="action-keybind" id="type-keybind">
+                    </div>
+                    <div class="action-text">Type</div>
+                </div>
+            </div>
+        </div>
+        <script>
+            let isMac = false;
+
+            // Detect platform and set keybind display
+            const initializePlatform = async () => {
+                isMac = await preload.getPlatform() === 'darwin';
+                const cmdKey = isMac ? '⌘' : 'Ctrl';
+                document.getElementById('copy-keybind').textContent = `${cmdKey} + Shift + 1`;
+                document.getElementById('type-keybind').textContent = `${cmdKey} + Shift + 2`;
+            };
+
+            initializePlatform();
+
+            let showNotification = async (notification = "") => {
+                preload.setNotificationText(`${notification}`);
+                preload.log(`Showing notification: ${notification}`)
+                if (notification.length <= 0) return;
+                const noti = document.getElementById("notification")
+                document.getElementById("notification-text").innerHTML = notification
+                noti.classList.remove("notification-hidden");
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+                noti.classList.add("notification-hidden");
+                preload.setNotificationText(``);
+            }
+
+            //let wsUrl = "wss://netsocket.strayfade.com"
+            let wsUrl = "ws://127.0.0.1:4675"
+            let ws;
+            let connected = false;
+
+            const sendStatus = () => {
+                if (window.preload && window.preload.sendStatus) {
+                    window.preload.sendStatus({ connected, wsUrl });
+                } else {
+                    preload.log("sendStatus not available on preload");
+                }
+            }
+
+            // Attach handlers using `on...` so they can be overwritten/cleared
+            function attachWsEvents(socket) {
+                socket.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data)
+                        if (data.broadcastPurpose == "overlay") {
+                            showNotification(data.broadcastData.toString())
+                        }
+                    }
+                    catch (err) {
+                        preload.log(err)
+                    }
+                }
+                socket.onclose = (ev) => {
+                    console.log(`Socket closed! ${wsUrl}`)
+                    connected = false;
+                    sendStatus();
+                    attemptReconnect(ev);
+                }
+                socket.onerror = (ev) => {
+                    console.log(`Socket error! ${wsUrl}`)
+                    connected = false;
+                    sendStatus();
+                }
+                socket.onopen = (connectedEvent) => {
+                    console.log(`Socket opened! ${wsUrl}`)
+                    // reset backoff on successful open
+                    reconnectDelay = INITIAL_RECONNECT_DELAY;
+                    connected = true
+                    sendStatus();
+                }
+            }
+
+            // Reconnection backoff configuration
+            const INITIAL_RECONNECT_DELAY = 1000;
+            let reconnectDelay = INITIAL_RECONNECT_DELAY;
+
+            const connect = () => {
+                try {
+                    // If an existing socket exists, close it first to avoid piling up sockets/handlers
+                    if (ws) {
+                        try {
+                            // remove handlers and close
+                            ws.onmessage = null;
+                            ws.onclose = null;
+                            ws.onerror = null;
+                            ws.onopen = null;
+                            if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                                ws.close();
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
+                        ws = null;
+                    }
+
+                    sendStatus();
+                    ws = new WebSocket(wsUrl);
+                    console.log(`Connecting to ${wsUrl}`)
+                    attachWsEvents(ws);
+                } catch (err) {
+                    console.warn(err)
+                    connected = false;
+                    sendStatus();
+                    attemptReconnect();
+                }
+            }
+
+            connect();
+
+            const attemptReconnect = async (closedEvent) => {
+                // toggle server address on each reconnect attempt
+                if (wsUrl == "ws://127.0.0.1:4675")
+                    wsUrl = "wss://netsocket.strayfade.com"
+                else if (wsUrl == "wss://netsocket.strayfade.com")
+                    wsUrl = "ws://127.0.0.1:4675"
+
+                // schedule reconnect with exponential backoff to avoid rapid socket creation
+                setTimeout(() => {
+                    connect();
+                }, reconnectDelay);
+
+                // increase delay up to a cap
+                reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+            }
+
+            const tryPing = () => {
+                if (ws.readyState != WebSocket.OPEN) {
+                    attemptReconnect()
+                }
+                if (connected && ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ broadcastPurpose: "ping" }));
+                }
+            }
+            setInterval(tryPing, 10000);
+
+            showNotification("Started netsocket overlay!")
+
+            // initial status
+            sendStatus();
+
+            // Input area functionality
+            let inputAreaVisible = false;
+
+            const toggleInputArea = async () => {
+                const inputArea = document.getElementById("input-area");
+                inputAreaVisible = !inputAreaVisible;
+
+                if (inputAreaVisible) {
+                    inputArea.classList.remove("input-area-hidden");
+                    await new Promise((resolve) => setTimeout(resolve, 250));
+                    inputArea.focus();
+                    preload.setIgnoreMouse(false)
+                } else {
+                    inputArea.classList.add("input-area-hidden");
+                    inputArea.blur();
+                    preload.setIgnoreMouse(true)
+                }
+            };
+
+            const sendCommand = async () => {
+                const inputArea = document.getElementById("input-area");
+                const text = inputArea.value.trim();
+                inputArea.value = '';
+                toggleInputArea();
+
+                if (text.length === 0) {
+                    return;
+                }
+
+                try {
+                    // Extract base URL from wsUrl
+                    let baseUrl = wsUrl;
+                    if (baseUrl.startsWith('ws://')) {
+                        baseUrl = baseUrl.replace('ws://', 'http://');
+                    } else if (baseUrl.startsWith('wss://')) {
+                        baseUrl = baseUrl.replace('wss://', 'https://');
+                    }
+                    const response = await fetch(`${baseUrl}/v1/postCommand`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            command: text
+                        })
+                    });
+
+                    if (response.ok) {
+                        preload.log(`Command sent: ${text}`);
+                    } else {
+                        preload.log(`Error sending command: ${response.status}`);
+                    }
+                } catch (err) {
+                    preload.log(`Error sending command: ${err}`);
+                }
+            };
+
+            // Handle Enter key in input area
+            document.getElementById("input-area").addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendCommand();
+                } else if (e.key === 'Escape') {
+                    toggleInputArea();
+                }
+            });
+        </script>
+    </div>
+
+</body>
