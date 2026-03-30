@@ -285,9 +285,11 @@
         const resize = () => {
             lastSize = [
                 window.innerWidth, window.innerHeight
-            ]
-            nodegraph.width = lastSize[0] * window.devicePixelRatio;
-            nodegraph.height = lastSize[1] * window.devicePixelRatio;
+            ];
+            const dpr = window.devicePixelRatio || 1;
+            // Use LGraphCanvas.resize so bgcanvas stays in sync and setDirty triggers a full redraw
+            // (setting canvas width/height alone clears the bitmap without marking dirty).
+            canvas.resize(lastSize[0] * dpr, lastSize[1] * dpr);
         }
         const detectResizeNeeded = () => {
             let currentSize = [

@@ -10324,6 +10324,10 @@ LGraphNode.prototype.executeAction = function(action)
         this.bgcanvas.width = this.canvas.width;
         this.bgcanvas.height = this.canvas.height;
         this.setDirty(true, true);
+        // Setting canvas dimensions clears the bitmap; repaint immediately so the frame is not blank until input.
+        if (this.is_rendering && !this.pause_rendering) {
+            this.draw(true, true);
+        }
     };
 
     /**
