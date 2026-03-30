@@ -1,9 +1,9 @@
 const { log, logColors } = require('../log')
 const { number, string, bool } = require('./utils/inputParser')
 require('../manager/nodePreferencesRegistry').addPref(
-    'Triggers',
+    'Command Palette',
     'triggersCommandPalette.secret',
-    'Secret Key',
+    'Command Palette Secret Key',
     'text',
     '',
     'A secret key used to authenticate connections from the command palette to netsocket.'

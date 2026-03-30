@@ -1,12 +1,12 @@
 const { log, logColors } = require('../log')
 const { number, string, bool } = require('./utils/inputParser')
 require('../manager/nodePreferencesRegistry').addPref(
-    'Triggers',
+    'iOS Notification',
     'triggersNotification.secret',
-    'Secret Key',
+    'iOS Notification Secret Key',
     'text',
     '',
-    'A secret key used to authenticate connections from the command palette to netsocket.'
+    'A secret key used to authenticate connections from the iOS tweak to netsocket.'
 );
 class NodeDefinition {
     constructor() {
