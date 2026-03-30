@@ -5,4 +5,7 @@ services:
     container_name: netsocket
     ports:
       - 4675:4675
+    environment:
+      - PORT=4675
+      - HOST=0.0.0.0
     restart: always

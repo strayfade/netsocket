@@ -19,6 +19,9 @@ services:
     container_name: netsocket
     ports:
       - 3000:4675
+    environment:
+      - PORT=4675
+      - HOST=0.0.0.0
     restart: always
 ```
 - Go to [http://localhost:3000](http://localhost:3000).

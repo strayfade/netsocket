@@ -358,8 +358,9 @@ app.get('/:page', (req, res) => {
 })
 
 const PORT = process.env.PORT || 4675;
+const HOST = process.env.HOST || "127.0.0.1";
 const { reloadVars } = require('./nodes/utils/vars.js')
-server.listen(PORT, "0.0.0.0", async () => {
+server.listen(PORT, HOST, async () => {
     await populateNodes()
     await populateUsers()
     await populateCredentials()
