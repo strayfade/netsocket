@@ -7,5 +7,5 @@ services:
       - 4675:4675
     environment:
       - PORT=4675
-      - HOST=0.0.0.0
+      - HOSTNAME=0.0.0.0
     restart: always

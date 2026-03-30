@@ -8,7 +8,7 @@ Netsocket is a deeply-integrated, expandable nodegraph editor for creating autom
 - Image: [strayfade/netsocket](https://hub.docker.com/repository/docker/strayfade/netsocket/general)
 - Run from command line:
 ```
-docker run -e HOST="0.0.0.0" -e PORT="4675" -p 3000:4675 strayfade/netsocket
+docker run -e HOSTNAME="0.0.0.0" -e PORT="4675" -p 4675:4675 strayfade/netsocket
 ```
 - `compose.yaml`
 ```yaml
@@ -18,13 +18,13 @@ services:
     image: strayfade/netsocket:latest
     container_name: netsocket
     ports:
-      - 3000:4675
+      - 4675:4675
     environment:
       - PORT=4675
-      - HOST=0.0.0.0
+      - HOSTNAME=0.0.0.0
     restart: always
 ```
-- Go to [http://localhost:3000](http://localhost:3000).
+- Go to [http://localhost:4675](http://localhost:4675).
 
 ### Node.js
 - Clone netsocket and install dependencies
