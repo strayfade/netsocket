@@ -8,7 +8,7 @@ Netsocket is a deeply-integrated, expandable nodegraph editor for creating autom
 - Image: [strayfade/netsocket](https://hub.docker.com/repository/docker/strayfade/netsocket/general)
 - Run from command line:
 ```
-docker run -p 3000:4675 strayfade/netsocket
+docker run -e HOST="0.0.0.0" -e PORT="4675" -p 3000:4675 strayfade/netsocket
 ```
 - `compose.yaml`
 ```yaml
