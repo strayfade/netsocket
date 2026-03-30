@@ -149,6 +149,9 @@
         let activeWs;
         let wsRequestSeq = 0;
         const wsPendingRequests = {}
+        let graphLoaded = false;
+        /** True while applying server graph state — suppresses autosave during LGraph.configure (clear/add call change). */
+        let graphReconfiguring = false;
 
         const sendWsRequest = async (payload) => {
             while (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
@@ -202,11 +205,16 @@
                 }
                 switch (parsedMessage.broadcastPurpose) {
                     case "setNodes":
-                        graph.configure(parsedMessage.broadcastData);
-                        graph.start();
-                        graphLoaded = true;
-                        // update header counts after loading the graph
-                        try { updateNodeCounts(); } catch (e) { /* ignore */ }
+                        graphReconfiguring = true;
+                        try {
+                            graph.configure(parsedMessage.broadcastData);
+                            graph.start();
+                            graphLoaded = true;
+                            // update header counts after loading the graph
+                            try { updateNodeCounts(); } catch (e) { /* ignore */ }
+                        } finally {
+                            graphReconfiguring = false;
+                        }
                         break;
                     case "populateLog":
                         log.innerHTML = (() => {
@@ -226,7 +234,6 @@
             })
         }
         setupWs()
-        let graphLoaded = false;
 
         // On resize
         let lastSize = []
@@ -260,17 +267,18 @@
         }
         loadGraph()
         const saveGraph = async () => {
-            if (graphLoaded) {
-                while (activeWs.readyState !== WebSocket.OPEN) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                }
-                await activeWs.send(JSON.stringify({
-                    broadcastPurpose: 'setNodes',
-                    broadcastData: graph.serialize()
-                }));
+            if (!graphLoaded || graphReconfiguring) {
+                return;
             }
+            while (activeWs.readyState !== WebSocket.OPEN) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            await activeWs.send(JSON.stringify({
+                broadcastPurpose: 'setNodes',
+                broadcastData: graph.serialize()
+            }));
         }
-        graph.change = saveGraph
+        graph.on_change = saveGraph
 
         const ping = async () => {
             if (activeWs.readyState == WebSocket.OPEN) {

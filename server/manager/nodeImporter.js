@@ -67,7 +67,7 @@ ${(() => {
                     outConstructor += `\t\t${input.value}\n`
                 }
                 else {
-                    outConstructor += `\t\tthis.addInput("${input.name}", "${input.type}")\n`
+                    outConstructor += `\t\tthis.addInput("${input.name}", ${input.type != "LiteGraph.EVENT" ? `"${input.type}"` : input.type})\n`
                     
                     if (property && input.type != "LiteGraph.EVENT") {
                         outConstructor += `\t\tthis.addProperty("${input.name}", "${property.defaultValue}")\n`

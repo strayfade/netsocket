@@ -7,7 +7,7 @@ require('../../manager/nodePreferencesRegistry').addPref(
     'authentication.otp_accounts',
     'OTP account secrets',
     'text',
-    '',
+    'abc',
     '<p>Enter TOTP secrets as text. <strong>Comma</strong> (<code>,</code>) separates multiple accounts. Each account must be <code>Issuer:Account:Secret</code> — <strong>colon</strong> (<code>:</code>) separates issuer, display name, and the Base32 secret. Algorithm is always SHA1.</p>' +
     '<p>Account keys used by the OTP node are <code>Issuer:Account</code> (e.g. <code>GitHub:strayfade</code>).</p>'
 );

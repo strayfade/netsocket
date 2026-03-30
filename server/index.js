@@ -31,14 +31,22 @@ app.use(cookieParser())
 wss.on('connection', (socket, request) => {
 
     const cookiesHeader = request.headers.cookie;
-    const cookies = Object.fromEntries(
-        cookiesHeader.split(';').map(c => {
-            const [key, ...v] = c.trim().split('=');
-            return [key, v.join('=')];
-        })
-    );
-
-    if (validateToken(cookies.tk)) {
+        let cookies = (() => {
+            if (!cookiesHeader) {
+            return {
+                tk: "_blank"
+            }
+        }
+        const cookies2 = Object.fromEntries(
+            cookiesHeader.split(';').map(c => {
+                const [key, ...v] = c.trim().split('=');
+                return [key, v.join('=')];
+            })
+        );
+        return cookies2
+    })()
+    
+    if (validateToken(cookies.tk) || request.headers?.['x-socket-auth'] == settingsManager.getSetting('cmdPalette.secret')) {
         connectedClients.push(socket);
         log('Client connected');
         setWsServerConnectedClients(connectedClients)

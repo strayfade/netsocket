@@ -11,13 +11,9 @@
 #include <sstream>
 #include <functional>
 
-#define NETSOCKET_AUTH R"({ "broadcastPurpose": "subscribe", "broadcastData": { "username": "strayfade", "password": "t45Xn=m7$(LeZRipHU-W}P;]7M%$,+GSGTk60hH1wXMy=cM99fKu159C69G+.4ye6v&hh@ES_6EG8c*hPMj/zuS(h7jbj%BL?g.)+-x/5N,/&74f2z#&V3LFE&Gt9d.wk.{xMYL(m#Bhtib!8QaiP4q5v{gGt[Wjuh%fr2,3RM(F.gK9:3-HwD(}r6/%%b*Lcnz0,Y(-D8&(+Tb&Wc]G-aS3(xmgj&0vDc@x})@px*b*JH[u=9Dy{P07B60i?tvt" } })"
-
-#define NETSOCKET_PUBLIC "ws://netsocket.strayfade.com"
-#define NETSOCKET_PRIVATE "ws://127.0.0.1:4675"
-
 #include "websocket/websocket.hpp"
 #include "styling.hpp"
+#include "config.hpp"
 
 using namespace easywsclient;
 WebSocket* Socket = nullptr;
@@ -124,7 +120,7 @@ namespace notification {
         noti.color = lerpColor(noti.color, ImColor(0, 0, 0, 0));
         noti.text = unescape(noti.text);
         queue.push_back(noti);
-        std::cout << noti.text << std::endl;
+        std::cout << "[Notification] " << noti.text << std::endl;
     }
 
     float easeOutCubic(float x) {
@@ -174,34 +170,36 @@ namespace notification {
     }
 }
 
+struct preferences_t {
+    std::string url = NETSOCKET_DEFAULT_HOST;
+    bool shouldStartOnStartup = false;
+    int retryMs = 500000;
+} preferences;
+
 bool isConnecting = false;
 std::string connUrl = "Disconnected";
-WebSocket::readyStateValues OpenConnection(const std::string url = NETSOCKET_PRIVATE) {
+WebSocket::readyStateValues OpenConnection(const std::string url = preferences.url) {
     isConnecting = true;
     //notification::addNotification({ std::string("Connecting to server \"") + url + std::string("\"...") });
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
         exit(1);
     }
-    Socket = WebSocket::from_url(url);
+    Socket = WebSocket::from_url(url, "");
     int TimePassed = 0;
     bool success = true;
     while (Socket == nullptr || Socket->getReadyState() != WebSocket::OPEN) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         TimePassed += 100;
-        if (TimePassed > 1000) {
+        if (TimePassed > preferences.retryMs) {
             success = false;
-            notification::addNotification({ std::string("Failed to connect to server \"") + url + std::string("\" after 1000ms"), ImColor(255, 0, 0) });
-            OpenConnection(url == NETSOCKET_PUBLIC ? NETSOCKET_PRIVATE : NETSOCKET_PUBLIC);
+            notification::addNotification({ std::string("Failed to connect to server \"") + url + std::string("\" after ") + std::to_string(preferences.retryMs) + std::string("ms"), ImColor(255, 0, 0)});
+            OpenConnection(url);
             break;
         }
     }
     if (Socket && success) {
         notification::addNotification({ std::string("Connected to server \"") + url + std::string("\"!"), ImColor(0, 255, 0) });
-        if (Socket->getReadyState() == WebSocket::OPEN) {
-            std::cout << NETSOCKET_AUTH << std::endl;
-            Socket->send(NETSOCKET_AUTH);
-        }
         isConnecting = false;
         connUrl = url;
         return Socket->getReadyState();
@@ -246,13 +244,42 @@ int textEditCallback(ImGuiInputTextCallbackData* data) {
     return 0;
 }
 
-int main(int, char**) {
+namespace utils {
+    void addToStartup() {
+        std::wstring progPath = GetExecutablePath();
+        HKEY hKey = NULL;
+        LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hKey);
+        LONG status = RegSetValueEx(hKey, L"netsocket", 0, REG_SZ, (BYTE*)progPath.c_str(), (progPath.size() + 1) * sizeof(wchar_t));
+    }
+    void removeFromStartup() {
+        std::wstring progPath = GetExecutablePath();
+        HKEY hKey = NULL;
+        LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hKey);
+        LONG status = RegDeleteValue(hKey, L"netsocket");
+    }
+}
 
-    // Add to startup
-    std::wstring progPath = GetExecutablePath();
-    HKEY hkey = NULL;
-    LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hkey);
-    LONG status = RegSetValueEx(hkey, L"netsocket", 0, REG_SZ, (BYTE*)progPath.c_str(), (progPath.size() + 1) * sizeof(wchar_t));
+class hotkey {
+    std::function<bool()> condition = nullptr;
+    std::function<void()> call = nullptr;
+    std::chrono::steady_clock::time_point lastDetectedTime;
+    int delay = 250; // ms
+public:
+    void poll() {
+        if (!condition || !call) return;
+        std::chrono::steady_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
+        if (this->condition() && std::chrono::duration<double, std::milli>(currentTime - lastDetectedTime).count() > delay) {
+            this->call();
+            lastDetectedTime = std::chrono::high_resolution_clock::now();
+        }
+    }
+    hotkey(std::function<bool()> newCondition, std::function<void()> newCall) {
+        condition = newCondition;
+        call = newCall;
+    }
+};
+
+int main(int, char**) {
 
 #ifdef _DEBUG
     ShowWindow(GetConsoleWindow(), SW_SHOW);
@@ -315,14 +342,50 @@ int main(int, char**) {
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
 
-    std::thread t(OpenConnection, NETSOCKET_PRIVATE);
+    // Hide/show palette
+    static auto showPalette = [&](HWND hwnd) -> void {
+        lastFocusedWindow = GetForegroundWindow();
+        if (Socket != nullptr && Socket->getReadyState() != WebSocket::OPEN) {
+            std::cout << Socket->getReadyState() << std::endl;
+            notification::addNotification({ "netsocket is currently disconnected!" });
+        }
+        SetWindowLong(hwnd, GWL_EXSTYLE, WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW);
+        SetForegroundWindow(hwnd);
+        focusStale = true;
+        paletteHidden = false;
+        };
+    static auto hidePalette = [&](HWND hwnd) -> void {
+        SetWindowLong(hwnd, GWL_EXSTYLE, WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW);
+        SetForegroundWindow(lastFocusedWindow);
+        paletteHidden = true;
+    };
+
+    std::vector<hotkey*> registeredKeys;
+    registeredKeys.push_back(new hotkey([]() -> bool {
+        return (
+            GetAsyncKeyState(VK_LCONTROL) && 
+            GetAsyncKeyState(VK_LSHIFT) && 
+            GetAsyncKeyState(VK_SPACE)
+        ) || (!paletteHidden && GetAsyncKeyState(VK_ESCAPE));
+    }, [&]() {
+        if (paletteHidden)
+            showPalette(hwnd);
+        else {
+            hidePalette(hwnd);
+        }
+    }));
+
+    std::thread t(OpenConnection, preferences.url   );
 
     // Main loop
     bool done = false;
-    bool started = false;
     ImVec2 paletteSize;
 
     while (!done) {
+
+        for (hotkey* key : registeredKeys) {
+            key->poll();
+        }
 
         // Notification actions
         if (GetAsyncKeyState(VK_LCONTROL) && GetAsyncKeyState(VK_LSHIFT) && GetAsyncKeyState('1') & 1) {
@@ -370,42 +433,11 @@ int main(int, char**) {
         if (GetAsyncKeyState(VK_RETURN) && !paletteHidden && std::string(inputBuf).length() > 0) {
             sendCommand(std::string(inputBuf));
         }
-
-        // Hide/show command palette
-        static std::chrono::steady_clock::time_point lastChangedTime;
-        static auto showPalette = [&](HWND hwnd) -> void {
-            lastFocusedWindow = GetForegroundWindow();
-            if (Socket != nullptr && Socket->getReadyState() != WebSocket::OPEN) {
-                std::cout << Socket->getReadyState() << std::endl;
-                notification::addNotification({ "netsocket is currently disconnected!" });
-            }
-            SetWindowLong(hwnd, GWL_EXSTYLE, WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW);
-            SetForegroundWindow(hwnd);
-            focusStale = true;
-            paletteHidden = false;
-            lastChangedTime = std::chrono::high_resolution_clock::now();
-        };
-        static auto hidePalette = [&](HWND hwnd) -> void {
-            SetWindowLong(hwnd, GWL_EXSTYLE, WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW);
-            SetForegroundWindow(lastFocusedWindow);
-            paletteHidden = true;
-            lastChangedTime = std::chrono::high_resolution_clock::now();
-        };
-        if (GetAsyncKeyState(VK_LCONTROL) && GetAsyncKeyState(VK_LSHIFT) && GetAsyncKeyState(VK_SPACE) || (!paletteHidden && GetAsyncKeyState(VK_ESCAPE)) || !started || shouldHidePalette) {
-            auto currentTime = std::chrono::high_resolution_clock::now();
-            if (std::chrono::duration<double, std::milli>(currentTime - lastChangedTime).count() <= 250) 
-                continue;
-            paletteHidden = !paletteHidden;
-            if (paletteHidden) {
-                hidePalette(hwnd);
-            }
-            else {
-                showPalette(hwnd);
-            }
-            started = true;
+        if (shouldHidePalette) {
+            hidePalette(hwnd);
             shouldHidePalette = false;
-            ShowWindow(hwnd, SW_SHOW);
         }
+
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         MSG msg;

@@ -74,9 +74,10 @@ typedef int socket_t;
 #include <string>
 
 #include <iostream>
-#define Log(x, y) ;
+#define Log(x, y) std::cout << "[WebSocket] " << x << std::endl;
 
 #include "websocket.hpp"
+#include "../config.hpp"
 
 using easywsclient::Callback_Imp;
 using easywsclient::BytesCallback_Imp;
@@ -503,6 +504,18 @@ namespace {
         snprintf(line, 1024, "Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==\r\n");
         send(sockfd, line, strlen(line), 0);
         snprintf(line, 1024, "Sec-WebSocket-Version: 13\r\n");
+        send(sockfd, line, strlen(line), 0);
+        const char* word = "X-Socket-Auth: ";
+        const char* word2 = NETSOCKET_SECRET;
+        const char* word3 = "\r\n";
+        char* s = new char[strlen(word) + strlen(word2) + 1];
+        strcpy(s, word);
+        strcat(s, word2);
+        char* s2 = new char[strlen(s) + strlen(word3) + 1];
+        strcpy(s2, s);
+        strcat(s2, word3);
+        const char* ln2 = s2;
+        snprintf(line, 1024, ln2);
         send(sockfd, line, strlen(line), 0);
         snprintf(line, 1024, "\r\n");
         send(sockfd, line, strlen(line), 0);

@@ -74,5 +74,8 @@
     <ClInclude Include="styling.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="config.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
