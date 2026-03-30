@@ -146,12 +146,46 @@
             banner.textContent = connected ? "" : "Disconnected"
         }
 
-        let activeWs;
+        let activeWs = null;
+        let wsConnectAbort = null;
+        let reconnectTimerId = null;
         let wsRequestSeq = 0;
         const wsPendingRequests = {}
         let graphLoaded = false;
         /** True while applying server graph state — suppresses autosave during LGraph.configure (clear/add call change). */
         let graphReconfiguring = false;
+
+        const wsUrl = () => `${location.protocol !== 'https:' ? "ws" : "wss"}://${window.location.host}`;
+
+        const clearWsReconnectTimer = () => {
+            if (reconnectTimerId != null) {
+                clearTimeout(reconnectTimerId);
+                reconnectTimerId = null;
+            }
+        };
+
+        /** Drop listeners and close any in-flight socket so only one WebSocket exists at a time. */
+        const disposeCurrentWebSocket = () => {
+            if (wsConnectAbort) {
+                wsConnectAbort.abort();
+                wsConnectAbort = null;
+            }
+            const w = activeWs;
+            activeWs = null;
+            if (w && (w.readyState === WebSocket.CONNECTING || w.readyState === WebSocket.OPEN)) {
+                try {
+                    w.close(1000, "reconnect");
+                } catch (e) { /* ignore */ }
+            }
+        };
+
+        const scheduleWsReconnect = () => {
+            clearWsReconnectTimer();
+            reconnectTimerId = setTimeout(() => {
+                reconnectTimerId = null;
+                connectWebSocket();
+            }, 1000);
+        };
 
         const sendWsRequest = async (payload) => {
             while (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
@@ -169,31 +203,40 @@
             })
         }
 
-        const setupWs = async () => {
-            let wsUrl = `${location.protocol !== 'https:' ? "ws" : "wss"}://${window.location.host}`
-            activeWs = new WebSocket(wsUrl);
-            activeWs.addEventListener("open", () => {
-                setConnected(true)
-                activeWs.send(JSON.stringify({
+        const scrollToBottom = () => {
+            log.scrollTop = log.scrollHeight;
+        };
+        log.addEventListener("mouseleave", async () => {
+            await new Promise(resolve => setTimeout(resolve, 1));
+            scrollToBottom();
+        });
+
+        const connectWebSocket = () => {
+            clearWsReconnectTimer();
+            disposeCurrentWebSocket();
+
+            wsConnectAbort = new AbortController();
+            const { signal } = wsConnectAbort;
+            const ws = new WebSocket(wsUrl());
+            activeWs = ws;
+
+            ws.addEventListener("open", () => {
+                if (activeWs !== ws) return;
+                setConnected(true);
+                ws.send(JSON.stringify({
                     broadcastPurpose: "populateLog"
-                }))
-            })
-            activeWs.addEventListener("close", async () => {
-                while (activeWs.readyState !== WebSocket.OPEN) {
-                    setConnected(false)
-                    activeWs = new WebSocket(`${location.protocol !== 'https:' ? "ws" : "wss"}://${window.location.host}`);
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-                setupWs()
-            })
-            const scrollToBottom = () => {
-                log.scrollTop = log.scrollHeight;
-            }
-            log.addEventListener("mouseleave", async () => {
-                await new Promise(resolve => setTimeout(resolve, 1));
-                scrollToBottom()
-            });
-            activeWs.addEventListener("message", async (event) => {
+                }));
+            }, { signal });
+
+            ws.addEventListener("close", () => {
+                if (activeWs !== ws) return;
+                activeWs = null;
+                setConnected(false);
+                scheduleWsReconnect();
+            }, { signal });
+
+            ws.addEventListener("message", async (event) => {
+                if (activeWs !== ws) return;
                 const message = event.data;
                 const parsedMessage = JSON.parse(message);
                 if (parsedMessage?.requestId && wsPendingRequests[parsedMessage.requestId]) {
@@ -231,9 +274,9 @@
                         scrollToBottom()
                         break;
                 }
-            })
-        }
-        setupWs()
+            }, { signal });
+        };
+        connectWebSocket();
 
         // On resize
         let lastSize = []
@@ -258,7 +301,7 @@
         detectResizeNeeded()
 
         async function loadGraph() {
-            while (activeWs.readyState !== WebSocket.OPEN) {
+            while (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
             await activeWs.send(JSON.stringify({
@@ -270,7 +313,7 @@
             if (!graphLoaded || graphReconfiguring) {
                 return;
             }
-            while (activeWs.readyState !== WebSocket.OPEN) {
+            while (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
             await activeWs.send(JSON.stringify({
@@ -281,7 +324,7 @@
         graph.on_change = saveGraph
 
         const ping = async () => {
-            if (activeWs.readyState == WebSocket.OPEN) {
+            if (activeWs && activeWs.readyState == WebSocket.OPEN) {
                 await activeWs.send(JSON.stringify({
                     broadcastPurpose: 'ping',
                     broadcastData: Date.now()
