@@ -2,6 +2,7 @@
     font-family: 'Geist', sans-serif, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-optical-sizing: auto;
 }
+
 .property_value {
     font-family: 'Google Sans Code', 'Courier New', Courier, monospace;
 }
@@ -102,24 +103,34 @@ header {
     color: #b8b8b8;
     white-space: nowrap;
 }
+
 header img {
     padding: 10px;
     height: 42px;
 }
+
 header a {
     color: white;
     text-decoration: none;
     height: max-content;
     padding: 12px;
     font-weight: 500;
+    display: flex;
 }
+
 header a:hover {
     color: black;
     background-color: white;
 }
+
+header a .material-symbols-outlined {
+    margin-left: 5px;
+}
+
 header .header-distance {
     margin-left: auto;
 }
+
 header .node-count {
     color: white;
     text-decoration: none;
@@ -128,6 +139,7 @@ header .node-count {
     padding-left: 0px;
     font-size: 11px;
 }
+
 header #node-count-visible {
     opacity: 0.5;
 }
@@ -308,8 +320,8 @@ header #node-count-visible {
     margin-bottom: 18px;
 }
 
-#settings-modal .settings-field > .settings-label-block,
-#settings-modal .settings-field > label.settings-label-block {
+#settings-modal .settings-field>.settings-label-block,
+#settings-modal .settings-field>label.settings-label-block {
     display: block;
     font-size: 13px;
     font-weight: 500;
