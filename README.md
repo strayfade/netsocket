@@ -1,14 +1,41 @@
-<img src="./images/hero.webp" style="height: 50px;">
+# netsocket
 
-<p>
-<img src="https://img.shields.io/badge/Node.js-v22.20.0-blue?logo=nodedotjs&style=flat-square&logoColor=white&labelColor=black&color=#4F903E">
-<img src="https://img.shields.io/badge/Docker-v24.0.7-2496ED?logo=docker&style=flat-square&logoColor=white&labelColor=black">
-<img src="https://img.shields.io/badge/Netsocket%20API-v1-606060?style=flat-square&labelColor=black">
-</p>
+Netsocket is a deeply-integrated, expandable nodegraph editor for creating automations.
 
-#
+# Usage
 
-### Purpose
-**netsocket** is a cross-platform nodegraph editor for automations. Automations in netsocket are defined by connecting nodes, and run automatically to provide the user with useful actions or information.
+### Docker
+- Image: [strayfade/netsocket](https://hub.docker.com/repository/docker/strayfade/netsocket/general)
+- Run from command line:
+```
+docker run -p 3000:4675 strayfade/netsocket
+```
+- `compose.yaml`
+```yaml
+version: "3.8"
+services:
+  netsocket:
+    image: strayfade/netsocket:latest
+    container_name: netsocket
+    ports:
+      - 3000:4675
+    restart: always
+```
+- Go to [http://localhost:3000](http://localhost:3000).
 
-*this readme is a work-in-progress!*
+### Node.js
+- Clone netsocket and install dependencies
+```
+git clone https://github.com/strayfade/netsocket
+cd netsocket
+npm install
+```
+- Run netsocket
+```
+npm start
+```
+- Go to [http://localhost:4675](http://localhost:4675).
+
+### After installing...
+- Create a username/password by navigating to the homepage
+- Create your first automation
