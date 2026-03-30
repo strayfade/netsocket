@@ -1,8 +1,8 @@
 const { log, logColors } = require('../log')
 const { number, string, bool } = require('./utils/inputParser')
 require('../manager/nodePreferencesRegistry').addPref(
-    'Command Palette',
-    'cmdPalette.secret',
+    'Triggers',
+    'triggersCommandPalette.secret',
     'Secret Key',
     'text',
     '',

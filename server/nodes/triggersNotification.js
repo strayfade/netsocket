@@ -1,6 +1,13 @@
 const { log, logColors } = require('../log')
 const { number, string, bool } = require('./utils/inputParser')
-
+require('../manager/nodePreferencesRegistry').addPref(
+    'Triggers',
+    'triggersNotification.secret',
+    'Secret Key',
+    'text',
+    '',
+    'A secret key used to authenticate connections from the command palette to netsocket.'
+);
 class NodeDefinition {
     constructor() {
         this.addOutput("", LiteGraph.EVENT);

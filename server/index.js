@@ -31,8 +31,8 @@ app.use(cookieParser())
 wss.on('connection', (socket, request) => {
 
     const cookiesHeader = request.headers.cookie;
-        let cookies = (() => {
-            if (!cookiesHeader) {
+    let cookies = (() => {
+        if (!cookiesHeader) {
             return {
                 tk: "_blank"
             }
@@ -45,8 +45,8 @@ wss.on('connection', (socket, request) => {
         );
         return cookies2
     })()
-    
-    if (validateToken(cookies.tk) || request.headers?.['x-socket-auth'] == settingsManager.getSetting('cmdPalette.secret')) {
+
+    if (validateToken(cookies.tk) || request.headers?.['x-socket-auth'] == settingsManager.getSetting('triggersCommandPalette.secret')) {
         connectedClients.push(socket);
         log('Client connected');
         setWsServerConnectedClients(connectedClients)
@@ -182,11 +182,17 @@ setOnPushLog(((line) => {
 
 // MARK: PostNotification
 const { onNewNotification } = require('./nodes/utils/waitForOTP')
-app.post("/v1/postNotification", async (req, res) => {
-    const notificationContent = req.body
-    onNewNotification(notificationContent)
-    log(`Received notification: ${JSON.stringify(notificationContent)}`, logColors.Success)
-    res.sendStatus(200);
+app.post("/v1/postNotification/:secret", async (req, res) => {
+    const expectedSecret = settingsManager.getSetting('triggersNotification.secret')
+    if (!expectedSecret || req.params.secret !== expectedSecret) {
+        return res.sendStatus(403)
+    }
+    else {
+        const notificationContent = req.body
+        onNewNotification(notificationContent)
+        log(`Received notification: ${JSON.stringify(notificationContent)}`, logColors.Success)
+        res.sendStatus(200);
+    }
 })
 
 // MagicMirror
