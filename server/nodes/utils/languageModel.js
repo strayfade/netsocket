@@ -12,13 +12,21 @@ require('../../manager/nodePreferencesRegistry').addPref(
 
 const { createOllama } = require('ollama-ai-provider-v2');
 let ollama
+let ollamaInitialized = false
 const initOllama = () => {
-    const ollamaHost = settingsManager.getSetting('ollama.ip') || '127.0.0.1'
-    ollama = createOllama({
-        baseURL: `http://${ollamaHost}:11434/api`
-    })
+    if (ollamaInitialized) return
+    try {
+        const ollamaHost = settingsManager.getSetting('ollama.ip') || '127.0.0.1'
+        const baseURL = `http://${ollamaHost}:11434/api`
+        ollama = createOllama({
+            baseURL
+        })
+        ollamaInitialized = true
+    }
+    catch (e) {
+        log(`Failed to initialize Ollama client: ${e.message}`, logColors.Error)
+    }
 }
-initOllama()
 const { generateText } = require('ai')
 const defaultSystemPrompt = `You are an intelligent robot that is able to 
     perform a user's instructions efficiently and exactly as requested. 
@@ -71,6 +79,9 @@ function sanitizeAiOutput(input) {
 }
 
 const askAI = async (userText, systemPrompt, model) => {
+    
+    initOllama()
+
     if (!userText)
         userText = ""
     if (!systemPrompt)
