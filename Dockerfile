@@ -1,7 +1,20 @@
-FROM node:22
+# Build stage
+FROM dhi.io/node:22-dev AS build-stage
+
+ENV NODE_ENV=production
 WORKDIR /netsocket
+
 COPY package*.json ./
-RUN npm install
+RUN npm install --omit=dev
+
+# Runtime stage
+FROM dhi.io/node:22 AS runtime-stage
+
+ENV NODE_ENV=production
+WORKDIR /netsocket
+
+COPY --from=build-stage /netsocket/node_modules ./node_modules
 COPY . .
+
 EXPOSE 4675
 CMD ["npm", "start"]
