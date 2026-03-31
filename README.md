@@ -1,6 +1,11 @@
 <p align="center">
   <img src='./images/hero.webp'>
 </p>
+<p align="center">
+<img src="https://img.shields.io/docker/pulls/strayfade/netsocket?style=flat-square&logo=docker&logoColor=white&label=Downloads">
+<img src="https://img.shields.io/github/last-commit/strayfade/netsocket?style=flat-square&logo=github&logoColor=white&logoSize=auto&label=Last%20commit">
+<img src="https://img.shields.io/github/license/strayfade/netsocket?style=flat-square&label=License">
+</p>
 
 Netsocket is a deeply-integrated, expandable nodegraph editor for creating automations.
 
