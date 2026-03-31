@@ -10,7 +10,7 @@
 Netsocket is a deeply-integrated, expandable nodegraph editor for creating automations.
 
 # Usage
-> [!INFO]
+> [!NOTE]
 > 
 > By default, new installs should prefer to use **Docker** or an official tag from **Releases** rather than running from source, because this repository may contain bugs or critical issues at any time, which are fixed before releases.
 >
