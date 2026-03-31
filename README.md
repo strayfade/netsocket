@@ -1,4 +1,6 @@
-# netsocket
+<p align="center">
+  <img src='./images/hero.webp'>
+</p>
 
 Netsocket is a deeply-integrated, expandable nodegraph editor for creating automations.
 
