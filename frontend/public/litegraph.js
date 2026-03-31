@@ -145,7 +145,7 @@
 
         // if true, all newly created nodes/links will use string UUIDs for their id fields instead of integers.
         // use this if you must have node IDs that are unique across all graphs and subgraphs.
-        use_uuids: false,
+        use_uuids: true,
 
         /**
          * Register a node class so it can be listed when the user wants to create a new one
@@ -13070,6 +13070,38 @@ LGraphNode.prototype.executeAction = function(action)
         node.setDirtyCanvas(true, true);
     };
 
+    LGraphCanvas.onMenuNodeCopyId = function (value, options, e, menu, node) {
+        if (!node || node.id == null) {
+            return;
+        }
+        var text = String(node.id);
+        var doc = menu && menu.root && menu.root.ownerDocument
+            ? menu.root.ownerDocument
+            : document;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).catch(function () {
+                LGraphCanvas._fallbackCopyTextToClipboard(text, doc);
+            });
+        } else {
+            LGraphCanvas._fallbackCopyTextToClipboard(text, doc);
+        }
+    };
+
+    LGraphCanvas._fallbackCopyTextToClipboard = function (text, doc) {
+        doc = doc || document;
+        var ta = doc.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        doc.body.appendChild(ta);
+        ta.select();
+        try {
+            doc.execCommand("copy");
+        } catch (err) { /* ignore */ }
+        doc.body.removeChild(ta);
+    };
+
     LGraphCanvas.onMenuNodeClone = function (value, options, e, menu, node) {
 
         node.graph.beforeChange();
@@ -13273,11 +13305,18 @@ LGraphNode.prototype.executeAction = function(action)
             })
         }
 
-        options.push(null, {
-            content: "Remove",
-            disabled: !(node.removable !== false && !node.block_delete),
-            callback: LGraphCanvas.onMenuNodeRemove
-        });
+        options.push(
+            {
+                content: "Copy node ID",
+                callback: LGraphCanvas.onMenuNodeCopyId
+            },
+            null,
+            {
+                content: "Remove",
+                disabled: !(node.removable !== false && !node.block_delete),
+                callback: LGraphCanvas.onMenuNodeRemove
+            }
+        );
 
         if (node.graph && node.graph.onGetNodeMenuOptions) {
             node.graph.onGetNodeMenuOptions(options, node);

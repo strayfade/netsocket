@@ -69,6 +69,7 @@
     <textarea id="log" spellcheck="false"></textarea>
     <script>
 
+        LiteGraph.use_uuids = true;
         let graph = new LGraph();
         let canvas = new LGraphCanvas("#nodegraph", graph);
 
@@ -137,6 +138,7 @@
             }
             if (n > 0) {
                 appendKeybindItem(["Double-click"], "Set Inputs");
+                appendKeybindItem(["Right-click"], "Copy node ID (menu)");
                 appendKeybindItem(["Alt", "Drag"], "Clone");
                 appendKeybindItem(["Shift"], "Multiselect");
                 appendKeybindItem(["CTRL", "C"], "Copy");
