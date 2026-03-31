@@ -21,7 +21,6 @@
     "cookie-parser": "^1.4.7",
     "express": "^5.2.1",
     "hi-base32": "^0.5.1",
-    "homeassistant": "^0.2.0",
     "node-hue-api": "^5.0.0-beta.16",
     "ollama-ai-provider-v2": "^1.5.5",
     "otplib": "^13.3.0",
