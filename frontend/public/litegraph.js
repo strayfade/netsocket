@@ -27,7 +27,7 @@
         NODE_TITLE_COLOR: "#FFF",
         NODE_SELECTED_TITLE_COLOR: "lime",
         NODE_TEXT_SIZE: 14,
-        NODE_TEXT_COLOR: "#AAA",
+        NODE_TEXT_COLOR: "#FFF",
         NODE_SUBTEXT_SIZE: 12,
         NODE_DEFAULT_COLOR: "#333",
         NODE_DEFAULT_BGCOLOR: "#353535",
@@ -12923,7 +12923,7 @@ LGraphNode.prototype.executeAction = function(action)
         values.push({
             value: null,
             content:
-                "<span style='display: block; padding-left: 4px;'>No color</span>"
+                "<span style='display: block; padding-left: 4px;'>Default Color</span>"
         });
 
         for (var i in LGraphCanvas.node_colors) {
@@ -13209,7 +13209,7 @@ LGraphNode.prototype.executeAction = function(action)
             options = node.getMenuOptions(this);
         } else {
             options = [
-                {
+                /*{
                     content: "Inputs",
                     has_submenu: true,
                     disabled: true,
@@ -13227,8 +13227,8 @@ LGraphNode.prototype.executeAction = function(action)
                     has_submenu: true,
                     callback: LGraphCanvas.onShowMenuNodeProperties
                 },
-                null,
-                {
+                null,*/
+                /*{
                     content: "Title",
                     callback: LGraphCanvas.onShowPropertyEditor
                 },
@@ -13236,7 +13236,8 @@ LGraphNode.prototype.executeAction = function(action)
                     content: "Mode",
                     has_submenu: true,
                     callback: LGraphCanvas.onMenuNodeMode
-                }];
+                }*/
+            ];
             if (node.resizable !== false) {
                 options.push({
                     content: "Resize", callback: LGraphCanvas.onMenuResizeNode
@@ -13247,17 +13248,17 @@ LGraphNode.prototype.executeAction = function(action)
                     content: "Collapse",
                     callback: LGraphCanvas.onMenuNodeCollapse
                 },
-                { content: "Pin", callback: LGraphCanvas.onMenuNodePin },
+                // { content: "Pin", callback: LGraphCanvas.onMenuNodePin },
                 {
                     content: "Colors",
                     has_submenu: true,
                     callback: LGraphCanvas.onMenuNodeColors
                 },
-                {
+                /*{
                     content: "Shapes",
                     has_submenu: true,
                     callback: LGraphCanvas.onMenuNodeShapes
-                },
+                },*/
                 null
             );
         }
@@ -13359,7 +13360,7 @@ LGraphNode.prototype.executeAction = function(action)
         };
 
         if (node)
-            options.title = node.type;
+            options.title = node.type.split("/").slice(-1)[0];
 
         //check if mouse is in input
         var slot = null;

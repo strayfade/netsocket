@@ -136,17 +136,18 @@
     padding-right: 8px;
     transition-duration: 0.4s;
 }
+
 .litegraph .litemenu-entry.has_submenu:hover {
     border-right: 7px solid black;
     padding-right: 3px;
 }
 
 .litegraph .litemenu-title {
-    color: #dde;
-    background-color: #111;
+    color: white;
+    background-color: #151515;
     margin: 0;
-    padding: 2px;
     cursor: default;
+    padding: 6px 12px;
 }
 
 .litegraph .litemenu-entry:hover:not(.disabled):not(.separator) {
