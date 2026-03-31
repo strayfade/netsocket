@@ -1,5 +1,5 @@
-const {log, logColors} = require('../log')
-const {number, string, bool} = require('./utils/inputParser')
+const { log, logColors } = require('../log')
+const { number, string, bool } = require('./utils/inputParser')
 
 class NodeDefinition {
   constructor() {
@@ -12,11 +12,12 @@ class NodeDefinition {
 NodeDefinition.prototype.title = 'String/Random'
 NodeDefinition.prototype.color = 'green'
 
+const crypto = require('crypto')
 const NodeFunction = async (node, params, behaviors) => {
   const chars = string(params.Charset)
   let result = '';
   for (let i = 0; i < number(params.Length); i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    result += chars.charAt(crypto.randomInt(chars.length));
   }
   await behaviors.populateNextNodeLinks([result]);
   return true

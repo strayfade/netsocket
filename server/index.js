@@ -251,11 +251,12 @@ const hasUserSession = (req) => {
     if (authSkipped()) return false;
     return sessionIsValidAndTouch(req.cookies?.tk);
 };
+const crypto = require('crypto');
 function generateRandomString(length) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let result = "";
     for (let i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
+        result += chars.charAt(crypto.randomInt(chars.length));
     }
     return result;
 }
@@ -313,8 +314,13 @@ app.post("/login", async (req, res) => {
         return res.cookie("tk", tk, sessionCookieOpts).sendStatus(200);
     }
     try {
+        const cmp = async (str1, str2) => {
+            let eq = str1 === str2
+            await new Promise((resolve) => setTimeout(resolve, 10))
+            return eq;
+        }
         if (!hasAccount()) {
-            if (password !== passwordConfirm) {
+            if (!(await cmp(password, passwordConfirm))) {
                 return res.status(400).json({ error: "password_mismatch" });
             }
             const usernameHash = await bcrypt.hash(u, BCRYPT_ROUNDS);
