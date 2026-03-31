@@ -51,11 +51,13 @@
             <div class="header-distance"></div>
             <a href="#" id="open-settings">
                 <span>Node Settings</span>
-                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;">settings</span>
+                <span class="material-symbols-outlined"
+                    style="font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;">settings</span>
             </a>
             <a href="/logout">
                 <span>Log Out</span>
-                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;">arrow_outward</span>
+                <span class="material-symbols-outlined"
+                    style="font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;">arrow_outward</span>
             </a>
         </header>
         <div id="editor-keybinds-bar" class="editor-keybinds-bar" hidden aria-hidden="true">
@@ -118,7 +120,7 @@
             const n = Object.keys(sel).length;
             if (!keybindsBar || !keybindsInner) return;
             keybindsInner.innerHTML = "";
-            if (n < 1) {
+            if (n < 0) {
                 keybindsBar.hidden = true;
                 keybindsBar.setAttribute("aria-hidden", "true");
                 return;
@@ -130,11 +132,16 @@
             selectionSummary.textContent =
                 n === 1 ? "1 node selected" : `${n} nodes selected`;
             keybindsInner.appendChild(selectionSummary);
-            appendKeybindItem(["Double-click"], "Set Inputs");
-            appendKeybindItem(["Alt", "Drag"], "Clone");
-            appendKeybindItem(["Shift"], "Multiselect");
-            appendKeybindItem(["CTRL", "C"], "Copy");
-            appendKeybindItem(["CTRL", "V"], "Paste");
+            if (n === 0) {
+                appendKeybindItem(["Right-click"], "Add Nodes");
+            }
+            if (n > 0) {
+                appendKeybindItem(["Double-click"], "Set Inputs");
+                appendKeybindItem(["Alt", "Drag"], "Clone");
+                appendKeybindItem(["Shift"], "Multiselect");
+                appendKeybindItem(["CTRL", "C"], "Copy");
+                appendKeybindItem(["CTRL", "V"], "Paste");
+            }
             if (n > 1) {
                 appendKeybindItem(["Shift", "Drag"], "Move Nodes");
             }
