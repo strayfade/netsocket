@@ -5,7 +5,7 @@
 # Build files
 /extensions/overlay/netsocketoverlay-*
 .env
-.credentials.json
+/data/
 /extensions/overlay/node_modules
 frontend/public/nodes/constructNodes.js
 /extensions/overlay-cpp/Debug

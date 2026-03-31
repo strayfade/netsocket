@@ -1,11 +1,16 @@
 const path = require('path')
+const fs = require('fs')
+
+const dataDir = path.join(__dirname, '../data')
+fs.mkdirSync(dataDir, { recursive: true })
+
 const config = {
     storage: {
-        nodes: path.join(__dirname, "../../.state.json"),
-        users: path.join(__dirname, "../../.users.json"),
-        credentials: path.join(__dirname, "../../.credentials.json"),
-        vars: path.join(__dirname, "../../.vars.json"),
-        settings: path.join(__dirname, "../../.settings.json")
+        nodes: path.join(dataDir, 'state.json'),
+        users: path.join(dataDir, 'users.json'),
+        credentials: path.join(dataDir, 'credentials.json'),
+        vars: path.join(dataDir, 'vars.json'),
+        settings: path.join(dataDir, 'settings.json')
     },
     netsocket: {
         username: "strayfade",
