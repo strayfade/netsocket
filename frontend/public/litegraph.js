@@ -5336,7 +5336,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.editor_alpha = 1; //used for transition
         this.pause_rendering = false;
         this.clear_background = true;
-        this.clear_background_color = "#22222200";
+        this.clear_background_color = "#2a2a2a";
 
         this.read_only = false; //if set to true users cannot modify the graph
         this.render_only_selected = true;
@@ -12291,7 +12291,7 @@ LGraphNode.prototype.executeAction = function(action)
             root.style.height = options.height + (options.height.constructor === Number ? "px" : "");
         if (options.closable) {
             var close = document.createElement("span");
-            close.innerHTML = "&#10005;";
+            close.innerHTML = "<span class='material-symbols-outlined'>close</span>";
             close.classList.add("close");
             close.addEventListener("click", function () {
                 root.close();

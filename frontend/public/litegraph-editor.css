@@ -4,9 +4,9 @@
     margin: 0;
     padding: 0;
 
-    background-color: white;
-    color: black;
-    font: 14px Tahoma;
+    background-color: black;
+    color: white;
+    font-size: 14px;
 
     position: relative;
 }

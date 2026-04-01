@@ -366,7 +366,11 @@
         <div class="settings-shell" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
             <div id="settings-sidebar">
                 <div class="settings-sidebar-top">
-                    <span type="button" id="close-settings" class="settings-close-btn">Close</span>
+                    <span type="button" id="close-settings" class="settings-close-btn">
+                        <span class="material-symbols-outlined">
+                            close
+                        </span>
+                    </span>
                 </div>
                 <div id="settings-tabs-container"></div>
             </div>
@@ -516,13 +520,13 @@
                     const panel = document.createElement('div')
                     panel.className = 'settings-panel'
                     panel.style.display = idx === 0 ? '' : 'none'
-                    const h = document.createElement('h3')
-                    h.textContent = cat
-                    panel.appendChild(h)
-                    const sep = document.createElement('span')
-                    sep.className = 'separator'
-                    sep.setAttribute('aria-hidden', 'true')
-                    panel.appendChild(sep)
+                    //const h = document.createElement('h3')
+                    //h.textContent = cat
+                    //panel.appendChild(h)
+                    //const sep = document.createElement('span')
+                    //sep.className = 'separator'
+                    //sep.setAttribute('aria-hidden', 'true')
+                    //panel.appendChild(sep)
                     for (const pref of byCat[cat]) {
                         panel.appendChild(buildFieldRow(pref))
                     }
