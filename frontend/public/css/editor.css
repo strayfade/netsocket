@@ -3,6 +3,20 @@
     font-optical-sizing: auto;
 }
 
+.wordmark {
+    position: absolute;
+    width: 100%;
+    z-index: 3;
+    pointer-events: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 42px;
+}
+.wordmark img {
+    height: 18px;
+}
+
 .property_value {
     font-family: 'Google Sans Code', 'Courier New', Courier, monospace;
 }
