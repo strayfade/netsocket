@@ -25,7 +25,8 @@
         NODE_COLLAPSED_RADIUS: 10,
         NODE_COLLAPSED_WIDTH: 80,
         NODE_TITLE_COLOR: "#FFF",
-        NODE_SELECTED_TITLE_COLOR: "lime",
+        NODE_SELECTED_TITLE_COLOR: "#FFF",
+        NODE_BOX_OUTLINE_COLOR: "#D97E07",
         NODE_TEXT_SIZE: 14,
         NODE_TEXT_COLOR: "#FFF",
         NODE_SUBTEXT_SIZE: 12,
@@ -33,7 +34,6 @@
         NODE_DEFAULT_BGCOLOR: "#353535",
         NODE_DEFAULT_BOXCOLOR: "#FFF",
         NODE_DEFAULT_SHAPE: "box",
-        NODE_BOX_OUTLINE_COLOR: "lime",
         DEFAULT_SHADOW_COLOR: "rgba(0,0,0,0.2)",
         DEFAULT_GROUP_FONT: 24,
 
@@ -9267,28 +9267,28 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.beginPath();
             if (shape == LiteGraph.BOX_SHAPE) {
                 ctx.rect(
-                    -6 + area[0],
-                    -6 + area[1],
-                    12 + area[2],
-                    12 + area[3]
+                    -3 + area[0],
+                    -3 + area[1],
+                    6 + area[2],
+                    6 + area[3]
                 );
             } else if (
                 shape == LiteGraph.ROUND_SHAPE ||
                 (shape == LiteGraph.CARD_SHAPE && node.flags.collapsed)
             ) {
                 ctx.roundRect(
-                    -6 + area[0],
-                    -6 + area[1],
-                    12 + area[2],
-                    12 + area[3],
+                    -3 + area[0],
+                    -3 + area[1],
+                    6 + area[2],
+                    6 + area[3],
                     [this.round_radius * 2]
                 );
             } else if (shape == LiteGraph.CARD_SHAPE) {
                 ctx.roundRect(
-                    -6 + area[0],
-                    -6 + area[1],
-                    12 + area[2],
-                    12 + area[3],
+                    -3 + area[0],
+                    -3 + area[1],
+                    6 + area[2],
+                    6 + area[3],
                     [this.round_radius * 2, 2, this.round_radius * 2, 2]
                 );
             } else if (shape == LiteGraph.CIRCLE_SHAPE) {
@@ -9300,8 +9300,11 @@ LGraphNode.prototype.executeAction = function(action)
                     Math.PI * 2
                 );
             }
+            let prevStrokeWidth = ctx.lineWidth;
             ctx.strokeStyle = LiteGraph.NODE_BOX_OUTLINE_COLOR;
+            ctx.lineWidth = 3;
             ctx.stroke();
+            ctx.lineWidth = prevStrokeWidth;
             ctx.strokeStyle = fgcolor;
             ctx.globalAlpha = 1;
         }

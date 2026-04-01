@@ -172,14 +172,14 @@ header #node-count-visible {
     width: 100vw;
     left: 0;
     bottom: 0;
-    height: 20px;
+    height: 34px;
     z-index: 1;
     resize: none;
-    background-color: white;
+    background-color: black;
     border: none;
     font-size: 12px;
     font-family: monospace;
-    color: black;
+    color: white;
     padding: 4px 10px;
     border-top: 1px solid #141414;
     overflow: hidden;
