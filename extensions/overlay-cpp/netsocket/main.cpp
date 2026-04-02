@@ -170,11 +170,41 @@ namespace notification {
     }
 }
 
+char urlInputBuf[256];
+char secretInputBuf[256];
 struct preferences_t {
     std::string url = NETSOCKET_DEFAULT_HOST;
+    std::string secret = NETSOCKET_SECRET;
     bool shouldStartOnStartup = false;
     int retryMs = 500000;
 } preferences;
+bool isPreferencesVisible = false;
+ImGuiStyle ogStyle;
+void showPreferences() {
+    ImGuiStyle savedStyle = ImGui::GetStyle();
+    ImGui::GetStyle() = ogStyle;
+    if (isPreferencesVisible) {
+        if (ImGui::Begin("Settings")) {
+            ImGui::InputText("Server URL", urlInputBuf, 256,
+                ImGuiInputTextFlags_ElideLeft
+            );
+            ImGui::SameLine();
+            if (ImGui::Button("Save##Sv1")) {
+                preferences.url = std::string(urlInputBuf);
+            }
+            ImGui::InputText("Secret", secretInputBuf, 256,
+                ImGuiInputTextFlags_ElideLeft
+            );
+            ImGui::SameLine();
+            if (ImGui::Button("Save##Sv2")) {
+                preferences.secret = std::string(secretInputBuf);
+            }
+            ImGui::Checkbox("Add to Startup", &preferences.shouldStartOnStartup);
+            ImGui::End();
+        }
+    }
+    ImGui::GetStyle() = savedStyle;
+}
 
 bool isConnecting = false;
 std::string connUrl = "Disconnected";
@@ -186,12 +216,12 @@ WebSocket::readyStateValues OpenConnection(const std::string url = preferences.u
         exit(1);
     }
     Socket = WebSocket::from_url(url, "");
-    int TimePassed = 0;
+    int timePassed = 0;
     bool success = true;
     while (Socket == nullptr || Socket->getReadyState() != WebSocket::OPEN) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        TimePassed += 100;
-        if (TimePassed > preferences.retryMs) {
+        timePassed += 100;
+        if (timePassed > preferences.retryMs) {
             success = false;
             notification::addNotification({ std::string("Failed to connect to server \"") + url + std::string("\" after ") + std::to_string(preferences.retryMs) + std::string("ms"), ImColor(255, 0, 0)});
             OpenConnection(url);
@@ -332,6 +362,7 @@ int main(int, char**) {
     //ImGui::StyleColorsLight();
 
     // Setup scaling
+    ogStyle = ImGui::GetStyle();
     SetStyle();
     ImGuiStyle& style = ImGui::GetStyle();
     style.ScaleAllSizes(devicePixelRatio);
@@ -374,8 +405,54 @@ int main(int, char**) {
             hidePalette(hwnd);
         }
     }));
+    registeredKeys.push_back(new hotkey([]() -> bool {
+        return (
+            GetAsyncKeyState(VK_LCONTROL) &&
+            GetAsyncKeyState(VK_LSHIFT) &&
+            GetAsyncKeyState('1')
+        );
+    }, [&]() {
+        const char* output = notification::lastBigNotification.c_str();
+        const size_t len = strlen(output) + 1;
+        HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
+        memcpy(GlobalLock(hMem), output, len);
+        GlobalUnlock(hMem);
+        OpenClipboard(0);
+        EmptyClipboard();
+        SetClipboardData(CF_TEXT, hMem);
+        CloseClipboard();
+    }));
+    registeredKeys.push_back(new hotkey([]() -> bool {
+        return (
+            GetAsyncKeyState(VK_LCONTROL) &&
+            GetAsyncKeyState(VK_LSHIFT) &&
+            GetAsyncKeyState('2')
+        );
+    }, [&]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        for (char c : notification::lastBigNotification) {
+            SHORT vk = VkKeyScanA(c);
 
-    std::thread t(OpenConnection, preferences.url   );
+            INPUT inputs[2] = {};
+            inputs[0].type = INPUT_KEYBOARD;
+            inputs[0].ki.wVk = vk;
+            inputs[1].type = INPUT_KEYBOARD;
+            inputs[1].ki.wVk = vk;
+            inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
+            SendInput(2, inputs, sizeof(INPUT));
+        }
+    }));
+    registeredKeys.push_back(new hotkey([]() -> bool {
+        return (
+            GetAsyncKeyState(VK_LCONTROL) &&
+            GetAsyncKeyState(VK_LSHIFT) &&
+            GetAsyncKeyState('3')
+        );
+    }, [&]() {
+        isPreferencesVisible = !isPreferencesVisible;
+    }));
+
+    std::thread t(OpenConnection, preferences.url);
 
     // Main loop
     bool done = false;
@@ -385,35 +462,6 @@ int main(int, char**) {
 
         for (hotkey* key : registeredKeys) {
             key->poll();
-        }
-
-        // Notification actions
-        if (GetAsyncKeyState(VK_LCONTROL) && GetAsyncKeyState(VK_LSHIFT) && GetAsyncKeyState('1') & 1) {
-            // Copy text
-            const char* output = notification::lastBigNotification.c_str();
-            const size_t len = strlen(output) + 1;
-            HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
-            memcpy(GlobalLock(hMem), output, len);
-            GlobalUnlock(hMem);
-            OpenClipboard(0);
-            EmptyClipboard();
-            SetClipboardData(CF_TEXT, hMem);
-            CloseClipboard();
-        }
-        if (GetAsyncKeyState(VK_LCONTROL) && GetAsyncKeyState(VK_LSHIFT) && GetAsyncKeyState('2') & 1) {
-            // Type text
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            for (char c : notification::lastBigNotification) {
-                SHORT vk = VkKeyScanA(c);
-
-                INPUT inputs[2] = {};
-                inputs[0].type = INPUT_KEYBOARD;
-                inputs[0].ki.wVk = vk;
-                inputs[1].type = INPUT_KEYBOARD;
-                inputs[1].ki.wVk = vk;
-                inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
-                SendInput(2, inputs, sizeof(INPUT));
-            }
         }
 
         // Poll socket for data
@@ -452,16 +500,14 @@ int main(int, char**) {
             break;
 
         // Handle window being minimized or screen locked
-        if (g_SwapChainOccluded && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
-        {
+        if (g_SwapChainOccluded && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED) {
             ::Sleep(10);
             continue;
         }
         g_SwapChainOccluded = false;
 
         // Handle window resize (we don't resize directly in the WM_SIZE handler)
-        if (g_ResizeWidth != 0 && g_ResizeHeight != 0)
-        {
+        if (g_ResizeWidth != 0 && g_ResizeHeight != 0) {
             CleanupRenderTarget();
             g_pSwapChain->ResizeBuffers(0, g_ResizeWidth, g_ResizeHeight, DXGI_FORMAT_UNKNOWN, 0);
             g_ResizeWidth = g_ResizeHeight = 0;
@@ -474,6 +520,9 @@ int main(int, char**) {
         ImGui::NewFrame();
 
         if (!paletteHidden) {
+
+            showPreferences();
+
             ImVec2 palettePos;
             ImGui::PushFont(font_lg);
             ImGui::SetNextWindowPos(ImVec2(

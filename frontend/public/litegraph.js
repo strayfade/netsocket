@@ -13429,10 +13429,10 @@ LGraphNode.prototype.executeAction = function(action)
         red: { color: "rgb(243, 105, 105)", bgcolor: "#533", groupcolor: "#A88" },
         //brown: { color: "#6d482e", bgcolor: "#593930", groupcolor: "#b06634" },
         green: { color: "#6eaf72", bgcolor: "#353", groupcolor: "#6eaf72" },
-        blue: { color: "rgb(74, 74, 218)", bgcolor: "#335", groupcolor: "#88A" },
+        blue: { color: "rgb(117, 117, 242)", bgcolor: "#335", groupcolor: "#88A" },
         //pale_blue: { color: "#2a363b", bgcolor: "#3f5159", groupcolor: "#3f789e" },
         cyan: { color: "rgb(56, 211, 211)", bgcolor: "#355", groupcolor: "#8AA" },
-        purple: { color: "rgb(209, 84, 209)", bgcolor: "#535", groupcolor: "#a1309b" },
+        purple: { color: "rgb(182, 84, 209)", bgcolor: "#535", groupcolor: "#a1309b" },
         yellow: { color: "rgb(230, 227, 62)", bgcolor: "#653", groupcolor: "#b58b2a" },
         black: { color: "#080808", bgcolor: "#000", groupcolor: "#444" },
         white: { color: "#dbdbdb", bgcolor: "#000", groupcolor: "#444" }

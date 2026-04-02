@@ -43,7 +43,7 @@
     <script src="inset.browser.js"></script>
 </head>
 
-<body style="width: 100%; height: 100%; margin: 0;" class="litegraph litegraph-editor">
+<body style="width: 100vw; height: 100vh; margin: 0;" class="litegraph litegraph-editor">
     <div class="editor-top-chrome">
         <header>
             <img src="favicon.png" alt="Netsocket Logo">
@@ -171,6 +171,7 @@
             banner.style.padding = connected ? "0px 10px" : "4px 10px"
             banner.textContent = connected ? "" : "Disconnected"
         }
+        setConnected(false)
 
         let activeWs = null;
         let wsConnectAbort = null;

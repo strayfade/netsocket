@@ -460,15 +460,11 @@ namespace {
     };
 
 
-    easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, const std::string& origin) {
+    easywsclient::WebSocket::pointer from_url(const std::string& url, const std::string& secret, bool useMask) {
         char host[512];
         int port;
         if (url.size() >= 512) {
             Log("[socket] URL exceeds max length (512): " + url, "!");
-            return NULL;
-        }
-        if (origin.size() >= 200) {
-            Log("[socket] Origin exceeds max length (200): " + origin, "!");
             return NULL;
         }
         else if (sscanf(url.c_str(), "ws://%[^:/]:%d", host, &port) == 2) {
@@ -506,7 +502,7 @@ namespace {
         snprintf(line, 1024, "Sec-WebSocket-Version: 13\r\n");
         send(sockfd, line, strlen(line), 0);
         const char* word = "X-Socket-Auth: ";
-        const char* word2 = NETSOCKET_SECRET;
+        const char* word2 = secret.c_str();
         const char* word3 = "\r\n";
         char* s = new char[strlen(word) + strlen(word2) + 1];
         strcpy(s, word);
@@ -566,12 +562,12 @@ namespace easywsclient {
         return dummy;
     }
 
-    WebSocket::pointer WebSocket::from_url(const std::string& url, const std::string& origin) {
-        return ::from_url(url, true, origin);
+    WebSocket::pointer WebSocket::from_url(const std::string& url, const std::string& secret) {
+        return ::from_url(url, secret, true);
     }
 
-    WebSocket::pointer WebSocket::from_url_no_mask(const std::string& url, const std::string& origin) {
-        return ::from_url(url, false, origin);
+    WebSocket::pointer WebSocket::from_url_no_mask(const std::string& url, const std::string& secret) {
+        return ::from_url(url, secret, false);
     }
 
 }
