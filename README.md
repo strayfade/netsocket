@@ -22,7 +22,7 @@
 - Image: [strayfade/netsocket](https://hub.docker.com/repository/docker/strayfade/netsocket/general)
 - Run from command line:
 ```
-docker run -e HOSTNAME="0.0.0.0" -e PORT="4675" -p 4675:4675 strayfade/netsocket
+docker run -e HOSTNAME=0.0.0.0 -e PORT=4675 -p 4675:4675 -e DATA_DIR=/netsocket/data -v netsocket-data:/netsocket/data netsocket 
 ```
 - `compose.yaml`
 ```yaml
@@ -36,7 +36,12 @@ services:
     environment:
       - PORT=4675
       - HOSTNAME=0.0.0.0
+      - DATA_DIR=/netsocket/data
+    volumes:
+      - netsocket-data:/netsocket/data
     restart: always
+volumes:
+  netsocket-data:
 ```
 - Go to [http://localhost:4675](http://localhost:4675).
 

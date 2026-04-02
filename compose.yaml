@@ -8,4 +8,9 @@ services:
     environment:
       - PORT=4675
       - HOSTNAME=0.0.0.0
+      - DATA_DIR=/netsocket/data
+    volumes:
+      - netsocket-data:/netsocket/data
     restart: always
+volumes:
+  netsocket-data:

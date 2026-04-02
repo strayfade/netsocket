@@ -1,8 +1,13 @@
 const path = require('path')
 const fs = require('fs')
+const { log, logColors } = require('./log')
+const dataDir = process.env.DATA_DIR || path.join(__dirname, "../data");
+log(`Checking data directory: ${dataDir}`)
 
-const dataDir = path.join(__dirname, '../data')
-fs.mkdirSync(dataDir, { recursive: true })
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    log(`Creating new data directory: ${dataDir}`)
+}
 
 const config = {
     storage: {
@@ -11,10 +16,6 @@ const config = {
         credentials: path.join(dataDir, 'credentials.json'),
         vars: path.join(dataDir, 'vars.json'),
         settings: path.join(dataDir, 'settings.json')
-    },
-    netsocket: {
-        username: "strayfade",
-        password: atob("dDQ1WG49bTckKExlWlJpcEhVLVd9UDtdN00lJCwrR1NHVGs2MGhIMXdYTXk9Y005OWZLdTE1OUM2OUcrLjR5ZTZ2JmhoQEVTXzZFRzhjKmhQTWovenVTKGg3amJqJUJMP2cuKSsteC81TiwvJjc0ZjJ6IyZWM0xGRSZHdDlkLndrLnt4TVlMKG0jQmh0aWIhOFFhaVA0cTV2e2dHdFtXanVoJWZyMiwzUk0oRi5nSzk6My1Id0QofXI2LyUlYipMY256MCxZKC1EOCYoK1RiJldjXUctYVMzKHhtZ2omMHZEY0B4fSlAcHgqYipKSFt1PTlEeXtQMDdCNjBpP3R2dA==")
     }
 }
 

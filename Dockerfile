@@ -1,5 +1,5 @@
 # Build stage
-FROM dhi.io/node:22-dev AS build-stage
+FROM node:22 AS build-stage
 
 ENV NODE_ENV=production
 WORKDIR /netsocket
@@ -8,7 +8,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 # Runtime stage
-FROM dhi.io/node:22 AS runtime-stage
+FROM node:22 AS runtime-stage
 
 ENV NODE_ENV=production
 WORKDIR /netsocket

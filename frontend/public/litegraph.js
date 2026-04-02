@@ -8725,11 +8725,10 @@ LGraphNode.prototype.executeAction = function(action)
                             ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8); //faster
                         else {
                             const renderSlot = (x, y, filled) => {
-
                                 ctx.beginPath();
-                                ctx.moveTo(x + 1, y - 4)
-                                ctx.lineTo(x + 6, y)
-                                ctx.lineTo(x + 1, y + 4)
+                                ctx.moveTo(x + 1.5, y - 4)
+                                ctx.lineTo(x + 8, y)
+                                ctx.lineTo(x + 1.5, y + 4)
                                 ctx.closePath();
                                 ctx.fill();
 
@@ -8738,14 +8737,14 @@ LGraphNode.prototype.executeAction = function(action)
                                 ctx.shadowOffsetX = 0;
                                 ctx.shadowOffsetY = 0;
                                 ctx.beginPath();
-                                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                                ctx.arc(x, y, 5, 0, Math.PI * 2);
                                 ctx.closePath();
                                 ctx.fill();
 
                                 if (filled) return;
 
                                 ctx.beginPath();
-                                ctx.arc(x, y, 2.25, 0, Math.PI * 2);
+                                ctx.arc(x, y, 3, 0, Math.PI * 2);
                                 ctx.closePath();
                                 ctx.shadowBlur = 4;
                                 ctx.fillStyle = "black"
@@ -8894,9 +8893,9 @@ LGraphNode.prototype.executeAction = function(action)
                             const renderSlot = (x, y, filled) => {
 
                                 ctx.beginPath();
-                                ctx.moveTo(x + 1, y - 4)
-                                ctx.lineTo(x + 6, y)
-                                ctx.lineTo(x + 1, y + 4)
+                                ctx.moveTo(x + 1.5, y - 4)
+                                ctx.lineTo(x + 8, y)
+                                ctx.lineTo(x + 1.5, y + 4)
                                 ctx.closePath();
                                 ctx.fill();
 
@@ -8905,14 +8904,14 @@ LGraphNode.prototype.executeAction = function(action)
                                 ctx.shadowOffsetX = 0;
                                 ctx.shadowOffsetY = 0;
                                 ctx.beginPath();
-                                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                                ctx.arc(x, y, 5, 0, Math.PI * 2);
                                 ctx.closePath();
                                 ctx.fill();
 
                                 if (filled) return;
 
                                 ctx.beginPath();
-                                ctx.arc(x, y, 2.25, 0, Math.PI * 2);
+                                ctx.arc(x, y, 3, 0, Math.PI * 2);
                                 ctx.closePath();
                                 ctx.shadowBlur = 4;
                                 ctx.fillStyle = "black"
