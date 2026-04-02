@@ -9,6 +9,9 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Math/Trigonometry/sin"
 NodeDefinition.prototype.color = "green"
+NodeDefinition.prototype.bigText = "sin"
+NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"
+NodeDefinition.prototype.collapsible = "false"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([ Math.sin(number(params.A)) ]);
     return true

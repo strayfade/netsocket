@@ -11,6 +11,8 @@ class NodeDefinition {
 NodeDefinition.prototype.title = "Math/Divide"
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "/"
+NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"
+NodeDefinition.prototype.collapsible = "false"
 const NodeFunction = async (node, params, behaviors) => {
     if (number(params.B) == 0) {
         log(`Attempted to divide by zero.`)

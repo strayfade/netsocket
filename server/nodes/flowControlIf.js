@@ -10,6 +10,7 @@ class NodeDefinition {
         this.addOutput("False", LiteGraph.EVENT);
     }
 }
+NodeDefinition.prototype.icon = "arrow_split"
 NodeDefinition.prototype.title = "Flow Control/If"
 NodeDefinition.prototype.color = "white"
 const NodeFunction = async (node, params, behaviors) => {

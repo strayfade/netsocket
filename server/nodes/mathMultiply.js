@@ -11,6 +11,8 @@ class NodeDefinition {
 NodeDefinition.prototype.title = "Math/Multiply"
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "X"
+NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"
+NodeDefinition.prototype.collapsible = "false"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([ number(params.A) * number(params.B) ]);
     return true

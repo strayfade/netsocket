@@ -68,7 +68,7 @@ ${(() => {
                 }
                 else {
                     outConstructor += `\t\tthis.addInput("${input.name}", ${input.type != "LiteGraph.EVENT" ? `"${input.type}"` : input.type})\n`
-                    
+
                     if (property && input.type != "LiteGraph.EVENT") {
                         outConstructor += `\t\tthis.addProperty("${input.name}", "${property.defaultValue}")\n`
                     }
@@ -117,6 +117,9 @@ ${(() => {
                 break;
             case "color":
             case "bigText":
+            case "collapsible":
+            case "icon":
+            case "title_mode":
                 nodeData += `\nNodeDefinition.prototype.${elem.toString()} = "${currentPrototypeVal}"`
                 break;
             default:

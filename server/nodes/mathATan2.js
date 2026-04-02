@@ -8,6 +8,9 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Math/Trigonometry/atan2"
 NodeDefinition.prototype.color = "green"
+NodeDefinition.prototype.bigText = "atan2"
+NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"
+NodeDefinition.prototype.collapsible = "false"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([
         Math.atan2(number(params.A), number(params.B))

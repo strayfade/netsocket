@@ -16,22 +16,22 @@
 
         CANVAS_GRID_SIZE: 30,
 
-        NODE_TITLE_HEIGHT: 30,
+        NODE_TITLE_HEIGHT: 26,
         NODE_TITLE_TEXT_Y: 20,
-        NODE_SLOT_HEIGHT: 20,
+        NODE_SLOT_HEIGHT: 24,
         NODE_WIDGET_HEIGHT: 20,
         NODE_WIDTH: 160,
         NODE_MIN_WIDTH: 50,
         NODE_COLLAPSED_RADIUS: 10,
         NODE_COLLAPSED_WIDTH: 80,
-        NODE_TITLE_COLOR: "#FFF",
+        NODE_TITLE_COLOR: "#ffffffe7",
         NODE_SELECTED_TITLE_COLOR: "#FFF",
         NODE_BOX_OUTLINE_COLOR: "#D97E07",
-        NODE_TEXT_SIZE: 14,
+        NODE_TEXT_SIZE: 13,
         NODE_TEXT_COLOR: "#FFF",
         NODE_SUBTEXT_SIZE: 12,
         NODE_DEFAULT_COLOR: "#333",
-        NODE_DEFAULT_BGCOLOR: "#353535",
+        NODE_DEFAULT_BGCOLOR: "#00000080",
         NODE_DEFAULT_BOXCOLOR: "#FFF",
         NODE_DEFAULT_SHAPE: "box",
         DEFAULT_SHADOW_COLOR: "rgba(0,0,0,0.2)",
@@ -42,9 +42,9 @@
         WIDGET_TEXT_COLOR: "#DDD",
         WIDGET_SECONDARY_TEXT_COLOR: "#999",
 
-        LINK_COLOR: "#DD2",
-        EVENT_LINK_COLOR: "#DD2",
-        CONNECTING_LINK_COLOR: "#DD2",
+        LINK_COLOR: "white",
+        EVENT_LINK_COLOR: "white",
+        CONNECTING_LINK_COLOR: "white",
 
         MAX_NUMBER_OF_NODES: 10000, //avoid infinite loops
         DEFAULT_POSITION: [100, 100], //default node position
@@ -4934,7 +4934,7 @@ LGraphNode.prototype.executeAction = function(action)
      **/
     LGraphNode.prototype.collapse = function (force) {
         this.graph._version++;
-        if (this.constructor.collapsable === false && !force) {
+        if (this.constructor.collapsible === "false") {
             return;
         }
         if (!this.flags.collapsed) {
@@ -5313,16 +5313,16 @@ LGraphNode.prototype.executeAction = function(action)
         this.ds = new DragAndScale();
         this.zoom_modify_alpha = false; //otherwise it generates ugly patterns when scaling down too much
 
-        this.title_text_font = "" + LiteGraph.NODE_TEXT_SIZE + "px 'Geist'";
+        this.title_text_font = "500 " + LiteGraph.NODE_TEXT_SIZE + "px 'Roboto'";
         this.inner_text_font =
-            "normal " + LiteGraph.NODE_SUBTEXT_SIZE + "px 'Geist'";
+            "normal " + LiteGraph.NODE_SUBTEXT_SIZE + "px 'Roboto'";
         this.node_title_color = LiteGraph.NODE_TITLE_COLOR;
         this.default_link_color = LiteGraph.LINK_COLOR;
         this.default_connection_color = {
-            input_off: "#DD2",
-            input_on: "#DD2", //"#BBD"
-            output_off: "#DD2",
-            output_on: "#DD2" //"#BBD"
+            input_off: "white",
+            input_on: "white",
+            output_off: "white",
+            output_on: "white"
         };
         this.default_connection_color_byType = {
             number: "#7F7",
@@ -7939,7 +7939,7 @@ LGraphNode.prototype.executeAction = function(action)
                     connType === LiteGraph.EVENT ||
                     connShape === LiteGraph.BOX_SHAPE
                 ) {
-                    ctx.rect(
+                    /*ctx.rect(
                         this.connecting_pos[0] - 6 + 0.5,
                         this.connecting_pos[1] - 5 + 0.5,
                         14,
@@ -7952,7 +7952,7 @@ LGraphNode.prototype.executeAction = function(action)
                         this.graph_mouse[1] - 5 + 0.5,
                         14,
                         10
-                    );
+                    );*/
                 } else if (connShape === LiteGraph.ARROW_SHAPE) {
                     ctx.moveTo(this.connecting_pos[0] + 8, this.connecting_pos[1] + 0.5);
                     ctx.lineTo(this.connecting_pos[0] - 4, this.connecting_pos[1] + 6 + 0.5);
@@ -8485,23 +8485,16 @@ LGraphNode.prototype.executeAction = function(action)
      * @method drawNode
      **/
     LGraphCanvas.prototype.drawNode = function (node, ctx) {
-        var glow = false;
         this.current_node = node;
 
         var color = node.color || node.constructor.color || LiteGraph.NODE_DEFAULT_COLOR;
         var bgcolor = node.bgcolor || node.constructor.bgcolor || LiteGraph.NODE_DEFAULT_BGCOLOR;
-
-        //shadow and glow
-        if (node.mouseOver) {
-            glow = true;
-        }
-
         var low_quality = this.ds.scale < 0.6; //zoomed out
 
         //only render if it forces it to do it
         if (this.live_mode) {
             if (!node.flags.collapsed) {
-                ctx.shadowColor = "transparent";
+                //ctx.shadowColor = "transparent";
                 if (node.onDrawForeground) {
                     node.onDrawForeground(ctx, this, this.canvas);
                 }
@@ -8628,6 +8621,7 @@ LGraphNode.prototype.executeAction = function(action)
                             this.default_connection_color_byTypeOff[slot_type] ||
                             this.default_connection_color_byType[slot_type] ||
                             this.default_connection_color.input_off;
+                    const filled = slot.link != null
 
                     var pos = node.getConnectionPos(true, i, slot_pos);
                     pos[0] -= node.pos[0];
@@ -8656,12 +8650,59 @@ LGraphNode.prototype.executeAction = function(action)
                                 14
                             );
                         } else {
-                            ctx.rect(
-                                pos[0] - 6 + 0.5,
-                                pos[1] - 5 + 0.5,
-                                14,
-                                10
-                            );
+                            function drawRoundedPolygon(ctx, points, filled = false) {
+                                let radius = filled ? 1 : 2;
+                                ctx.beginPath();
+
+                                ctx.fillStyle = "transparent"
+                                for (let i = 0; i < points.length; i++) {
+                                    const prev = points[(i - 1 + points.length) % points.length];
+                                    const curr = points[i];
+                                    const next = points[(i + 1) % points.length];
+
+                                    // Calculate direction vectors
+                                    const v1 = { x: curr.x - prev.x, y: curr.y - prev.y };
+                                    const v2 = { x: next.x - curr.x, y: next.y - curr.y };
+
+                                    // Normalize vectors
+                                    const len1 = Math.hypot(v1.x, v1.y);
+                                    const len2 = Math.hypot(v2.x, v2.y);
+
+                                    const p1 = {
+                                        x: curr.x - (v1.x / len1) * radius,
+                                        y: curr.y - (v1.y / len1) * radius
+                                    };
+
+                                    const p2 = {
+                                        x: curr.x + (v2.x / len2) * radius,
+                                        y: curr.y + (v2.y / len2) * radius
+                                    };
+
+                                    if (i === 0) ctx.moveTo(p1.x, p1.y);
+                                    else ctx.lineTo(p1.x, p1.y);
+
+                                    ctx.arcTo(curr.x, curr.y, p2.x, p2.y, radius);
+                                }
+                                ctx.lineTo(points[0].x, points[0].y + 1)
+
+                                ctx.lineWidth = 1;
+                                ctx.strokeStyle = "white";
+                                ctx.stroke();
+                                if (filled) {
+                                    ctx.fillStyle = "white"
+                                    ctx.fill();
+                                }
+                            }
+
+                            const connectWidth = 12
+                            const points = [
+                                { x: pos[0] - connectWidth / 2, y: pos[1] - connectWidth / 2 },
+                                { x: pos[0] - connectWidth / 12, y: pos[1] - connectWidth / 2 },
+                                { x: pos[0] + connectWidth / 2, y: pos[1] },
+                                { x: pos[0] - connectWidth / 12, y: pos[1] + connectWidth / 2 },
+                                { x: pos[0] - connectWidth / 2, y: pos[1] + connectWidth / 2 },
+                            ]
+                            drawRoundedPolygon(ctx, points, filled)
                         }
                     } else if (slot_shape === LiteGraph.ARROW_SHAPE) {
                         ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
@@ -8682,8 +8723,36 @@ LGraphNode.prototype.executeAction = function(action)
                     } else {
                         if (low_quality)
                             ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8); //faster
-                        else
-                            ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
+                        else {
+                            const renderSlot = (x, y, filled) => {
+
+                                ctx.beginPath();
+                                ctx.moveTo(x + 1, y - 4)
+                                ctx.lineTo(x + 6, y)
+                                ctx.lineTo(x + 1, y + 4)
+                                ctx.closePath();
+                                ctx.fill();
+
+                                ctx.shadowColor = "black";
+                                ctx.shadowBlur = 20;
+                                ctx.shadowOffsetX = 0;
+                                ctx.shadowOffsetY = 0;
+                                ctx.beginPath();
+                                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                                ctx.closePath();
+                                ctx.fill();
+
+                                if (filled) return;
+
+                                ctx.beginPath();
+                                ctx.arc(x, y, 2.25, 0, Math.PI * 2);
+                                ctx.closePath();
+                                ctx.shadowBlur = 4;
+                                ctx.fillStyle = "black"
+                                ctx.fill();
+                            }
+                            renderSlot(pos[0], pos[1], filled)
+                        }
                     }
                     ctx.fill();
 
@@ -8734,6 +8803,7 @@ LGraphNode.prototype.executeAction = function(action)
                             this.default_connection_color_byTypeOff[slot_type] ||
                             this.default_connection_color_byType[slot_type] ||
                             this.default_connection_color.output_off;
+                    let filled = slot.links && slot.links.length
                     ctx.beginPath();
                     //ctx.rect( node.size[0] - 14,i*14,10,10);
 
@@ -8747,21 +8817,59 @@ LGraphNode.prototype.executeAction = function(action)
                         slot_type === LiteGraph.EVENT ||
                         slot_shape === LiteGraph.BOX_SHAPE
                     ) {
-                        if (horizontal) {
-                            ctx.rect(
-                                pos[0] - 5 + 0.5,
-                                pos[1] - 8 + 0.5,
-                                10,
-                                14
-                            );
-                        } else {
-                            ctx.rect(
-                                pos[0] - 6 - 3,
-                                pos[1] - 5 + 0.5,
-                                14,
-                                10
-                            );
+                        function drawRoundedPolygon(ctx, points, filled = false) {
+                            let radius = filled ? 1 : 2;
+                            ctx.beginPath();
+
+                            ctx.fillStyle = "transparent"
+                            for (let i = 0; i < points.length; i++) {
+                                const prev = points[(i - 1 + points.length) % points.length];
+                                const curr = points[i];
+                                const next = points[(i + 1) % points.length];
+
+                                // Calculate direction vectors
+                                const v1 = { x: curr.x - prev.x, y: curr.y - prev.y };
+                                const v2 = { x: next.x - curr.x, y: next.y - curr.y };
+
+                                // Normalize vectors
+                                const len1 = Math.hypot(v1.x, v1.y);
+                                const len2 = Math.hypot(v2.x, v2.y);
+
+                                const p1 = {
+                                    x: curr.x - (v1.x / len1) * radius,
+                                    y: curr.y - (v1.y / len1) * radius
+                                };
+
+                                const p2 = {
+                                    x: curr.x + (v2.x / len2) * radius,
+                                    y: curr.y + (v2.y / len2) * radius
+                                };
+
+                                if (i === 0) ctx.moveTo(p1.x, p1.y);
+                                else ctx.lineTo(p1.x, p1.y);
+
+                                ctx.arcTo(curr.x, curr.y, p2.x, p2.y, radius);
+                            }
+                            ctx.lineTo(points[0].x, points[0].y + 1)
+
+                            ctx.lineWidth = 1;
+                            ctx.strokeStyle = "white";
+                            ctx.stroke();
+                            if (filled) {
+                                ctx.fillStyle = "white"
+                                ctx.fill();
+                            }
                         }
+
+                        const connectWidth = 12
+                        const points = [
+                            { x: pos[0] - connectWidth / 2, y: pos[1] - connectWidth / 2 },
+                            { x: pos[0] - connectWidth / 12, y: pos[1] - connectWidth / 2 },
+                            { x: pos[0] + connectWidth / 2, y: pos[1] },
+                            { x: pos[0] - connectWidth / 12, y: pos[1] + connectWidth / 2 },
+                            { x: pos[0] - connectWidth / 2, y: pos[1] + connectWidth / 2 },
+                        ]
+                        drawRoundedPolygon(ctx, points, filled)
                     } else if (slot_shape === LiteGraph.ARROW_SHAPE) {
                         ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
                         ctx.lineTo(pos[0] - 4, pos[1] + 6 + 0.5);
@@ -8781,8 +8889,37 @@ LGraphNode.prototype.executeAction = function(action)
                     } else {
                         if (low_quality)
                             ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8);
-                        else
-                            ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
+                        else {
+
+                            const renderSlot = (x, y, filled) => {
+
+                                ctx.beginPath();
+                                ctx.moveTo(x + 1, y - 4)
+                                ctx.lineTo(x + 6, y)
+                                ctx.lineTo(x + 1, y + 4)
+                                ctx.closePath();
+                                ctx.fill();
+
+                                ctx.shadowColor = "black";
+                                ctx.shadowBlur = 20;
+                                ctx.shadowOffsetX = 0;
+                                ctx.shadowOffsetY = 0;
+                                ctx.beginPath();
+                                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                                ctx.closePath();
+                                ctx.fill();
+
+                                if (filled) return;
+
+                                ctx.beginPath();
+                                ctx.arc(x, y, 2.25, 0, Math.PI * 2);
+                                ctx.closePath();
+                                ctx.shadowBlur = 4;
+                                ctx.fillStyle = "black"
+                                ctx.fill();
+                            }
+                            renderSlot(pos[0], pos[1], filled)
+                        }
                     }
 
                     //trigger
@@ -9002,8 +9139,12 @@ LGraphNode.prototype.executeAction = function(action)
         mouse_over
     ) {
         //bg rect
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "black"
         ctx.strokeStyle = fgcolor;
-        ctx.fillStyle = bgcolor;
+        ctx.fillStyle = "#00000080";
 
         var title_height = LiteGraph.NODE_TITLE_HEIGHT;
         var low_quality = this.ds.scale < 0.5;
@@ -9015,7 +9156,7 @@ LGraphNode.prototype.executeAction = function(action)
         var title_mode = node.constructor.title_mode;
 
         var render_title = true;
-        if (title_mode == LiteGraph.TRANSPARENT_TITLE || title_mode == LiteGraph.NO_TITLE) {
+        if (title_mode == LiteGraph.TRANSPARENT_TITLE || title_mode == "LiteGraph.NO_TITLE") {
             render_title = false;
         } else if (title_mode == LiteGraph.AUTOHIDE_TITLE && mouse_over) {
             render_title = true;
@@ -9039,13 +9180,82 @@ LGraphNode.prototype.executeAction = function(action)
                 shape == LiteGraph.ROUND_SHAPE ||
                 shape == LiteGraph.CARD_SHAPE
             ) {
-                ctx.roundRect(
-                    area[0],
-                    area[1],
-                    area[2],
-                    area[3],
-                    shape == LiteGraph.CARD_SHAPE ? [this.round_radius, this.round_radius, 0, 0] : [this.round_radius]
-                );
+                const x = area[0];
+                const y = area[1];
+                const w = area[2];
+                const h = area[3];
+
+                const radius = shape == LiteGraph.CARD_SHAPE
+                    ? [this.round_radius, this.round_radius, 0, 0]
+                    : [this.round_radius];
+
+                // ---------- 1. BASE SHAPE ----------
+                ctx.beginPath();
+                ctx.roundRect(x, y, w, h, radius);
+
+                // translucent base
+                ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+                ctx.fill();
+
+
+                // ---------- 2. TOP HIGHLIGHT ----------
+                ctx.save();
+
+                ctx.beginPath();
+                ctx.roundRect(x, y, w, h, radius);
+                ctx.clip();
+
+                const topGrad = ctx.createLinearGradient(x, y, x, y + h * 0.5);
+                topGrad.addColorStop(0, "rgba(255,255,255,0.65)");
+                topGrad.addColorStop(0.2, "rgba(255,255,255,0.25)");
+                topGrad.addColorStop(1, "rgba(255,255,255,0)");
+
+                ctx.fillStyle = topGrad;
+                ctx.fillRect(x, y, w, h * 0.5);
+
+                ctx.restore();
+
+
+                // ---------- 3. BOTTOM SHADOW ----------
+                ctx.save();
+
+                ctx.beginPath();
+                ctx.roundRect(x, y, w, h, radius);
+                ctx.clip();
+
+                const bottomGrad = ctx.createLinearGradient(x, y + h * 0.8, x, y + h);
+                bottomGrad.addColorStop(0, "rgba(0,0,0,0)");
+                bottomGrad.addColorStop(0.6, "rgba(0,0,0,0.2)");
+                bottomGrad.addColorStop(1, "rgba(0,0,0,0.4)");
+
+                ctx.fillStyle = bottomGrad;
+                ctx.fillRect(x, y + h * 0.8, w, h * 0.2);
+
+                ctx.restore();
+
+
+                // ---------- 4. OPTIONAL: INNER EDGE GLOSS ----------
+                ctx.beginPath();
+                ctx.roundRect(x, y, w, h, radius);
+
+                ctx.strokeStyle = "rgba(255,255,255,0.05)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+
+                // ---------- 5. FINAL BLACK OUTLINE (SOLID) ----------
+                ctx.beginPath();
+                ctx.roundRect(x - 0.5, y - 0.5, w + 1, h + 1, radius);
+
+                // Force full opacity regardless of previous alpha usage
+                ctx.save();
+                ctx.globalAlpha = 1;
+
+                ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.restore();
             } else if (shape == LiteGraph.CIRCLE_SHAPE) {
                 ctx.arc(
                     size[0] * 0.5,
@@ -9057,12 +9267,12 @@ LGraphNode.prototype.executeAction = function(action)
             }
             ctx.fill();
 
-            //separator
-            //if (!node.flags.collapsed && render_title) {
-            //    ctx.shadowColor = "transparent";
-            //    ctx.fillStyle = "rgba(0,0,0,0.2)";
-            //    ctx.fillRect(0, -1, area[2], 2);
-            //}
+            // separator
+            if (false && !node.flags.collapsed && render_title) {
+                ctx.shadowColor = "transparent";
+                ctx.fillStyle = "rgba(0,0,0,0.2)";
+                ctx.fillRect(0, -1, area[2], 2);
+            }
         }
         ctx.shadowColor = "transparent";
 
@@ -9085,24 +9295,36 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.shadowColor = LiteGraph.DEFAULT_SHADOW_COLOR;
                 }
 
-                //* gradient test
-                if (this.use_gradients) {
-                    var grad = LGraphCanvas.gradients[title_color];
-                    if (!grad) {
-                        grad = LGraphCanvas.gradients[title_color] = ctx.createLinearGradient(0, 0, 400, 0);
-                        grad.addColorStop(0, title_color); // TODO refactor: validate color !! prevent DOMException
-                        grad.addColorStop(1, "#000");
+                const renderTitleBar = () => {
+                    if (this.use_gradients) {
+                        var grad = LGraphCanvas.gradients[`${title_color}:1`];
+                        if (!grad) {
+                            grad = LGraphCanvas.gradients[`${title_color}:1`] = ctx.createLinearGradient(-200, 0, 400, 300);
+                            grad.addColorStop(0, title_color);
+                            grad.addColorStop(1, "transparent");
+                        }
+                        //ctx.shadowInset = false;
+                        //ctx.shadowBlur = 15;
+                        //ctx.shadowColor = 'black';
+                        ctx.fillStyle = grad;
+                    } else {
+                        ctx.fillStyle = title_color;
                     }
-                    ctx.fillStyle = grad;
-                } else {
-                    ctx.fillStyle = title_color;
-                }
 
-                //ctx.globalAlpha = 0.5 * old_alpha;
-                ctx.beginPath();
-                if (shape == LiteGraph.BOX_SHAPE || low_quality) {
-                    ctx.rect(0, -title_height, size[0] + 1, title_height);
-                } else if (shape == LiteGraph.ROUND_SHAPE || shape == LiteGraph.CARD_SHAPE) {
+                    //ctx.globalAlpha = 0.5 * old_alpha;
+                    ctx.beginPath();
+                    if (shape == LiteGraph.BOX_SHAPE || low_quality) {
+                        ctx.rect(0, -title_height, size[0] + 1, title_height);
+                    } else if (shape == LiteGraph.ROUND_SHAPE || shape == LiteGraph.CARD_SHAPE) {
+                        ctx.roundRect(
+                            0,
+                            -title_height,
+                            size[0] + 1,
+                            title_height,
+                            node.flags.collapsed ? [this.round_radius] : [this.round_radius, this.round_radius, 0, 0]
+                        );
+                    }
+                    ctx.fill();
                     ctx.roundRect(
                         0,
                         -title_height,
@@ -9110,8 +9332,58 @@ LGraphNode.prototype.executeAction = function(action)
                         title_height,
                         node.flags.collapsed ? [this.round_radius] : [this.round_radius, this.round_radius, 0, 0]
                     );
+                    ctx.globalAlpha = 1
+                    var grad2 = LGraphCanvas.gradients[`${title_color}:2`];
+                    if (!grad2) {
+                        const gradX = size[0] / 49
+                        const gradY = -title_height / 2
+                        grad2 = LGraphCanvas.gradients[`${title_color}:2`] = ctx.createRadialGradient(gradX + 50, gradY, 30, gradX + (size[0] - 50), gradY, 150);
+                        grad2.addColorStop(0, "#00000030");
+                        grad2.addColorStop(1, "transparent");
+                    }
+                    ctx.fillStyle = grad2
+                    ctx.fill();
+
+                    ctx.save();
+
+                    // Reuse the same rounded path
+                    ctx.beginPath();
+                    ctx.roundRect(
+                        0,
+                        -title_height,
+                        size[0] + 1,
+                        title_height,
+                        node.flags.collapsed
+                            ? [this.round_radius]
+                            : [this.round_radius, this.round_radius, 0, 0]
+                    );
+                    ctx.clip();
+
+                    // Create a vertical gradient (top → middle)
+                    const gradient = ctx.createLinearGradient(
+                        0,
+                        -title_height,
+                        0,
+                        -title_height + title_height * 0.1
+                    );
+
+                    // Strong white at top, fades out
+                    gradient.addColorStop(0, "rgba(255, 255, 255, 0.2)");
+                    gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+                    ctx.fillStyle = gradient;
+
+                    // Only draw the top portion
+                    ctx.fillRect(
+                        0,
+                        -title_height,
+                        size[0] + 1,
+                        title_height * 0.1
+                    );
+
+                    ctx.restore();
                 }
-                ctx.fill();
+                renderTitleBar();
                 ctx.shadowColor = "transparent";
             }
 
@@ -9152,7 +9424,17 @@ LGraphNode.prototype.executeAction = function(action)
                 if (low_quality)
                     ctx.fillRect(title_height * 0.5 - box_size * 0.5, title_height * -0.5 - box_size * 0.5, box_size, box_size);
                 else {
-                    doDrawChevron(title_height * 0.5, title_height * -0.5, box_size, node.flags.collapsed, ctx)
+                    ctx.textAlign = "center";
+                    ctx.fillStyle = title_color;
+                    ctx.font = "400 18px 'Material Symbols Outlined'";
+                    let spacing = 4
+                    ctx.fillText(
+                        node.constructor.icon ? node.constructor.icon : "function", //"ƒ",
+                        10 + spacing,
+                        LiteGraph.NODE_TITLE_TEXT_Y - title_height + spacing - 2
+                    );
+                    // CHEVRON
+                    //doDrawChevron(title_height * 0.5, title_height * -0.5, box_size, node.flags.collapsed, ctx)
                     /*ctx.beginPath();
                     ctx.arc(
                         title_height * 0.5,
@@ -9207,11 +9489,10 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                     if (node.flags.collapsed) {
                         ctx.textAlign = "left";
-                        var measure = ctx.measureText(title);
                         ctx.fillText(
-                            title.substr(0, 20), //avoid urls too long
-                            title_height,// + measure.width * 0.5,
-                            LiteGraph.NODE_TITLE_TEXT_Y - title_height
+                            title,
+                            title_height,
+                            LiteGraph.NODE_TITLE_TEXT_Y - title_height - 2
                         );
                         ctx.textAlign = "left";
                     } else {
@@ -9219,7 +9500,7 @@ LGraphNode.prototype.executeAction = function(action)
                         ctx.fillText(
                             title,
                             title_height,
-                            LiteGraph.NODE_TITLE_TEXT_Y - title_height
+                            LiteGraph.NODE_TITLE_TEXT_Y - title_height - 2
                         );
                     }
                 }
@@ -9263,32 +9544,32 @@ LGraphNode.prototype.executeAction = function(action)
                 area[3] += title_height;
             }
             ctx.lineWidth = 1;
-            ctx.globalAlpha = 0.8;
+            ctx.globalAlpha = 1;
             ctx.beginPath();
             if (shape == LiteGraph.BOX_SHAPE) {
                 ctx.rect(
-                    -3 + area[0],
-                    -3 + area[1],
-                    6 + area[2],
-                    6 + area[3]
+                    -1.5 + area[0],
+                    -1.5 + area[1],
+                    3 + area[2],
+                    3 + area[3]
                 );
             } else if (
                 shape == LiteGraph.ROUND_SHAPE ||
                 (shape == LiteGraph.CARD_SHAPE && node.flags.collapsed)
             ) {
                 ctx.roundRect(
-                    -3 + area[0],
-                    -3 + area[1],
-                    6 + area[2],
-                    6 + area[3],
-                    [this.round_radius * 2]
+                    -1.5 + area[0],
+                    -1.5 + area[1],
+                    3 + area[2],
+                    3 + area[3],
+                    [this.round_radius + 1.5]
                 );
             } else if (shape == LiteGraph.CARD_SHAPE) {
                 ctx.roundRect(
-                    -3 + area[0],
-                    -3 + area[1],
-                    6 + area[2],
-                    6 + area[3],
+                    -1.5 + area[0],
+                    -1.5 + area[1],
+                    3 + area[2],
+                    3 + area[3],
                     [this.round_radius * 2, 2, this.round_radius * 2, 2]
                 );
             } else if (shape == LiteGraph.CIRCLE_SHAPE) {
@@ -9307,6 +9588,9 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.lineWidth = prevStrokeWidth;
             ctx.strokeStyle = fgcolor;
             ctx.globalAlpha = 1;
+        }
+        else {
+
         }
 
         // these counter helps in conditioning drawing based on if the node has been executed or an action occurred
@@ -9512,10 +9796,10 @@ LGraphNode.prototype.executeAction = function(action)
                 var end_offset_y = 0;
                 switch (start_dir) {
                     case LiteGraph.LEFT:
-                        start_offset_x = dist * -0.25;
+                        start_offset_x = dist * -0.40;
                         break;
                     case LiteGraph.RIGHT:
-                        start_offset_x = dist * 0.25;
+                        start_offset_x = dist * 0.40;
                         break;
                     case LiteGraph.UP:
                         start_offset_y = dist * -0.25;
@@ -9526,10 +9810,10 @@ LGraphNode.prototype.executeAction = function(action)
                 }
                 switch (end_dir) {
                     case LiteGraph.LEFT:
-                        end_offset_x = dist * -0.25;
+                        end_offset_x = dist * -0.40;
                         break;
                     case LiteGraph.RIGHT:
-                        end_offset_x = dist * 0.25;
+                        end_offset_x = dist * 0.40;
                         break;
                     case LiteGraph.UP:
                         end_offset_y = dist * -0.25;
@@ -13143,19 +13427,16 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     LGraphCanvas.node_colors = {
-        red: { color: "#322", bgcolor: "#533", groupcolor: "#A88" },
-        brown: { color: "#332922", bgcolor: "#593930", groupcolor: "#b06634" },
-        green: { color: "#232", bgcolor: "#353", groupcolor: "#8A8" },
-        blue: { color: "#223", bgcolor: "#335", groupcolor: "#88A" },
-        pale_blue: {
-            color: "#2a363b",
-            bgcolor: "#3f5159",
-            groupcolor: "#3f789e"
-        },
-        cyan: { color: "#233", bgcolor: "#355", groupcolor: "#8AA" },
-        purple: { color: "#323", bgcolor: "#535", groupcolor: "#a1309b" },
-        yellow: { color: "#432", bgcolor: "#653", groupcolor: "#b58b2a" },
-        black: { color: "#222", bgcolor: "#000", groupcolor: "#444" }
+        red: { color: "rgb(243, 105, 105)", bgcolor: "#533", groupcolor: "#A88" },
+        //brown: { color: "#6d482e", bgcolor: "#593930", groupcolor: "#b06634" },
+        green: { color: "#6eaf72", bgcolor: "#353", groupcolor: "#6eaf72" },
+        blue: { color: "rgb(74, 74, 218)", bgcolor: "#335", groupcolor: "#88A" },
+        //pale_blue: { color: "#2a363b", bgcolor: "#3f5159", groupcolor: "#3f789e" },
+        cyan: { color: "rgb(56, 211, 211)", bgcolor: "#355", groupcolor: "#8AA" },
+        purple: { color: "rgb(209, 84, 209)", bgcolor: "#535", groupcolor: "#a1309b" },
+        yellow: { color: "rgb(230, 227, 62)", bgcolor: "#653", groupcolor: "#b58b2a" },
+        black: { color: "#080808", bgcolor: "#000", groupcolor: "#444" },
+        white: { color: "#dbdbdb", bgcolor: "#000", groupcolor: "#444" }
     };
 
     LGraphCanvas.prototype.getCanvasMenuOptions = function () {
