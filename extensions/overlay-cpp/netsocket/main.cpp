@@ -37,7 +37,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 MARGINS Margin = { -1 };
 char inputBuf[256];
 
-bool paletteHidden = false;
+bool paletteHidden = true;
 
 ImFont* font_lg;
 ImFont* font_sm;
@@ -180,25 +180,56 @@ struct preferences_t {
 } preferences;
 bool isPreferencesVisible = false;
 ImGuiStyle ogStyle;
+namespace utils {
+    std::wstring GetExecutablePath() {
+        wchar_t buffer[MAX_PATH];
+        GetModuleFileNameW(NULL, buffer, MAX_PATH);
+        return std::wstring(buffer);
+    }
+    void addToStartup() {
+        std::wstring progPath = GetExecutablePath();
+        HKEY hKey = NULL;
+        LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hKey);
+        LONG status = RegSetValueEx(hKey, L"netsocket", 0, REG_SZ, (BYTE*)progPath.c_str(), (progPath.size() + 1) * sizeof(wchar_t));
+        notification::addNotification({ "Program added to startup." });
+    }
+    void removeFromStartup() {
+        std::wstring progPath = GetExecutablePath();
+        HKEY hKey = NULL;
+        LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hKey);
+        LONG status = RegDeleteValue(hKey, L"netsocket");
+        notification::addNotification({ "Program removed from startup." });
+    }
+}
 void showPreferences() {
     ImGuiStyle savedStyle = ImGui::GetStyle();
     ImGui::GetStyle() = ogStyle;
     if (isPreferencesVisible) {
         if (ImGui::Begin("Settings")) {
+            ImGui::TextDisabled("Press Ctrl + Alt + 3 to hide!");
+            if (ImGui::Button("Save##Sv1")) {
+                preferences.url = std::string(urlInputBuf);
+                notification::addNotification({ "Updated server URL." });
+            }
+            ImGui::SameLine();
             ImGui::InputText("Server URL", urlInputBuf, 256,
                 ImGuiInputTextFlags_ElideLeft
             );
-            ImGui::SameLine();
-            if (ImGui::Button("Save##Sv1")) {
-                preferences.url = std::string(urlInputBuf);
+            if (ImGui::Button("Save##Sv2")) {
+                preferences.secret = std::string(secretInputBuf);
+                notification::addNotification({ "Updated secret." });
             }
+            ImGui::SameLine();
             ImGui::InputText("Secret", secretInputBuf, 256,
                 ImGuiInputTextFlags_ElideLeft
             );
-            ImGui::SameLine();
-            if (ImGui::Button("Save##Sv2")) {
-                preferences.secret = std::string(secretInputBuf);
+            if (ImGui::Button("Save##Sv3")) {
+                if (preferences.shouldStartOnStartup)
+                    utils::addToStartup();
+                else
+                    utils::removeFromStartup();
             }
+            ImGui::SameLine();
             ImGui::Checkbox("Add to Startup", &preferences.shouldStartOnStartup);
             ImGui::End();
         }
@@ -257,11 +288,6 @@ void sendCommand(std::string cmd) {
         shouldHidePalette = true;
     }
 }
-std::wstring GetExecutablePath() {
-    wchar_t buffer[MAX_PATH];
-    GetModuleFileNameW(NULL, buffer, MAX_PATH);
-    return std::wstring(buffer);
-}
 
 bool focusStale = true;
 char lastKeyDown = 0;
@@ -272,21 +298,6 @@ int textEditCallback(ImGuiInputTextCallbackData* data) {
         focusStale = true;
     }
     return 0;
-}
-
-namespace utils {
-    void addToStartup() {
-        std::wstring progPath = GetExecutablePath();
-        HKEY hKey = NULL;
-        LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hKey);
-        LONG status = RegSetValueEx(hKey, L"netsocket", 0, REG_SZ, (BYTE*)progPath.c_str(), (progPath.size() + 1) * sizeof(wchar_t));
-    }
-    void removeFromStartup() {
-        std::wstring progPath = GetExecutablePath();
-        HKEY hKey = NULL;
-        LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hKey);
-        LONG status = RegDeleteValue(hKey, L"netsocket");
-    }
 }
 
 class hotkey {
