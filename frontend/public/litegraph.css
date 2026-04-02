@@ -1,7 +1,6 @@
 /* this CSS contains only the basic CSS needed to run the app and use it */
 
 .lgraphcanvas {
-    /*cursor: crosshair;*/
     user-select: none;
     -moz-user-select: none;
     -webkit-user-select: none;
@@ -21,8 +20,13 @@
     min-width: 100px;
     color: #aaf;
     padding: 0;
-    background-color: #2e2e2e !important;
+    background-color: #2e2e2e;
+    border: 1px solid #464646;
     z-index: 10;
+    padding: 3px;
+    padding-bottom: 0px;
+    border-radius: 8px;
+    box-shadow: 0px 2px 5px #00000080, 0px 0px 15px #00000080;
 }
 
 .litegraph.litecontextmenu.dark {
@@ -37,7 +41,12 @@
 
 .litegraph.litecontextmenu .litemenu-entry {
     margin: 0px;
-    padding: 6px 12px;
+    padding: 2px 4px;
+    font-size: 12px;
+    margin-bottom: 3px;
+    border-radius: 5px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding-left: 24px;
 }
 
 .litegraph.litecontextmenu .litemenu-entry.submenu {
@@ -131,15 +140,14 @@
     cursor: default !important;
 }
 
-.litegraph .litemenu-entry.has_submenu {
-    border-right: 2px solid black;
-    padding-right: 8px;
-    transition-duration: 0.4s;
-}
-
-.litegraph .litemenu-entry.has_submenu:hover {
-    border-right: 7px solid black;
-    padding-right: 3px;
+.litegraph .litemenu-entry.has_submenu::after {
+    content: "arrow_forward_ios";
+    font-family: 'Material Symbols Outlined';
+    font-size: 12px;
+    font-weight: 100;
+    margin-left: 10px;
+    margin-right: 4px;
+    float: right;
 }
 
 .litegraph .litemenu-title {
@@ -151,7 +159,7 @@
 }
 
 .litegraph .litemenu-entry:hover:not(.disabled):not(.separator) {
-    background-color: #444 !important;
+    background-color: #343434 !important;
     color: #eee;
     transition: all 0s;
 }

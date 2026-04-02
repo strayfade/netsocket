@@ -14024,8 +14024,8 @@ LGraphNode.prototype.executeAction = function(action)
             options.scroll_speed = 0.1;
         }
 
-        root.addEventListener("wheel", on_mouse_wheel, true);
-        root.addEventListener("mousewheel", on_mouse_wheel, true);
+        //root.addEventListener("wheel", on_mouse_wheel, true);
+        //root.addEventListener("mousewheel", on_mouse_wheel, true);
 
         this.root = root;
 
@@ -14086,17 +14086,19 @@ LGraphNode.prototype.executeAction = function(action)
 
         //compute best position
         var left = options.left || 0;
-        var top = options.top || 0;
+        var top = options.top - 10 || 0;
         if (options.event) {
             left = options.event.clientX - 10;
             top = options.event.clientY - 10;
+
             if (options.title) {
                 top -= 20;
             }
 
             if (options.parentMenu) {
                 var rect = options.parentMenu.root.getBoundingClientRect();
-                left = rect.left + rect.width;
+                left = rect.left + rect.width - 5;
+                top += 5;
             }
 
             var body_rect = document.body.getBoundingClientRect();
@@ -14131,8 +14133,6 @@ LGraphNode.prototype.executeAction = function(action)
 
         if (value === null) {
             element.classList.add("separator");
-            //element.innerHTML = "<hr/>"
-            //continue;
         } else {
             element.innerHTML = value && value.title ? value.title : name;
             element.value = value;
@@ -14208,7 +14208,10 @@ LGraphNode.prototype.executeAction = function(action)
                     !options.ignore_item_callbacks &&
                     value.disabled !== true
                 ) {
+                    options.event = e
                     //item callback
+                    //options.top += e.currentTarget.getBoundingClientRect().top;
+                    //options.event.clientY = e.currentTarget.getBoundingClientRect().top;
                     var r = value.callback.call(
                         this,
                         value,
@@ -14225,6 +14228,7 @@ LGraphNode.prototype.executeAction = function(action)
                     if (!value.submenu.options) {
                         throw "ContextMenu submenu needs options";
                     }
+                    value.submenu.options = e
                     var submenu = new that.constructor(value.submenu.options, {
                         callback: value.submenu.callback,
                         event: e,
