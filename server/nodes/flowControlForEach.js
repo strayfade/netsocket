@@ -14,6 +14,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Flow Control/For Each"
 NodeDefinition.prototype.color = "white"
+NodeDefinition.prototype.icon = "data_array"
 const NodeFunction = async (node, params, behaviors) => {
     try {
         const array = JSON.parse(string(params.Array))

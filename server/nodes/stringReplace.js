@@ -13,6 +13,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Replace"
 NodeDefinition.prototype.color = "green"
+NodeDefinition.prototype.icon = "sync_alt"
 const NodeFunction = async (node, params, behaviors) => {
     params["Original"] = string(params["Original"])
     params["Replace with"] = string(params["Replace with"])

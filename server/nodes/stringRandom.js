@@ -11,7 +11,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = 'String/Random'
 NodeDefinition.prototype.color = 'green'
-
+NodeDefinition.prototype.icon = "casino"
 const crypto = require('crypto')
 const NodeFunction = async (node, params, behaviors) => {
   const chars = string(params.Charset)

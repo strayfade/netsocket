@@ -10,6 +10,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Variables/Get Variable"
 NodeDefinition.prototype.color = "green"
+NodeDefinition.prototype.icon = "database"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([getVar(string(params["Name"]))]);
     return true

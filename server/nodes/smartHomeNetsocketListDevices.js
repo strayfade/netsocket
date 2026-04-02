@@ -8,6 +8,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Netsocket/List Devices"
 NodeDefinition.prototype.color = "white"
+NodeDefinition.prototype.icon = "devices"
 const { getDevices, discoverWirelessAdapters, sendCommand } = require('./utils/netsocketSmartHome')
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([JSON.stringify(await getDevices())]);

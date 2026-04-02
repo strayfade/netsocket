@@ -9,7 +9,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Length"
 NodeDefinition.prototype.color = "green"
-
+NodeDefinition.prototype.icon = "straighten"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([ number(string(params["String"]).length.toString()) ]);
     return true

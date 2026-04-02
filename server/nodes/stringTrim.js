@@ -9,7 +9,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Trim"
 NodeDefinition.prototype.color = "green"
-
+NodeDefinition.prototype.icon = "content_cut"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([ string(params["String"]).trim() ]);
     return true

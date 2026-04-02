@@ -9,6 +9,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Triggers/Button"
 NodeDefinition.prototype.color = "black"
+NodeDefinition.prototype.icon = "ads_click"
 NodeDefinition.prototype.onDrawForeground = function (ctx) {
     if (canvas.selected_nodes[this.id]) {
         return;

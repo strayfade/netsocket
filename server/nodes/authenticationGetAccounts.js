@@ -8,6 +8,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Authentication/Get OTP Accounts"
 NodeDefinition.prototype.color = "cyan"
+NodeDefinition.prototype.icon = "security"
 const NodeFunction = async (node, params, behaviors) => {
     let output = JSON.stringify(await otpController.listCodes())
     await behaviors.populateNextNodeLinks([output]);

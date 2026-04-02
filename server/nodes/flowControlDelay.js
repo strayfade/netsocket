@@ -11,6 +11,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Flow Control/Delay"
 NodeDefinition.prototype.color = "white"
+NodeDefinition.prototype.icon = "timer"
 const NodeFunction = async (node, params, behaviors) => {
     await new Promise(resolve => setTimeout(resolve, number(params["Delay (ms)"])));
     await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[0]);

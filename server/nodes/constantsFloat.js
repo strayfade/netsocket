@@ -9,6 +9,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Constants/Float"
 NodeDefinition.prototype.color = "green"
+NodeDefinition.prototype.icon = "input"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([number(params.Value)]);
     return true

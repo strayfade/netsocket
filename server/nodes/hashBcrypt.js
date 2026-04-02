@@ -11,7 +11,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Hash/bcrypt"
 NodeDefinition.prototype.color = "green"
-
+NodeDefinition.prototype.icon = "tag"
 const NodeFunction = async (node, params, behaviors) => {
     try  {
         await behaviors.populateNextNodeLinks([ await bcrypt.hash(string(params.Data), string(params.Salt)) ]);

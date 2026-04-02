@@ -15,6 +15,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Language Processing/Small LLM"
 NodeDefinition.prototype.color = "blue"
+NodeDefinition.prototype.icon = "network_intelligence"
 const { askAI } = require('./utils/languageModel')
 const NodeFunction = async (node, params, behaviors) => {
     params["Prompt"] = string(params["Prompt"])

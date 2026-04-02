@@ -10,7 +10,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "JSON/Get Object Keys"
 NodeDefinition.prototype.color = "green"
-
+NodeDefinition.prototype.icon = "data_object"
 const NodeFunction = async (node, params, behaviors) => {
     try {
         let object = JSON.parse(string(params["JSON"]))

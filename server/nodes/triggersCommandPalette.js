@@ -16,6 +16,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Triggers/Command Palette"
 NodeDefinition.prototype.color = "black"
+NodeDefinition.prototype.icon = "input"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([
         null,

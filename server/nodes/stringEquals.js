@@ -13,6 +13,7 @@ class NodeDefinition {
 NodeDefinition.prototype.title = "String/Equals"
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "="
+NodeDefinition.prototype.icon = "calculate"
 const NodeFunction = async (node, params, behaviors) => {
     params.A = string(params.A)
     params.B = string(params.B)

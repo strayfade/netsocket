@@ -28,6 +28,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Flow Control/Switch"
 NodeDefinition.prototype.color = "white"
+NodeDefinition.prototype.icon = "arrow_split"
 const NodeFunction = async (node, params, behaviors) => {
     let matched = false;
     for (i in [0, 1, 2, 3, 4]) {

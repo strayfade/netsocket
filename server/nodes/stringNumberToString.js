@@ -9,6 +9,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/To String (number)"
 NodeDefinition.prototype.color = "green"
+NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([number(params.Number).toString()]);
     return true

@@ -11,7 +11,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Append"
 NodeDefinition.prototype.color = "green"
-
+NodeDefinition.prototype.icon = "add_comment"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([ string(params["A"]) + string(params["B"]) + string(params["C"])]);
     return true

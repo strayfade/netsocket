@@ -14,6 +14,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Flow Control/For"
 NodeDefinition.prototype.color = "white"
+NodeDefinition.prototype.icon = "cached"
 const NodeFunction = async (node, params, behaviors) => {
     for (let i = 0; i < number(params["Loop Count"]); i++) {
         await behaviors.populateNextNodeLinks([

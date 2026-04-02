@@ -14,7 +14,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "JSON/Set Array Item"
 NodeDefinition.prototype.color = "green"
-
+NodeDefinition.prototype.icon = "data_array"
 const NodeFunction = async (node, params, behaviors) => {
     try {
         let array = JSON.parse(string(params["JSON Array"]))

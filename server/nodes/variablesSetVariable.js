@@ -13,6 +13,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Variables/Set Variable"
 NodeDefinition.prototype.color = "blue"
+NodeDefinition.prototype.icon = "database_upload"
 const NodeFunction = async (node, params, behaviors) => {
     setVar(string(params["Name"]), string(params["New Value"]))
     await behaviors.populateNextNodeLinks([getVar(string(params["Name"]))]);

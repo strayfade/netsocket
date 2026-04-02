@@ -15,6 +15,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Netsocket/Send Command"
 NodeDefinition.prototype.color = "white"
+NodeDefinition.prototype.icon = "code"
 const { getDevices, discoverWirelessAdapters, sendCommand } = require('./utils/netsocketSmartHome')
 const NodeFunction = async (node, params, behaviors) => {
     

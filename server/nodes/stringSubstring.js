@@ -13,6 +13,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Substring"
 NodeDefinition.prototype.color = "green"
+NodeDefinition.prototype.icon = "content_cut"
 const NodeFunction = async (node, params, behaviors) => {
     if (number(params.Count) == -1) {
         await behaviors.populateNextNodeLinks([ string(params.Input).substr(number(params.Begin)) ]);

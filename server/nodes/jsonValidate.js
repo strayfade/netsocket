@@ -10,7 +10,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "JSON/Validate"
 NodeDefinition.prototype.color = "green"
-
+NodeDefinition.prototype.icon = "data_object"
 const NodeFunction = async (node, params, behaviors) => {
     try {
         JSON.parse(string(params.JSON))

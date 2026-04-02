@@ -11,7 +11,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = 'String/Split'
 NodeDefinition.prototype.color = 'green'
-
+NodeDefinition.prototype.icon = "call_split"
 const NodeFunction = async (node, params, behaviors) => {
   const chars = string(params.Input)
   const delim = string(params.Delimiter)

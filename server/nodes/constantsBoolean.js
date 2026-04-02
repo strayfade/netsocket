@@ -9,6 +9,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Constants/Boolean"
 NodeDefinition.prototype.color = "green"
+NodeDefinition.prototype.icon = "input"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([bool(params.Value)]);
     return true

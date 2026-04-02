@@ -12,6 +12,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Notifiers/Alert"
 NodeDefinition.prototype.color = "yellow"
+NodeDefinition.prototype.icon = "notification_add"
 const NodeFunction = async (node, params, behaviors) => {
     await alert(string(params.Text))
     await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[0]);

@@ -13,6 +13,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Web/GET Request"
 NodeDefinition.prototype.color = "blue"
+NodeDefinition.prototype.icon = "downloading"
 const NodeFunction = async (node, params, behaviors) => {
 
     let webContent = await axios.get(string(io.input.URL))

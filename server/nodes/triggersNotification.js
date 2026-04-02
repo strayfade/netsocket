@@ -18,6 +18,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Triggers/iOS Notification"
 NodeDefinition.prototype.color = "black"
+NodeDefinition.prototype.icon = "notifications_unread"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([
         null,

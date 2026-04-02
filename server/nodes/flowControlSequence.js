@@ -14,6 +14,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Flow Control/Sequence"
 NodeDefinition.prototype.color = "white"
+NodeDefinition.prototype.icon = "order_play"
 const NodeFunction = async (node, params, behaviors) => {
     for (i in [0, 1, 2, 3, 4]) {
         await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[i]);

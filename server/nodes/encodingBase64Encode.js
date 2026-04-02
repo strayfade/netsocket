@@ -9,7 +9,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Encoding/Base64 Encode"
 NodeDefinition.prototype.color = "green"
-
+NodeDefinition.prototype.icon = "code"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([btoa(string(params.Text))]);
     return true

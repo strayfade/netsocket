@@ -10,6 +10,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Hash/SHA-256"
 NodeDefinition.prototype.color = "green"
+NodeDefinition.prototype.icon = "tag"
 const { createHash } = require('crypto');
 const NodeFunction = async (node, params, behaviors) => {
     try  {

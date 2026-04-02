@@ -17,6 +17,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Web/POST Request"
 NodeDefinition.prototype.color = "blue"
+NodeDefinition.prototype.icon = "arrow_upload_progress"
 const NodeFunction = async (node, params, behaviors) => {
 
     let webContent = await axios.post(string(io.input.URL), string(io.input.Body), {

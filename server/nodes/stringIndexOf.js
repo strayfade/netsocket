@@ -10,7 +10,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Index Of"
 NodeDefinition.prototype.color = "green"
-
+NodeDefinition.prototype.icon = "document_search"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([string(params["String"]).indexOf(string(params["Search for"]))]);
     return true

@@ -12,7 +12,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Regex"
 NodeDefinition.prototype.color = "green"
-
+NodeDefinition.prototype.icon = "regular_expression"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([new RegExp(string(params["Regex"])).test(string(params["String"]))]);
     return true

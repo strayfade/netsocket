@@ -12,6 +12,7 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Get Light by Name"
 NodeDefinition.prototype.color = "white"
+NodeDefinition.prototype.icon = "light"
 const NodeFunction = async (node, params, behaviors) => {
     if (!doesHueApiWork()) {
         await behaviors.populateNextNodeLinks([JSON.stringify({}), ""]);
