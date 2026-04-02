@@ -8,11 +8,11 @@ class NodeDefinition {
         this.addOutput("", "string");
     }
 }
-NodeDefinition.prototype.title = "Time/To Date String"
+NodeDefinition.prototype.title = "Time/To UTC String"
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {
-    await behaviors.populateNextNodeLinks([ new Date(number(params.Timestamp)).toDateString() ]);
+    await behaviors.populateNextNodeLinks([ new Date(number(params.Timestamp)).toUTCString() ]);
     return true
 }
 module.exports = { NodeDefinition, NodeFunction }
