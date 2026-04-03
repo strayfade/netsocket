@@ -19,6 +19,7 @@ const getInputPropertyParams = (str) => {
         last: params[params.length - 1]
     };
 }
+let numNodesImported = 0;
 const importNode = async (node) => {
     let { NodeDefinition, NodeFunction } = require(node)
     const oNodeDefinition = NodeDefinition;
@@ -128,16 +129,21 @@ ${(() => {
     }
     nodeData += `\n\treturn NodeDefinition\n})())\n\n`
     availableNodes[title] = NodeFunction
+    numNodesImported++;
     //log(`Imported node ${title}`)
 }
 
 var UglifyJS = require("uglify-js");
-const { on } = require('events')
-const setupNodes = async () => {
-    const nodes = await fs.readdir(path.join(__dirname, "../nodes"))
+const setupNodes = async (dir) => {
+    if (!dir)
+        dir = path.join(__dirname, "../nodes")
+    const nodes = await fs.readdir(dir)
     for (nodeEntry of nodes) {
         if (nodeEntry.endsWith(".js")) {
-            await importNode(path.join(__dirname, "../nodes", nodeEntry))
+            await importNode(path.join(dir, nodeEntry))
+        }
+        else {
+            await setupNodes(path.join(dir, nodeEntry))
         }
     }
     //return UglifyJS.minify(nodeData).code;
@@ -148,4 +154,8 @@ const getAvailableNodes = () => {
     return availableNodes
 }
 
-module.exports = { getAvailableNodes, setupNodes }
+const getNumNodesImported = () => {
+    return numNodesImported;
+}
+
+module.exports = { getAvailableNodes, setupNodes, getNumNodesImported }

@@ -373,6 +373,7 @@ server.listen(PORT, HOSTNAME, async () => {
     await reloadVars()
     await settingsManager.reloadSettings()
     constructedNodes = await require('./manager/nodeImporter').setupNodes()
+    log(`Imported ${require('./manager/nodeImporter').getNumNodesImported()} nodes`)
     log(`Server running on http://127.0.0.1:${PORT}`);
     log(`Dashboard URL: http://127.0.0.1:${PORT}/dashboard`)
 });
