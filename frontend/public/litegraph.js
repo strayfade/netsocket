@@ -9424,7 +9424,7 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillRect(title_height * 0.5 - box_size * 0.5, title_height * -0.5 - box_size * 0.5, box_size, box_size);
                 else {
                     ctx.textAlign = "center";
-                    ctx.fillStyle = title_color;
+                    ctx.fillStyle = title_color != "#080808" ? title_color : "#ffffff80";
                     ctx.font = "400 18px 'Material Symbols Outlined'";
                     let spacing = 4
                     ctx.fillText(
