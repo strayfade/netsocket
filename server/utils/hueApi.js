@@ -1,7 +1,7 @@
-const { config } = require('../../config')
-const { log, logColors } = require('../../log')
-const settingsManager = require('../../manager/settingsManager')
-require('../../manager/nodePreferencesRegistry').addPref(
+const { config } = require('../config')
+const { log, logColors } = require('../log')
+const settingsManager = require('../manager/settingsManager')
+require('../manager/nodePreferencesRegistry').addPref(
     'Philips Hue',
     'philipsHue.ip',
     'Bridge IP Address',
@@ -9,7 +9,7 @@ require('../../manager/nodePreferencesRegistry').addPref(
     '',
     '<p>LAN address of your Hue Bridge (for example <code>192.168.1.23</code>). Used to open the local Hue API connection.</p>'
 )
-require('../../manager/nodePreferencesRegistry').addPref(
+require('../manager/nodePreferencesRegistry').addPref(
     'Philips Hue',
     'philipsHue.user',
     'Bridge User',
@@ -17,7 +17,7 @@ require('../../manager/nodePreferencesRegistry').addPref(
     '',
     '<p>API username created when you pair the Bridge (the “whitelist” user string from the Hue developer flow).</p>'
 )
-require('../../manager/nodePreferencesRegistry').addPref(
+require('../manager/nodePreferencesRegistry').addPref(
     'Philips Hue',
     'philipsHue.clientKey',
     'Client Key',

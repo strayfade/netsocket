@@ -1,4 +1,4 @@
-const { log, logColors } = require('../../log')
+const { log, logColors } = require('../log')
 
 let devices = [
     { name: "Outlet", id: 2, commands: ["On", "Off"] }

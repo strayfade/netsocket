@@ -1,4 +1,4 @@
-const { otpController } = require('./utils/authenticator')
+const { otpController } = require('../utils/authenticator')
 
 class NodeDefinition {
     constructor() {

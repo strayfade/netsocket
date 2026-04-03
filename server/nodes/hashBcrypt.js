@@ -1,5 +1,5 @@
 const { log, logColors } = require('../log')
-const { number, string, bool } = require('./utils/inputParser')
+const { number, string, bool } = require('../utils/inputParser')
 const bcrypt = require('bcrypt')
 
 class NodeDefinition {

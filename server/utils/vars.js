@@ -1,6 +1,6 @@
-const { log, logColors } = require('../../log')
+const { log, logColors } = require('../log')
 const fs = require('fs').promises
-const { config } = require('../../config')
+const { config } = require('../config')
 
 let vars = []
 

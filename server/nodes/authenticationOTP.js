@@ -1,6 +1,6 @@
-const { string } = require('./utils/inputParser')
+const { string } = require('../utils/inputParser')
 
-const { otpController } = require('./utils/authenticator')
+const { otpController } = require('../utils/authenticator')
 
 class NodeDefinition {
     constructor() {

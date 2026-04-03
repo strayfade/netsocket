@@ -1,7 +1,7 @@
 const { log, logColors } = require('../log')
-const { number, string, bool } = require('./utils/inputParser')
-const { getHueApi, LightState, hueApiLib, doesHueApiWork } = require('./utils/hueApi')
-const { hexToRgb } = require('./utils/hexToRgb')
+const { number, string, bool } = require('../utils/inputParser')
+const { getHueApi, LightState, hueApiLib, doesHueApiWork } = require('../utils/hueApi')
+const { hexToRgb } = require('../utils/hexToRgb')
 
 class NodeDefinition {
     constructor() {

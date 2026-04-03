@@ -24,7 +24,7 @@ const wss = new WebSocket.Server({ server });
 let connectedClients = [];
 
 // Store connected clients
-const { setWsServerConnectedClients } = require('./nodes/utils/alert.js')
+const { setWsServerConnectedClients } = require('./utils/alert.js')
 const { executeGraph } = require('./manager/execute')
 var cookieParser = require('cookie-parser')
 app.use(cookieParser())
@@ -141,12 +141,12 @@ wss.on('connection', (socket, request) => {
                             settingsManager.setSetting(name, value ?? '')
                             await settingsManager.saveSettings()
                             try {
-                                await require('./nodes/utils/hueApi').setupHueApi()
+                                await require('./utils/hueApi').setupHueApi()
                             } catch (e) {
                                 log(`Hue reconnect after save: ${e}`, logColors.Warning)
                             }
                             try {
-                                require('./nodes/utils/languageModel').reinitOllama()
+                                require('./utils/languageModel').reinitOllama()
                             } catch (e) {
                                 log(`Ollama reinit after save: ${e}`, logColors.Warning)
                             }
@@ -181,7 +181,7 @@ setOnPushLog(((line) => {
 }))
 
 // MARK: PostNotification
-const { onNewNotification } = require('./nodes/utils/waitForOTP')
+const { onNewNotification } = require('./utils/waitForOTP')
 app.post("/v1/postNotification/:secret", async (req, res) => {
     const expectedSecret = settingsManager.getSetting('triggersNotification.secret')
     if (!expectedSecret || req.params.secret !== expectedSecret) {
@@ -291,7 +291,7 @@ app.use('/', express.static(path.join(__dirname, '../frontend/public')));
 app.get("/", (req, res) => {
     res.redirect(302, "/login");
 });
-const { onNewCommand } = require('./nodes/utils/waitForCommands.js')
+const { onNewCommand } = require('./utils/waitForCommands.js')
 app.post("/v1/postCommand", async (req, res) => {
     await onNewCommand(req.body.command)
     res.sendStatus(200);
@@ -365,7 +365,7 @@ app.get('/:page', (req, res) => {
 
 const PORT = process.env.PORT || 4675;
 const HOSTNAME = process.env.HOSTNAME || undefined;
-const { reloadVars } = require('./nodes/utils/vars.js')
+const { reloadVars } = require('./utils/vars.js')
 server.listen(PORT, HOSTNAME, async () => {
     await populateNodes()
     await populateUsers()

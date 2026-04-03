@@ -1,8 +1,8 @@
 const { OTP } = require('otplib');
 const base32 = require('hi-base32');
-const { log, logColors } = require('../../log');
-const settingsManager = require('../../manager/settingsManager');
-require('../../manager/nodePreferencesRegistry').addPref(
+const { log, logColors } = require('../log');
+const settingsManager = require('../manager/settingsManager');
+require('../manager/nodePreferencesRegistry').addPref(
     'Authenticator',
     'authentication.otp_accounts',
     'OTP account secrets',

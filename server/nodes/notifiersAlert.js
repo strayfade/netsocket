@@ -1,6 +1,6 @@
 const { log, logColors } = require('../log')
-const { number, string, bool } = require('./utils/inputParser')
-const { alert } = require('./utils/alert')
+const { number, string, bool } = require('../utils/inputParser')
+const { alert } = require('../utils/alert')
 
 class NodeDefinition {
     constructor() {

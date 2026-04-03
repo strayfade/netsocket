@@ -1,5 +1,5 @@
 const { log, logColors } = require('../log')
-const { number, string, bool } = require('./utils/inputParser')
+const { number, string, bool } = require('../utils/inputParser')
 
 class NodeDefinition {
     constructor() {
@@ -16,7 +16,7 @@ class NodeDefinition {
 NodeDefinition.prototype.title = "Language Processing/LLM"
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "network_intelligence"
-const { askAI } = require('./utils/languageModel')
+const { askAI } = require('../utils/languageModel')
 const NodeFunction = async (node, params, behaviors) => {
     params["Prompt"] = string(params["Prompt"])
     params["System Prompt"] = string(params["System Prompt"])

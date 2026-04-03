@@ -1,8 +1,8 @@
 const { askAI } = require('./languageModel')
-const { log, logColors } = require('../../log')
+const { log, logColors } = require('../log')
 
-const { getNodes, setNodes } = require('../../manager/saveState')
-const { executeGraph } = require('../../manager/execute')
+const { getNodes, setNodes } = require('../manager/saveState')
+const { executeGraph } = require('../manager/execute')
 
 let newOTP = false;
 let lastOTP = 0;

@@ -1,7 +1,7 @@
-const { log, logColors } = require('../../log')
+const { log, logColors } = require('../log')
 
-const { getNodes, setNodes } = require('../../manager/saveState')
-const { executeGraph } = require('../../manager/execute')
+const { getNodes, setNodes } = require('../manager/saveState')
+const { executeGraph } = require('../manager/execute')
 
 const onNewCommand = async (textContent) => {
     log(`Command received: ${textContent}`)

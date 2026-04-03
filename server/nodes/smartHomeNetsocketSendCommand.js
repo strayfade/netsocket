@@ -1,5 +1,5 @@
 const { log, logColors } = require('../log')
-const { number, string, bool } = require('./utils/inputParser')
+const { number, string, bool } = require('../utils/inputParser')
 
 class NodeDefinition {
     constructor() {
@@ -16,7 +16,7 @@ class NodeDefinition {
 NodeDefinition.prototype.title = "Smart Home/Netsocket/Send Command"
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "code"
-const { getDevices, discoverWirelessAdapters, sendCommand } = require('./utils/netsocketSmartHome')
+const { getDevices, discoverWirelessAdapters, sendCommand } = require('../utils/netsocketSmartHome')
 const NodeFunction = async (node, params, behaviors) => {
     
     sendCommand(`${string(params.Name)}:${number(params.Id).toString()}:${string(params.Command)}`);

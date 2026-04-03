@@ -1,7 +1,7 @@
-const { config } = require('../../config')
-const { log, logColors } = require('../../log')
-const settingsManager = require('../../manager/settingsManager')
-require('../../manager/nodePreferencesRegistry').addPref(
+const { config } = require('../config')
+const { log, logColors } = require('../log')
+const settingsManager = require('../manager/settingsManager')
+require('../manager/nodePreferencesRegistry').addPref(
     'Ollama',
     'ollama.ip',
     'Host (IP or hostname)',

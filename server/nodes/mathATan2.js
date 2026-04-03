@@ -1,4 +1,4 @@
-const { number, string, bool } = require('./utils/inputParser')
+const { number, string, bool } = require('../utils/inputParser')
 class NodeDefinition {
     constructor() {
         this.addInput("A", "number");
