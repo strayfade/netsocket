@@ -14,6 +14,7 @@ app.use(compression())
 
 const { getNodes, setNodes, populateNodes } = require('./manager/saveState')
 const settingsManager = require('./manager/settingsManager.js')
+const cronTriggerManager = require('./utils/cronTriggerManager')
 const nodePreferencesRegistry = require('./manager/nodePreferencesRegistry')
 
 // Create an HTTP server
@@ -95,12 +96,14 @@ wss.on('connection', (socket, request) => {
                             nodes: message.broadcastData,
                             currentValues: getNodes().currentValues
                         })
+                        cronTriggerManager.syncFromGraphIfNeeded()
                         break;
                     case "execute":
                         setNodes({
                             nodes: message.broadcastData.graphNodes,
                             currentValues: getNodes().currentValues
                         })
+                        cronTriggerManager.syncFromGraphIfNeeded()
                         await executeGraph(message.broadcastData.node)
                         socket.send(JSON.stringify({
                             broadcastPurpose: 'setNodes',
@@ -373,6 +376,7 @@ server.listen(PORT, HOSTNAME, async () => {
     await reloadVars()
     await settingsManager.reloadSettings()
     constructedNodes = await require('./manager/nodeImporter').setupNodes()
+    cronTriggerManager.syncFromGraphIfNeeded()
     log(`Imported ${require('./manager/nodeImporter').getNumNodesImported()} nodes`)
     log(`Server running on http://127.0.0.1:${PORT}`);
     log(`Dashboard URL: http://127.0.0.1:${PORT}/dashboard`)
