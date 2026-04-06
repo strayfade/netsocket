@@ -5,7 +5,9 @@ class NodeDefinition {
     constructor() {
         this.addInput("A", "number");
         this.addInput("Min", "number");
+        this.addProperty("Min", "0");
         this.addInput("Max", "number");
+        this.addProperty("Max", "1");
         this.addOutput("", "number");
     }
 }
