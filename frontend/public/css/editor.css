@@ -255,6 +255,15 @@ header #node-count-visible {
     box-sizing: border-box;
 }
 
+.settings-tabs-container-header {
+    padding: 8px;
+    padding-bottom: 0px;
+    font-size: 10px;
+    font-weight: 600;
+    opacity: 0.5;
+    text-transform: uppercase;
+}
+
 .settings-close-btn {
     display: inline-flex;
     align-items: center;
