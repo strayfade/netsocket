@@ -15,5 +15,27 @@ const bool = (b) => {
         return true
     return false
 }
+const json = (str) => {
+    if (!str)
+        return "{}"
+    if (typeof str === "object")
+        return str
+    let tStr = ""
+    for (line of str.split("\n")) {
+        tStr += line.trim() + "\n"
+    }
+    str = tStr;
+    for (i of str) {
+        str = str.replace("\n", "")
+        str = str.replace("\r", "")
+    }
+    try {
+        return JSON.parse(str)
+    }
+    catch (e) {
+        log(`Error parsing JSON: ${e}`)
+        return {}
+    }
+}
 
-module.exports = { number, string, bool }
+module.exports = { number, string, bool, json }

@@ -1,5 +1,5 @@
 const { log, logColors } = require('../../log')
-const { number, string, bool } = require('../../utils/inputParser')
+const { number, string, bool, json } = require('../../utils/inputParser')
 
 class NodeDefinition {
     constructor() {
@@ -14,7 +14,7 @@ NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_array"
 const NodeFunction = async (node, params, behaviors) => {
     try {
-        const array = JSON.parse(string(params["JSON Array"]))
+        const array = json(params["JSON Array"])
         const index = number(params.index)
         if (index < array.length && index >= 0)
             await behaviors.populateNextNodeLinks([JSON.stringify(array[index])]);

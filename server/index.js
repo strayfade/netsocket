@@ -49,12 +49,12 @@ wss.on('connection', (socket, request) => {
 
     if (validateToken(cookies.tk) || request.headers?.['x-socket-auth'] == settingsManager.getSetting('triggersCommandPalette.secret')) {
         connectedClients.push(socket);
-        log('Client connected');
+        //log('Client connected');
         setWsServerConnectedClients(connectedClients)
         socket.on('close', () => {
             connectedClients = connectedClients.filter((s) => s !== socket);
             setWsServerConnectedClients(connectedClients)
-            log('Client disconnected');
+            //log('Client disconnected');
         });
     }
     else {

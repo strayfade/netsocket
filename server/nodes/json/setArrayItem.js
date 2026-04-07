@@ -17,9 +17,9 @@ NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_array"
 const NodeFunction = async (node, params, behaviors) => {
     try {
-        let array = JSON.parse(string(params["JSON Array"]))
+        let array = json(params["JSON Array"])
         const index = number(params.Index)
-        const newItem = JSON.parse(string(params["New Item"]))
+        const newItem = json(params["New Item"])
         if (index < array.length && index >= 0) {
             array[index] = newItem
             await behaviors.populateNextNodeLinks([JSON.stringify(array)]);
