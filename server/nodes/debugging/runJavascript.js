@@ -38,7 +38,7 @@ const NodeFunction = async (node, params, behaviors) => {
         result = `Error: ${error.message}`
     }
 
-    await behaviors.populateNextNodeLinks([resultToString(result)]);
+    await behaviors.populateNextNodeLinks([null, resultToString(result)]);
     await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[0]);
     return true
 }
