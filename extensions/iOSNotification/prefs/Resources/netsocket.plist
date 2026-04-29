@@ -20,15 +20,27 @@
 			<key>defaults</key>
 			<string>com.strayfade.netsocket~prefs</string>
 			<key>default</key>
-			<string>https://netsocket.strayfade.com</string>
+			<string>https://netsocket.strayfade.com/v1/postNotification</string>
 			<key>label</key>
-			<string>Server Host</string>
+			<string>API URL</string>
 			<key>placeholder</key>
-			<string>https://netsocket.strayfade.com</string>
+			<string>https://netsocket.strayfade.com/v1/postNotification</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>defaults</key>
+			<string>com.strayfade.netsocket~prefs</string>
+			<key>default</key>
+			<false/>
+			<key>key</key>
+			<string>DevelopmentMode</string>
+			<key>label</key>
+			<string>Development Mode</string>
 		</dict>
 		<dict>
 			<key>key</key>
-			<string>ServerPath</string>
+			<string>DevelopmentServerURL</string>
 			<key>cell</key>
 			<string>PSEditTextCell</string>
 			<key>detail</key>
@@ -36,11 +48,45 @@
 			<key>defaults</key>
 			<string>com.strayfade.netsocket~prefs</string>
 			<key>default</key>
-			<string>/v1/postNotification</string>
+			<string>https://netsocket-dev.strayfade.com/v1/postNotification</string>
 			<key>label</key>
-			<string>Path</string>
+			<string>Development URL</string>
 			<key>placeholder</key>
-			<string>/v1/postNotification</string>
+			<string>https://netsocket-dev.strayfade.com/v1/postNotification</string>
+		</dict>
+		<dict>
+			<key>key</key>
+			<string>Password</string>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>detail</key>
+			<string>PSDetailController</string>
+			<key>defaults</key>
+			<string>com.strayfade.netsocket~prefs</string>
+			<key>default</key>
+			<string></string>
+			<key>label</key>
+			<string>Password</string>
+			<key>placeholder</key>
+			<string>Optional path suffix</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>View Debug Log</string>
+			<key>action</key>
+			<string>showDebugLog</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Clear Debug Log</string>
+			<key>isDestructive</key>
+			<true/>
+			<key>action</key>
+			<string>clearDebugLog</string>
 		</dict>
 	</array>
 	<key>title</key>

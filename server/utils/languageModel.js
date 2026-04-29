@@ -79,38 +79,44 @@ function sanitizeAiOutput(input) {
 }
 
 const askAI = async (userText, systemPrompt, model) => {
-    
-    initOllama()
 
-    if (!userText)
-        userText = ""
-    if (!systemPrompt)
-        systemPrompt = defaultSystemPrompt
-    if (!model)
-        model = "gemma3:270m"
-    currentConversation = [{
-        role: "system",
-        content: systemPrompt
-    }];
+    try {
 
-    currentConversation.push({ role: 'user', content: userText });
+        initOllama()
 
-    // Send to Ollama model
-    let { text } = await generateText({
-        model: ollama(model),
-        messages: currentConversation
-    });
+        if (!userText)
+            userText = ""
+        if (!systemPrompt)
+            systemPrompt = defaultSystemPrompt
+        if (!model)
+            model = "gemma3:270m"
+        currentConversation = [{
+            role: "system",
+            content: systemPrompt
+        }];
 
-    if (text.includes("</think>"))
-        text = text.substr(text.indexOf("</think>"))
+        currentConversation.push({ role: 'user', content: userText });
 
-    currentConversation.push({ role: 'assistant', content: text });
+        // Send to Ollama model
+        let { text } = await generateText({
+            model: ollama(model),
+            messages: currentConversation
+        });
 
-    const newText = sanitizeAiOutput(text)
-    //log(`> ${userText}`)
-    //log(`< ${text}`)
+        if (text.includes("</think>"))
+            text = text.substr(text.indexOf("</think>"))
 
-    return Buffer.from(newText, 'latin1').toString('utf8'), Buffer.from(text, 'latin1').toString('utf8')
+        currentConversation.push({ role: 'assistant', content: text });
+
+        const newText = sanitizeAiOutput(text)
+        //log(`> ${userText}`)
+        //log(`< ${text}`)
+
+        return Buffer.from(newText, 'latin1').toString('utf8'), Buffer.from(text, 'latin1').toString('utf8')
+    } catch (e) {
+        log(`Failed to ask AI: ${e.message}`, logColors.Error)
+        return "", ""
+    }
 }
 
 module.exports = { askAI, reinitOllama: initOllama }

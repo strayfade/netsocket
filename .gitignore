@@ -16,3 +16,5 @@ frontend/public/nodes/constructNodes.js
 /extensions/overlay-electron/node_modules*
 /extensions/overlay-cpp/.vs
 *imgui.ini
+/extensions/iOSNotification/.theos
+/extensions/iOSNotification/packages
