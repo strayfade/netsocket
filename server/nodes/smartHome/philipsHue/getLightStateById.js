@@ -5,7 +5,7 @@ const { getHueApi, LightState, hueApiLib, doesHueApiWork } = require('../../../u
 class NodeDefinition {
     constructor() {
         this.addInput("ID", "string");
-        this.addOutput("State Object", "string");
+        this.addOutput("State Object", "object");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Get Light State by ID"
@@ -13,11 +13,11 @@ NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 const NodeFunction = async (node, params, behaviors) => {
     if (!doesHueApiWork()) {
-        await behaviors.populateNextNodeLinks([JSON.stringify({})]);
+        await behaviors.populateNextNodeLinks([{}]);
         return false;
     }
     let state = await getHueApi()?.lights?.getLightState(string(params.ID))
-    await behaviors.populateNextNodeLinks([JSON.stringify(state)]);
+    await behaviors.populateNextNodeLinks([state]);
     return true
 }
 module.exports = { NodeDefinition, NodeFunction }

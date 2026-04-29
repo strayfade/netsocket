@@ -84,6 +84,8 @@ ${(() => {
                                     return "false"
                                 case "array":
                                     return "[]"
+                                case "object":
+                                    return "{}"
                             }
                         })()}")\n`
                     }

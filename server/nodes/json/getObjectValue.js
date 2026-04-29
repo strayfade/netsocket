@@ -3,10 +3,10 @@ const { number, string, bool, json } = require('../../utils/inputParser')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("JSON", "string");
+        this.addInput("JSON", "object");
         this.addProperty("JSON", "{}");
         this.addInput("Key Name", "string");
-        this.addOutput("", "string");
+        this.addOutput("", "object");
     }
 }
 NodeDefinition.prototype.title = "JSON/Get Object Value"
@@ -16,12 +16,12 @@ const NodeFunction = async (node, params, behaviors) => {
     try {
         let object = json(params["JSON"])
         let keyValue = object[params["Key Name"]]
-        await behaviors.populateNextNodeLinks([ JSON.stringify(keyValue) ]);
+        await behaviors.populateNextNodeLinks([ keyValue ]);
         return true
     }
     catch (e) {
         log(e)
-        await behaviors.populateNextNodeLinks([ "" ]);
+        await behaviors.populateNextNodeLinks([ {} ]);
         return false
     }
 }

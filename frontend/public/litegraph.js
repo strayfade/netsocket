@@ -5326,8 +5326,9 @@ LGraphNode.prototype.executeAction = function(action)
         };
         this.default_connection_color_byType = {
             number: "#7F7",
-            string: "orange",
+            string: "#F7F",
             boolean: "red",
+            object: "orange",
         }
         this.default_connection_color_byTypeOff = this.default_connection_color_byType
 
@@ -5424,8 +5425,9 @@ LGraphNode.prototype.executeAction = function(action)
     LGraphCanvas.link_type_colors = {
         "-1": LiteGraph.EVENT_LINK_COLOR,
         boolean: "red",
-        string: "orange",
+        string: "#8B5CF6",
         number: "#7F7",
+        object: "orange",
         node: "#DCA"
     };
     LGraphCanvas.gradients = {}; //cache of gradients

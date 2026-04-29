@@ -16,6 +16,8 @@ const { getNodes, setNodes, populateNodes } = require('./manager/saveState')
 const settingsManager = require('./manager/settingsManager.js')
 const cronTriggerManager = require('./utils/cronTriggerManager')
 const nodePreferencesRegistry = require('./manager/nodePreferencesRegistry')
+const { SCOPES, buildOAuthClient, setStoredTokens, getStoredTokens } = require('./utils/googleAuth')
+const { startGoogleTriggerPoller } = require('./utils/googleTriggerPoller')
 
 // Create an HTTP server
 const server = http.createServer(app);
@@ -185,6 +187,7 @@ setOnPushLog(((line) => {
 
 // MARK: PostNotification
 const { onNewNotification } = require('./utils/waitForOTP')
+const { onGenericWebhook, onGitHubWebhook } = require('./utils/waitForWebhookEvents')
 app.post("/v1/postNotification/:secret", async (req, res) => {
     const expectedSecret = settingsManager.getSetting('triggersNotification.secret')
     if (!expectedSecret || req.params.secret !== expectedSecret) {
@@ -195,6 +198,74 @@ app.post("/v1/postNotification/:secret", async (req, res) => {
         onNewNotification(notificationContent)
         log(`Received notification: ${JSON.stringify(notificationContent)}`, logColors.Success)
         res.sendStatus(200);
+    }
+})
+
+app.post("/v1/triggers/webhook/:secret", async (req, res) => {
+    const expectedSecret = settingsManager.getSetting('triggersWebhook.secret')
+    if (!expectedSecret || req.params.secret !== expectedSecret) {
+        return res.sendStatus(403)
+    }
+
+    await onGenericWebhook({
+        method: req.method,
+        path: req.path,
+        query: req.query,
+        headers: req.headers,
+        body: req.body
+    })
+
+    log(`Webhook received on ${req.path}`, logColors.Success)
+    return res.sendStatus(200);
+})
+
+app.post("/v1/triggers/github/:secret", async (req, res) => {
+    const expectedSecret = settingsManager.getSetting('triggersGitHub.secret')
+    if (!expectedSecret || req.params.secret !== expectedSecret) {
+        return res.sendStatus(403)
+    }
+
+    await onGitHubWebhook({
+        eventType: req.headers['x-github-event'],
+        deliveryId: req.headers['x-github-delivery'],
+        payload: req.body
+    })
+
+    return res.sendStatus(200);
+})
+
+app.get("/v1/google/auth/start", (req, res) => {
+    if (!hasUserSession(req)) return res.sendStatus(403)
+    const oAuth2Client = buildOAuthClient(req)
+    if (!oAuth2Client) {
+        return res.status(400).send('Google OAuth is not configured. Set client ID and secret in Integrations > Google.')
+    }
+    const authUrl = oAuth2Client.generateAuthUrl({
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: SCOPES
+    })
+    return res.redirect(authUrl)
+})
+
+app.get("/v1/google/auth/callback", async (req, res) => {
+    if (!hasUserSession(req)) return res.sendStatus(403)
+    const code = req.query?.code
+    if (!code) return res.status(400).send('Missing OAuth code')
+    const oAuth2Client = buildOAuthClient(req)
+    if (!oAuth2Client) {
+        return res.status(400).send('Google OAuth is not configured. Set client ID and secret in Integrations > Google.')
+    }
+    try {
+        const result = await oAuth2Client.getToken(code)
+        const existing = getStoredTokens() || {}
+        const tokens = Object.assign({}, existing, result.tokens || {})
+        await setStoredTokens(tokens)
+        log('Google account connected successfully', logColors.Success)
+        return res.redirect('/dashboard')
+    } catch (e) {
+        log(`Google OAuth callback error: ${e}`, logColors.Error)
+        return res.status(500).send('Google OAuth failed')
     }
 })
 
@@ -377,6 +448,7 @@ server.listen(PORT, HOSTNAME, async () => {
     await settingsManager.reloadSettings()
     constructedNodes = await require('./manager/nodeImporter').setupNodes()
     cronTriggerManager.syncFromGraphIfNeeded()
+    startGoogleTriggerPoller()
     log(`Imported ${require('./manager/nodeImporter').getNumNodesImported()} nodes`)
     log(`Server running on http://127.0.0.1:${PORT}`);
     log(`Dashboard URL: http://127.0.0.1:${PORT}/dashboard`)

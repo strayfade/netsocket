@@ -4,7 +4,7 @@ const { number, string, bool } = require('../../utils/inputParser')
 class NodeDefinition {
     constructor() {
         this.addInput("", LiteGraph.EVENT);
-        this.addInput("JSON Array", "array");
+        this.addInput("Array", "array");
         this.addInput("Index", "number")
         this.addInput("New Item", "string");
         this.addProperty("New Item", "{}");
@@ -17,7 +17,7 @@ NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_array"
 const NodeFunction = async (node, params, behaviors) => {
     try {
-        let array = json(params["JSON Array"])
+        let array = json(params["Array"])
         const index = number(params.Index)
         const newItem = json(params["New Item"])
         if (index < array.length && index >= 0) {

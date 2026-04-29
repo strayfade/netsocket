@@ -3,10 +3,10 @@ const { number, string, bool, json } = require('../../utils/inputParser')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("JSON Array", "array");
+        this.addInput("Array", "array");
         this.addInput("index", "number")
         this.addProperty("index", "0")
-        this.addOutput("", "string");
+        this.addOutput("", "object");
     }
 }
 NodeDefinition.prototype.title = "JSON/Get Array Item"
@@ -14,7 +14,7 @@ NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_array"
 const NodeFunction = async (node, params, behaviors) => {
     try {
-        const array = json(params["JSON Array"])
+        const array = json(params["Array"])
         const index = number(params.index)
         if (index < array.length && index >= 0)
             await behaviors.populateNextNodeLinks([JSON.stringify(array[index])]);
