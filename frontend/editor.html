@@ -411,6 +411,24 @@
                     return control.value
                 }
 
+                if (pref.type === 'readonly') {
+                    const title = document.createElement('div')
+                    title.className = 'settings-label-block'
+                    title.textContent = pref.displayName
+                    field.appendChild(title)
+                    appendDescription(field, pref)
+                    const row = document.createElement('div')
+                    row.className = 'settings-field-row'
+                    const control = document.createElement('input')
+                    control.type = 'text'
+                    control.readOnly = true
+                    control.value = pref.value != null ? String(pref.value) : ''
+                    control.placeholder = 'Not connected'
+                    row.appendChild(control)
+                    field.appendChild(row)
+                    return field
+                }
+
                 if (pref.type === 'boolean') {
                     const title = document.createElement('div')
                     title.className = 'settings-label-block'

@@ -11,7 +11,7 @@ class NodeDefinition {
         this.addOutput("Payload", "string")
     }
 }
-NodeDefinition.prototype.title = "Triggers/Gmail New Email"
+NodeDefinition.prototype.title = "Triggers/New Email (Gmail)"
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "mail"
 

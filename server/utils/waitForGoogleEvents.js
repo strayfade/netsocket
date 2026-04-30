@@ -5,7 +5,7 @@ const onNewGmailEmail = async (email, nodeId = null) => {
     if (!getNodes().nodes) return;
     let nodes = getNodes().nodes.nodes
     for (i of nodes) {
-        if (i.type == "Triggers/Gmail New Email" && (!nodeId || i.id == nodeId)) {
+        if (i.type == "Triggers/New Email (Gmail)" && (!nodeId || i.id == nodeId)) {
             await executeGraph(i, {
                 "From": email.from || "",
                 "Subject": email.subject || "",

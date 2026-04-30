@@ -16,7 +16,7 @@ const { getNodes, setNodes, populateNodes } = require('./manager/saveState')
 const settingsManager = require('./manager/settingsManager.js')
 const cronTriggerManager = require('./utils/cronTriggerManager')
 const nodePreferencesRegistry = require('./manager/nodePreferencesRegistry')
-const { SCOPES, buildOAuthClient, setStoredTokens, getStoredTokens } = require('./utils/googleAuth')
+const { SCOPES, buildOAuthClient, getStoredTokens, mergeTokenSets, persistOAuthSession, CONNECTED_EMAIL_KEY } = require('./utils/googleAuth')
 const { startGoogleTriggerPoller } = require('./utils/googleTriggerPoller')
 
 // Create an HTTP server
@@ -121,7 +121,11 @@ wss.on('connection', (socket, request) => {
                     case "getPreferences": {
                         const defs = nodePreferencesRegistry.getPrefs()
                         const withValues = defs.map((p) => {
-                            const stored = settingsManager.getStoredValue(p.id)
+                            let stored = settingsManager.getStoredValue(p.id)
+                            if (p.id === 'google.oauth.connect') {
+                                const email = settingsManager.getStoredValue(CONNECTED_EMAIL_KEY)
+                                stored = email !== undefined ? email : stored
+                            }
                             const fallback = p.defaultVal != null && p.defaultVal !== '' ? String(p.defaultVal) : ''
                             return {
                                 category: p.category,
@@ -142,7 +146,7 @@ wss.on('connection', (socket, request) => {
                     }
                     case "saveSetting": {
                         const { name, value } = message.broadcastData || {}
-                        if (typeof name === 'string' && name.length) {
+                        if (typeof name === 'string' && name.length && name !== 'google.oauth.connect') {
                             settingsManager.setSetting(name, value ?? '')
                             await settingsManager.saveSettings()
                             try {
@@ -258,9 +262,8 @@ app.get("/v1/google/auth/callback", async (req, res) => {
     }
     try {
         const result = await oAuth2Client.getToken(code)
-        const existing = getStoredTokens() || {}
-        const tokens = Object.assign({}, existing, result.tokens || {})
-        await setStoredTokens(tokens)
+        const tokens = mergeTokenSets(getStoredTokens(), result.tokens)
+        await persistOAuthSession(oAuth2Client, tokens)
         log('Google account connected successfully', logColors.Success)
         return res.redirect('/dashboard')
     } catch (e) {
@@ -440,16 +443,22 @@ app.get('/:page', (req, res) => {
 const PORT = process.env.PORT || 4675;
 const HOSTNAME = process.env.HOSTNAME || undefined;
 const { reloadVars } = require('./utils/vars.js')
-server.listen(PORT, HOSTNAME, async () => {
-    await populateNodes()
-    await populateUsers()
-    await populateCredentials()
-    await reloadVars()
-    await settingsManager.reloadSettings()
-    constructedNodes = await require('./manager/nodeImporter').setupNodes()
-    cronTriggerManager.syncFromGraphIfNeeded()
-    startGoogleTriggerPoller()
-    log(`Imported ${require('./manager/nodeImporter').getNumNodesImported()} nodes`)
-    log(`Server running on http://127.0.0.1:${PORT}`);
-    log(`Dashboard URL: http://127.0.0.1:${PORT}/dashboard`)
-});
+;(async () => {
+    try {
+        await populateNodes()
+        await populateUsers()
+        await populateCredentials()
+        await reloadVars()
+        await settingsManager.reloadSettings()
+        constructedNodes = await require('./manager/nodeImporter').setupNodes()
+        cronTriggerManager.syncFromGraphIfNeeded()
+    } catch (e) {
+        log(`Startup init error: ${e}`, logColors.Error)
+    }
+    server.listen(PORT, HOSTNAME, () => {
+        startGoogleTriggerPoller()
+        log(`Imported ${require('./manager/nodeImporter').getNumNodesImported()} nodes`)
+        log(`Server running on http://127.0.0.1:${PORT}`)
+        log(`Dashboard URL: http://127.0.0.1:${PORT}/dashboard`)
+    })
+})()

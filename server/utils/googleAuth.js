@@ -28,9 +28,9 @@ require('../manager/nodePreferencesRegistry').addPref(
     'Google',
     'google.oauth.connect',
     'Connect Google Account',
-    'text',
+    'readonly',
     '',
-    'Open <a href="/v1/google/auth/start" target="_blank" rel="noopener">Google Connect</a> to sign in from the web UI.'
+    '<a href="/v1/google/auth/start" target="_blank" rel="noopener">Click here</a> to sign in or switch accounts from the web UI.'
 );
 
 const SCOPES = [
@@ -53,6 +53,8 @@ const buildOAuthClient = (req = null) => {
     return new google.auth.OAuth2(clientId, clientSecret, getRedirectUri(req))
 }
 
+const CONNECTED_EMAIL_KEY = 'google.oauth.connectedEmail'
+
 const getStoredTokens = () => {
     const raw = settingsManager.getSetting('google.oauth.tokens')
     if (!raw) return null
@@ -63,18 +65,57 @@ const getStoredTokens = () => {
     }
 }
 
+/** Merge new OAuth tokens with existing; Google omits refresh_token on re-auth unless rotating. */
+const mergeTokenSets = (existing, incoming) => {
+    const merged = { ...(existing || {}), ...(incoming || {}) }
+    if (!incoming?.refresh_token && existing?.refresh_token) {
+        merged.refresh_token = existing.refresh_token
+    }
+    return merged
+}
+
+let authClientSingleton = null
+
 const setStoredTokens = async (tokens) => {
     settingsManager.setSetting('google.oauth.tokens', JSON.stringify(tokens || {}))
     await settingsManager.saveSettings()
 }
 
-const getAuthorizedGoogleClient = () => {
-    const oAuth2Client = buildOAuthClient()
-    if (!oAuth2Client) return null
-    const tokens = getStoredTokens()
-    if (!tokens) return null
+/**
+ * After OAuth exchange: persist tokens, fetch Gmail profile email for settings UI.
+ */
+const persistOAuthSession = async (oAuth2Client, tokens) => {
+    await setStoredTokens(tokens)
     oAuth2Client.setCredentials(tokens)
-    return oAuth2Client
+    try {
+        const gmail = google.gmail({ version: 'v1', auth: oAuth2Client })
+        const profile = await gmail.users.getProfile({ userId: 'me' })
+        const email = profile.data.emailAddress || ''
+        settingsManager.setSetting(CONNECTED_EMAIL_KEY, email)
+        await settingsManager.saveSettings()
+    } catch {
+        // tokens still valid for API use; email is optional in UI
+    }
+}
+
+const getAuthorizedGoogleClient = () => {
+    const tokens = getStoredTokens()
+    if (!tokens || !Object.keys(tokens).length) {
+        authClientSingleton = null
+        return null
+    }
+    if (!authClientSingleton) {
+        const client = buildOAuthClient()
+        if (!client) return null
+        authClientSingleton = client
+        authClientSingleton.on('tokens', async (newTokens) => {
+            const existing = getStoredTokens() || {}
+            const merged = mergeTokenSets(existing, newTokens)
+            await setStoredTokens(merged)
+        })
+    }
+    authClientSingleton.setCredentials(tokens)
+    return authClientSingleton
 }
 
 module.exports = {
@@ -82,5 +123,8 @@ module.exports = {
     buildOAuthClient,
     getStoredTokens,
     setStoredTokens,
-    getAuthorizedGoogleClient
+    getAuthorizedGoogleClient,
+    mergeTokenSets,
+    persistOAuthSession,
+    CONNECTED_EMAIL_KEY
 }

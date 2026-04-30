@@ -21,7 +21,7 @@ const getTriggerNodes = () => {
     const graph = getNodes().nodes
     if (!graph || !Array.isArray(graph.nodes)) return { gmail: [], calendar: [] }
     return {
-        gmail: graph.nodes.filter((n) => n.type == "Triggers/Gmail New Email"),
+        gmail: graph.nodes.filter((n) => n.type == "Triggers/New Email (Gmail)"),
         calendar: graph.nodes.filter((n) => n.type == "Triggers/Google Calendar Upcoming Event")
     }
 }
