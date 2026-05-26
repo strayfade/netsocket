@@ -9,12 +9,13 @@ const { log, logColors, setOnPushLog, getLines } = require('./log')
 const { config } = require('./config')
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '32mb' }));
 app.use(compression())
 
 const { getNodes, setNodes, populateNodes } = require('./manager/saveState')
 const settingsManager = require('./manager/settingsManager.js')
 const cronTriggerManager = require('./utils/cronTriggerManager')
+const { reloadVars, getVarsSnapshot, replaceVarsAndPersist } = require('./utils/vars.js')
 const nodePreferencesRegistry = require('./manager/nodePreferencesRegistry')
 const { SCOPES, buildOAuthClient, getStoredTokens, mergeTokenSets, persistOAuthSession, CONNECTED_EMAIL_KEY } = require('./utils/googleAuth')
 const { startGoogleTriggerPoller } = require('./utils/googleTriggerPoller')
@@ -94,6 +95,9 @@ wss.on('connection', (socket, request) => {
                         }));
                         break;
                     case "setNodes":
+                        if (message.broadcastData == null) {
+                            break
+                        }
                         setNodes({
                             nodes: message.broadcastData,
                             currentValues: getNodes().currentValues
@@ -433,6 +437,90 @@ app.get("/v1/session", (req, res) => {
     else res.sendStatus(401);
 });
 
+const FULL_EXPORT_SCHEMA = 'netsocketFullExport'
+const FULL_EXPORT_VERSION = 1
+
+const canAccessPrivateApi = (req) => authSkipped() || hasUserSession(req)
+
+const broadcastGraphToClients = () => {
+    const payload = JSON.stringify({
+        broadcastPurpose: 'setNodes',
+        broadcastData: getNodes().nodes
+    })
+    connectedClients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(payload)
+        }
+    })
+}
+
+app.get('/v1/export-full-state', async (req, res) => {
+    if (!canAccessPrivateApi(req)) {
+        return res.sendStatus(401)
+    }
+    try {
+        const graph = getNodes()
+        const body = {
+            [FULL_EXPORT_SCHEMA]: true,
+            version: FULL_EXPORT_VERSION,
+            exportedAt: new Date().toISOString(),
+            graph: JSON.parse(JSON.stringify(graph)),
+            settings: settingsManager.getAllSettings(),
+            vars: getVarsSnapshot()
+        }
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+        const filename = `netsocket-backup-${stamp}.json`
+        res.setHeader('Content-Type', 'application/json; charset=utf-8')
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+        return res.status(200).send(JSON.stringify(body, null, 2))
+    } catch (e) {
+        log(`export-full-state: ${e}`, logColors.Error)
+        return res.sendStatus(500)
+    }
+})
+
+app.post('/v1/import-full-state', async (req, res) => {
+    if (!canAccessPrivateApi(req)) {
+        return res.sendStatus(401)
+    }
+    const payload = req.body
+    if (!payload || payload[FULL_EXPORT_SCHEMA] !== true || payload.version !== FULL_EXPORT_VERSION) {
+        return res.status(400).json({ error: 'invalid_backup' })
+    }
+    const graph = payload.graph
+    if (!graph || typeof graph !== 'object' || graph.nodes == null) {
+        return res.status(400).json({ error: 'invalid_graph' })
+    }
+    if (!Array.isArray(payload.settings)) {
+        return res.status(400).json({ error: 'invalid_settings' })
+    }
+    try {
+        const nextGraph = JSON.parse(JSON.stringify(graph))
+        if (!Array.isArray(nextGraph.currentValues)) {
+            nextGraph.currentValues = []
+        }
+        setNodes(nextGraph, { fromImport: true })
+        await settingsManager.replaceAllSettings(payload.settings)
+        await replaceVarsAndPersist(payload.vars != null ? payload.vars : [])
+        cronTriggerManager.syncFromGraphIfNeeded()
+        try {
+            await require('./utils/hueApi').setupHueApi()
+        } catch (e) {
+            log(`Hue reconnect after import: ${e}`, logColors.Warning)
+        }
+        try {
+            require('./utils/languageModel').reinitOllama()
+        } catch (e) {
+            log(`Ollama reinit after import: ${e}`, logColors.Warning)
+        }
+        broadcastGraphToClients()
+        return res.status(200).json({ ok: true })
+    } catch (e) {
+        log(`import-full-state: ${e}`, logColors.Error)
+        return res.status(500).json({ error: 'import_failed' })
+    }
+})
+
 app.get('/logout', (req, res) => {
     res.clearCookie("tk", { path: "/" }).redirect("/login");
 });
@@ -442,8 +530,7 @@ app.get('/:page', (req, res) => {
 
 const PORT = process.env.PORT || 4675;
 const HOSTNAME = process.env.HOSTNAME || undefined;
-const { reloadVars } = require('./utils/vars.js')
-;(async () => {
+(async () => {
     try {
         await populateNodes()
         await populateUsers()

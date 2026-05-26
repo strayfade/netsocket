@@ -25,11 +25,16 @@ const onNewNotification = async (notificationContent) => {
     
     ${notificationContent.textContent}
     `
-    const code = await askAI(prompt, null, "gemma3:4b")
-    if (code.trim().toLowerCase() != "none") {
-        lastOTP = code
-        log(`OTP Received: ${lastOTP}`, logColors.SuccessVisible)
-        newOTP = true;
+    try {
+        const code = await askAI(prompt, null, "gemma3:4b")
+        if (code.trim().toLowerCase() != "none") {
+            lastOTP = code
+            log(`OTP Received: ${lastOTP}`, logColors.SuccessVisible)
+            newOTP = true;
+        }
+    }
+    catch (e) {
+        log(`Error: ${e}`, logColors.Error)
     }
 }
 const waitForOTP = async () => {

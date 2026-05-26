@@ -4,15 +4,31 @@ const { config } = require('../config')
 
 let vars = []
 
+const normalizeVarsArray = (raw) => {
+    if (Array.isArray(raw)) {
+        return raw
+            .filter((e) => e && typeof e.name === 'string' && e.name.length)
+            .map((e) => ({ name: e.name, value: e.value != null ? String(e.value) : '' }))
+    }
+    if (raw && typeof raw === 'object') {
+        return Object.keys(raw).map((name) => ({
+            name,
+            value: raw[name] != null ? String(raw[name]) : ''
+        }))
+    }
+    return []
+}
+
 const reloadVars = async () => {
     const varsPath = config.storage.vars
     try {
-        vars = JSON.parse(await fs.readFile(varsPath, { encoding: "utf-8" }))
+        const raw = JSON.parse(await fs.readFile(varsPath, { encoding: "utf-8" }))
+        vars = normalizeVarsArray(raw)
         log(`Loaded state variables!`)
     }
     catch {
         log("Unable to load state variables (if this is a first run, ignore this warning)", logColors.Warning)
-        await fs.writeFile(varsPath, JSON.stringify({}), { encoding: "utf-8" })
+        await fs.writeFile(varsPath, JSON.stringify([], null, 2), { encoding: "utf-8" })
         vars = []
     }
 }
@@ -41,4 +57,15 @@ const setVar = (varName, newVal) => {
     }
 }
 
-module.exports = { getVar, setVar, reloadVars }
+const getVarsSnapshot = () => {
+    return JSON.parse(JSON.stringify(Array.isArray(vars) ? vars : []))
+}
+
+const replaceVarsAndPersist = async (raw) => {
+    const next = normalizeVarsArray(raw)
+    vars = next
+    const varsPath = config.storage.vars
+    await fs.writeFile(varsPath, JSON.stringify(next, null, 2), { encoding: 'utf-8' })
+}
+
+module.exports = { getVar, setVar, reloadVars, getVarsSnapshot, replaceVarsAndPersist }

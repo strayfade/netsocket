@@ -49,7 +49,20 @@
             <img src="favicon.png" alt="Netsocket Logo">
             <span class="node-count"><span id="node-count">0 nodes</span> <span id="node-count-visible">(0
                     visible)</span></span>
+            <span class="editor-history-controls" role="group" aria-label="Graph undo and redo">
+                <button type="button" id="editor-undo" class="header-toolbar-btn" disabled title="Undo (Ctrl+Z)">
+                    <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+                </button>
+                <button type="button" id="editor-redo" class="header-toolbar-btn" disabled title="Redo (Ctrl+Y or Ctrl+Shift+Z)">
+                    <span class="material-symbols-outlined" aria-hidden="true">redo</span>
+                </button>
+            </span>
             <div class="header-distance"></div>
+            <a href="#" id="open-backup" title="Move your graph and settings to another machine">
+                <span>Backup</span>
+                <span class="material-symbols-outlined"
+                    style="font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;">cloud_download</span>
+            </a>
             <a href="#" id="open-settings">
                 <span>Integrations</span>
                 <span class="material-symbols-outlined"
@@ -182,6 +195,157 @@
         /** True while applying server graph state — suppresses autosave during LGraph.configure (clear/add call change). */
         let graphReconfiguring = false;
 
+        const GRAPH_HISTORY_MAX = 200;
+        let graphHistory = [];
+        let graphHistoryIndex = -1;
+        /** Last graph JSON string we recorded as persisted (local history tip or last successful server sync). */
+        let lastPersistedSnapshotJson = "";
+        let graphPersistChain = Promise.resolve();
+
+        const serializeGraphJson = () => JSON.stringify(graph.serialize());
+        const cloneGraphData = (data) => JSON.parse(JSON.stringify(data));
+
+        const undoBtn = document.getElementById("editor-undo");
+        const redoBtn = document.getElementById("editor-redo");
+
+        const updateUndoRedoUi = () => {
+            const canUndo = graphLoaded && graphHistoryIndex > 0;
+            const canRedo = graphLoaded && graphHistoryIndex >= 0 && graphHistoryIndex < graphHistory.length - 1;
+            if (undoBtn) {
+                undoBtn.disabled = !canUndo;
+                undoBtn.setAttribute("aria-disabled", canUndo ? "false" : "true");
+            }
+            if (redoBtn) {
+                redoBtn.disabled = !canRedo;
+                redoBtn.setAttribute("aria-disabled", canRedo ? "false" : "true");
+            }
+        };
+
+        const resetHistoryToCurrentGraph = () => {
+            const j = serializeGraphJson();
+            graphHistory = [JSON.parse(j)];
+            graphHistoryIndex = 0;
+            lastPersistedSnapshotJson = j;
+            updateUndoRedoUi();
+        };
+
+        async function persistGraphChangeNow() {
+            if (!graphLoaded || graphReconfiguring) {
+                return;
+            }
+            const j = serializeGraphJson();
+            if (j === lastPersistedSnapshotJson) {
+                return;
+            }
+            if (graphHistoryIndex < graphHistory.length - 1) {
+                graphHistory.splice(graphHistoryIndex + 1);
+            }
+            graphHistory.push(JSON.parse(j));
+            graphHistoryIndex = graphHistory.length - 1;
+            while (graphHistory.length > GRAPH_HISTORY_MAX) {
+                graphHistory.shift();
+                graphHistoryIndex--;
+            }
+            updateUndoRedoUi();
+            while (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+            await activeWs.send(
+                JSON.stringify({
+                    broadcastPurpose: "setNodes",
+                    broadcastData: graph.serialize(),
+                })
+            );
+            lastPersistedSnapshotJson = serializeGraphJson();
+        }
+
+        const enqueuePersistGraphChange = () => {
+            graphPersistChain = graphPersistChain
+                .then(() => persistGraphChangeNow())
+                .catch((err) => console.warn("Graph persist failed", err));
+        };
+
+        async function applyHistoryStepWork(nextIndex) {
+            if (!graphLoaded || nextIndex < 0 || nextIndex >= graphHistory.length) {
+                return;
+            }
+            graphHistoryIndex = nextIndex;
+            const snap = graphHistory[graphHistoryIndex];
+            graphReconfiguring = true;
+            try {
+                graph.configure(cloneGraphData(snap));
+                graph.start();
+                try {
+                    updateNodeCounts();
+                } catch (e) {
+                    /* ignore */
+                }
+            } finally {
+                graphReconfiguring = false;
+            }
+            updateUndoRedoUi();
+            while (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+            await activeWs.send(
+                JSON.stringify({
+                    broadcastPurpose: "setNodes",
+                    broadcastData: graph.serialize(),
+                })
+            );
+            lastPersistedSnapshotJson = serializeGraphJson();
+        }
+
+        const graphUndo = () => {
+            graphPersistChain = graphPersistChain
+                .then(() => applyHistoryStepWork(graphHistoryIndex - 1))
+                .catch((err) => console.warn("Undo failed", err));
+        };
+
+        const graphRedo = () => {
+            graphPersistChain = graphPersistChain
+                .then(() => applyHistoryStepWork(graphHistoryIndex + 1))
+                .catch((err) => console.warn("Redo failed", err));
+        };
+
+        if (undoBtn) {
+            undoBtn.addEventListener("click", () => graphUndo());
+        }
+        if (redoBtn) {
+            redoBtn.addEventListener("click", () => graphRedo());
+        }
+
+        document.addEventListener(
+            "keydown",
+            (e) => {
+                const tag = (e.target && e.target.tagName && e.target.tagName.toLowerCase()) || "";
+                if (tag === "input" || tag === "textarea" || tag === "select" || e.target?.isContentEditable) {
+                    return;
+                }
+                const mod = e.ctrlKey || e.metaKey;
+                if (!mod) {
+                    return;
+                }
+                if (e.code === "KeyZ" && e.shiftKey) {
+                    e.preventDefault();
+                    graphRedo();
+                    return;
+                }
+                if (e.code === "KeyZ" && !e.shiftKey) {
+                    e.preventDefault();
+                    graphUndo();
+                    return;
+                }
+                if (e.code === "KeyY" && !e.shiftKey) {
+                    e.preventDefault();
+                    graphRedo();
+                }
+            },
+            true
+        );
+
+        updateUndoRedoUi();
+
         const wsUrl = () => `${location.protocol !== 'https:' ? "ws" : "wss"}://${window.location.host}`;
 
         const clearWsReconnectTimer = () => {
@@ -275,6 +439,7 @@
                 }
                 switch (parsedMessage.broadcastPurpose) {
                     case "setNodes":
+                        graphPersistChain = Promise.resolve();
                         graphReconfiguring = true;
                         try {
                             graph.configure(parsedMessage.broadcastData);
@@ -282,6 +447,7 @@
                             graphLoaded = true;
                             // update header counts after loading the graph
                             try { updateNodeCounts(); } catch (e) { /* ignore */ }
+                            resetHistoryToCurrentGraph();
                         } finally {
                             graphReconfiguring = false;
                         }
@@ -338,19 +504,11 @@
             }));
         }
         loadGraph()
-        const saveGraph = async () => {
-            if (!graphLoaded || graphReconfiguring) {
-                return;
-            }
-            while (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            await activeWs.send(JSON.stringify({
-                broadcastPurpose: 'setNodes',
-                broadcastData: graph.serialize()
-            }));
-        }
-        graph.on_change = saveGraph
+        const saveGraph = () => {
+            enqueuePersistGraphChange();
+        };
+        graph.on_change = saveGraph;
+        graph.onAfterChange = saveGraph;
 
         const ping = async () => {
             if (activeWs && activeWs.readyState == WebSocket.OPEN) {
@@ -363,6 +521,22 @@
         setInterval(ping, 3000);
     </script>
     <!-- Settings modal (sidebar + panels built from server preference registry) -->
+    <div id="backup-modal" class="backup-modal-root" hidden aria-hidden="true">
+        <div id="backup-backdrop" class="settings-backdrop" aria-hidden="true"></div>
+        <div class="backup-dialog" role="dialog" aria-modal="true" aria-labelledby="backup-modal-title">
+            <h2 id="backup-modal-title">Backup &amp; restore</h2>
+            <p class="backup-intro">Download or upload a single file with your entire node graph, workflow variables, and
+                integration settings (including API keys and OAuth tokens stored in settings). Your netsocket login name
+                and password are never included.</p>
+            <p id="backup-status" class="backup-status" role="status"></p>
+            <div class="backup-actions">
+                <button type="button" id="backup-export-btn" class="backup-primary-btn">Export everything</button>
+                <button type="button" id="backup-import-btn" class="backup-secondary-btn">Import from file…</button>
+            </div>
+            <input type="file" id="backup-file-input" accept=".json,application/json" hidden />
+            <button type="button" id="backup-close-btn" class="backup-close-footer">Close</button>
+        </div>
+    </div>
     <div id="settings-modal" style="display:none; position:fixed; inset:0; z-index:50;">
         <div id="settings-backdrop" class="settings-backdrop" aria-hidden="true"></div>
         <div class="settings-shell" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
@@ -386,6 +560,121 @@
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const backupModal = document.getElementById('backup-modal')
+            const backupBackdrop = document.getElementById('backup-backdrop')
+            const backupCloseBtn = document.getElementById('backup-close-btn')
+            const openBackupBtn = document.getElementById('open-backup')
+            const backupExportBtn = document.getElementById('backup-export-btn')
+            const backupImportBtn = document.getElementById('backup-import-btn')
+            const backupFileInput = document.getElementById('backup-file-input')
+            const backupStatus = document.getElementById('backup-status')
+
+            const setBackupStatus = (text, isError = false) => {
+                if (!backupStatus) return
+                backupStatus.textContent = text || ''
+                backupStatus.classList.toggle('backup-status-error', Boolean(isError && text))
+            }
+
+            const openBackupModal = () => {
+                if (!backupModal) return
+                backupModal.hidden = false
+                backupModal.setAttribute('aria-hidden', 'false')
+                setBackupStatus('')
+            }
+
+            const closeBackupModal = () => {
+                if (!backupModal) return
+                backupModal.hidden = true
+                backupModal.setAttribute('aria-hidden', 'true')
+                setBackupStatus('')
+            }
+
+            const parseFilenameFromDisposition = (header) => {
+                if (!header) return null
+                const m = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(header)
+                return m ? decodeURIComponent(m[1].replace(/"/g, '')) : null
+            }
+
+            if (openBackupBtn) {
+                openBackupBtn.addEventListener('click', (e) => {
+                    e.preventDefault()
+                    openBackupModal()
+                })
+            }
+            if (backupBackdrop) backupBackdrop.addEventListener('click', closeBackupModal)
+            if (backupCloseBtn) backupCloseBtn.addEventListener('click', closeBackupModal)
+
+            if (backupExportBtn) {
+                backupExportBtn.addEventListener('click', async () => {
+                    setBackupStatus('')
+                    backupExportBtn.disabled = true
+                    try {
+                        const res = await fetch('/v1/export-full-state', { credentials: 'same-origin' })
+                        if (!res.ok) {
+                            setBackupStatus(res.status === 401 ? 'Not signed in.' : `Export failed (${res.status}).`, true)
+                            return
+                        }
+                        const blob = await res.blob()
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = parseFilenameFromDisposition(res.headers.get('Content-Disposition')) || 'netsocket-backup.json'
+                        a.rel = 'noopener'
+                        document.body.appendChild(a)
+                        a.click()
+                        a.remove()
+                        URL.revokeObjectURL(url)
+                        setBackupStatus('Download started.')
+                    } catch (err) {
+                        console.warn(err)
+                        setBackupStatus('Export failed. Check your connection and try again.', true)
+                    } finally {
+                        backupExportBtn.disabled = false
+                    }
+                })
+            }
+
+            if (backupImportBtn && backupFileInput) {
+                backupImportBtn.addEventListener('click', () => {
+                    setBackupStatus('')
+                    backupFileInput.click()
+                })
+                backupFileInput.addEventListener('change', async () => {
+                    const file = backupFileInput.files && backupFileInput.files[0]
+                    backupFileInput.value = ''
+                    if (!file) return
+                    if (!window.confirm('Replace this machine’s entire graph, variables, and integration settings with the contents of this file? This cannot be undone.')) {
+                        return
+                    }
+                    backupImportBtn.disabled = true
+                    if (backupExportBtn) backupExportBtn.disabled = true
+                    setBackupStatus('Importing…')
+                    try {
+                        const text = await file.text()
+                        const body = JSON.parse(text)
+                        const res = await fetch('/v1/import-full-state', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body)
+                        })
+                        if (!res.ok) {
+                            const errJson = await res.json().catch(() => ({}))
+                            const code = errJson.error || res.statusText
+                            setBackupStatus(`Import failed${code ? `: ${code}` : ''}.`, true)
+                            return
+                        }
+                        setBackupStatus('Import complete. Graph and settings are updated.')
+                    } catch (err) {
+                        console.warn(err)
+                        setBackupStatus('Import failed. Use a netsocket backup JSON file.', true)
+                    } finally {
+                        backupImportBtn.disabled = false
+                        if (backupExportBtn) backupExportBtn.disabled = false
+                    }
+                })
+            }
+
             const openSettingsBtn = document.getElementById('open-settings')
             const settingsModal = document.getElementById('settings-modal')
             const closeSettingsBtn = document.getElementById('close-settings')

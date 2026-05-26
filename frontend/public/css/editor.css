@@ -155,6 +155,44 @@ header .node-count {
     font-size: 11px;
 }
 
+.editor-history-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 4px 0 8px;
+    pointer-events: auto;
+}
+
+.header-toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 6px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: white;
+    cursor: pointer;
+    line-height: 0;
+}
+
+.header-toolbar-btn .material-symbols-outlined {
+    margin-left: 0;
+    font-size: 22px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.header-toolbar-btn:hover:not(:disabled) {
+    color: black;
+    background-color: white;
+}
+
+.header-toolbar-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
 header #node-count-visible {
     opacity: 0.5;
 }
@@ -602,8 +640,120 @@ header #node-count-visible {
     color: #721c24;
 }
 
-a, a:visited {
+a,
+a:visited {
     color: white;
     text-decoration: none;
     font-weight: bold;
+}
+
+/* Full-state backup modal (header → Backup) */
+.backup-modal-root {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+}
+
+.backup-modal-root[hidden] {
+    display: none !important;
+}
+
+.backup-dialog {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(440px, 92vw);
+    max-height: min(520px, 88vh);
+    overflow: auto;
+    box-sizing: border-box;
+    background: #292929;
+    color: #eee;
+    padding: 22px 24px 18px;
+    border-radius: 10px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+    border: 1px solid #3a3a3a;
+}
+
+.backup-dialog h2 {
+    margin: 12px 0px;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    padding: 0px;
+}
+
+.backup-intro {
+    margin: 0 0 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #b8b8b8;
+}
+
+.backup-status {
+    min-height: 1.25em;
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: #9fd89f;
+}
+
+.backup-status-error {
+    color: #f0a8a8;
+}
+
+.backup-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.backup-primary-btn,
+.backup-secondary-btn,
+.backup-close-footer {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 10px 14px;
+    border: none;
+}
+
+.backup-primary-btn {
+    background: #e8e8e8;
+    color: #111;
+}
+
+.backup-primary-btn:hover:not(:disabled) {
+    background: #fff;
+    color: black;
+}
+
+.backup-secondary-btn {
+    background: #3a3a3a;
+    color: #f0f0f0;
+    border: 1px solid #505050;
+}
+
+.backup-secondary-btn:hover:not(:disabled) {
+    background: #484848;
+}
+
+.backup-primary-btn:disabled,
+.backup-secondary-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.backup-close-footer {
+    width: 100%;
+    background: transparent;
+    color: #888;
+    padding: 8px;
+    font-weight: 500;
+}
+
+.backup-close-footer:hover {
+    color: #ccc;
 }

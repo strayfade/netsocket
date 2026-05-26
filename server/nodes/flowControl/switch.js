@@ -32,7 +32,6 @@ NodeDefinition.prototype.icon = "arrow_split"
 const NodeFunction = async (node, params, behaviors) => {
     let matched = false;
     for (i in [0, 1, 2, 3, 4]) {
-        log(`Condition ${(parseInt(i) + 1).toString()}`)
         if (string(params.Input) == string(params[`Condition ${(parseInt(i) + 1).toString()}`])) {
             matched = true;
             await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[i]);

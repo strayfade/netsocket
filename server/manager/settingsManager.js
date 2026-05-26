@@ -58,4 +58,29 @@ const saveSettings = async () => {
     await fs.writeFile(settingsPath, JSON.stringify(settingsStorage), { encoding: "utf-8" })
 }
 
-module.exports = { getSetting, getStoredValue, setSetting, getAllSettings, reloadSettings, saveSettings }
+/** Replace all stored settings (used for full-state import). */
+const replaceAllSettings = async (items) => {
+    if (!Array.isArray(items)) {
+        throw new Error('settings must be an array')
+    }
+    const cleaned = []
+    for (const entry of items) {
+        if (!entry || typeof entry.name !== 'string' || !entry.name.length) continue
+        cleaned.push({
+            name: entry.name,
+            value: entry.value != null ? String(entry.value) : ''
+        })
+    }
+    settingsStorage = cleaned
+    await saveSettings()
+}
+
+module.exports = {
+    getSetting,
+    getStoredValue,
+    setSetting,
+    getAllSettings,
+    reloadSettings,
+    saveSettings,
+    replaceAllSettings
+}

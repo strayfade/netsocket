@@ -11480,15 +11480,20 @@ LGraphNode.prototype.executeAction = function(action)
                 return false;
         }
 
-        var options = ["Add Node", null];
+        var fromSlotType = slotX.type == LiteGraph.EVENT ? "_event_" : slotX.type;
 
         if (that.allow_searchbox) {
-            options.push("Search");
-            options.push(null);
+            if (isFrom) {
+                that.showSearchBox(opts.e, { node_from: opts.nodeFrom, slot_from: slotX, type_filter_in: fromSlotType });
+            } else {
+                that.showSearchBox(opts.e, { node_to: opts.nodeTo, slot_from: slotX, type_filter_out: fromSlotType });
+            }
+            return false;
         }
 
+        var options = ["Add Node", null];
+
         // get defaults nodes for this slottype
-        var fromSlotType = slotX.type == LiteGraph.EVENT ? "_event_" : slotX.type;
         var slotTypesDefault = isFrom ? LiteGraph.slot_types_default_out : LiteGraph.slot_types_default_in;
         if (slotTypesDefault && slotTypesDefault[fromSlotType]) {
             if (typeof slotTypesDefault[fromSlotType] == "object" || typeof slotTypesDefault[fromSlotType] == "array") {
@@ -11519,13 +11524,6 @@ LGraphNode.prototype.executeAction = function(action)
                             opts.nodeTo.connectByTypeOutput(iSlotConn, node, fromSlotType);
                         }
                     });
-                    break;
-                case "Search":
-                    if (isFrom) {
-                        that.showSearchBox(e, { node_from: opts.nodeFrom, slot_from: slotX, type_filter_in: fromSlotType });
-                    } else {
-                        that.showSearchBox(e, { node_to: opts.nodeTo, slot_from: slotX, type_filter_out: fromSlotType });
-                    }
                     break;
                 default:
                     // check for defaults nodes for this slottype
@@ -11598,9 +11596,9 @@ LGraphNode.prototype.executeAction = function(action)
             offsety -= rect.top;
         }
 
-        if (event) {
-            dialog.style.left = event.clientX * window.devicePixelRatio + offsetx + "px";
-            dialog.style.top = event.clientY * window.devicePixelRatio + offsety + "px";
+        if (e) {
+            dialog.style.left = e.clientX * window.devicePixelRatio + offsetx + "px";
+            dialog.style.top = e.clientY * window.devicePixelRatio + offsety + "px";
         } else {
             dialog.style.left = canvas.width * 0.5 + offsetx + "px";
             dialog.style.top = canvas.height * 0.5 + offsety + "px";
@@ -14230,7 +14228,6 @@ LGraphNode.prototype.executeAction = function(action)
                     if (!value.submenu.options) {
                         throw "ContextMenu submenu needs options";
                     }
-                    value.submenu.options = e
                     var submenu = new that.constructor(value.submenu.options, {
                         callback: value.submenu.callback,
                         event: e,

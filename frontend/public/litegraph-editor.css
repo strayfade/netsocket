@@ -12,7 +12,6 @@
 }
 
 .litegraph-editor h1 {
-    font-family: "Metro Light", Tahoma;
     color: #ddd;
     font-size: 28px;
     padding-left: 10px;
@@ -29,7 +28,6 @@
 }
 
 .litegraph-editor h2 {
-    font-family: "Metro Light";
     padding: 5px;
     margin-left: 10px;
 }
@@ -94,7 +92,6 @@
 /* BUTTONS **********************/
 
 .litegraph-editor .btn {
-    /*font-family: "Metro Light";*/
     color: #ccc;
     font-size: 20px;
     min-width: 30px;
