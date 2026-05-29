@@ -7,6 +7,8 @@
 .env
 /data/
 /extensions/overlay/node_modules
+/extensions/overlay/dist
+/extensions/overlay/src-tauri/target
 frontend/public/nodes/constructNodes.js
 /extensions/overlay-cpp/Debug
 /extensions/overlay-cpp/netsocket/Debug

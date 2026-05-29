@@ -12,6 +12,7 @@ class NodeDefinition {
     constructor() {
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("Content", "string")
+        this.addOutput("Conversation ID", "string")
     }
 }
 NodeDefinition.prototype.title = "Triggers/Command Palette"
@@ -20,7 +21,8 @@ NodeDefinition.prototype.icon = "input"
 const NodeFunction = async (node, params, behaviors) => {
     await behaviors.populateNextNodeLinks([
         null,
-        string(params["Content"])
+        string(params["Content"]),
+        string(params["Conversation ID"])
     ]);
     await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[0]);
     return true

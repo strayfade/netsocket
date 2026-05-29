@@ -7,6 +7,7 @@ class NodeDefinition {
         this.addInput("", LiteGraph.EVENT);
         this.addInput("Text", "string");
         this.addProperty("Text", "Alert");
+        this.addInput("Conversation ID", "string");
         this.addOutput("", LiteGraph.EVENT);
     }
 }
@@ -14,7 +15,7 @@ NodeDefinition.prototype.title = "Notifiers/Alert"
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "notification_add"
 const NodeFunction = async (node, params, behaviors) => {
-    await alert(string(params.Text))
+    await alert(string(params.Text), string(params["Conversation ID"]))
     await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[0]);
     return true
 }

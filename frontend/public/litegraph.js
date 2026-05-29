@@ -10663,7 +10663,6 @@ LGraphNode.prototype.executeAction = function(action)
     /* this is an implementation for touch not in production and not ready
      */
     /*LGraphCanvas.prototype.touchHandler = function(event) {
-        //alert("foo");
         var touches = event.changedTouches,
             first = touches[0],
             type = "";

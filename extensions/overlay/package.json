@@ -1,0 +1,26 @@
+{
+  "name": "netsocket-overlay",
+  "version": "1.0.0",
+  "description": "Spotlight-style desktop overlay for netsocket",
+  "type": "module",
+  "scripts": {
+    "dev:vite": "vite",
+    "dev": "tauri dev",
+    "build": "vite build",
+    "start": "tauri dev",
+    "tauri": "tauri",
+    "build:app": "tauri build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "dompurify": "^3.2.6",
+    "marked": "^15.0.12",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "vite": "^7.2.0"
+  }
+}

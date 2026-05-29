@@ -402,12 +402,16 @@ int main(int, char**) {
         paletteHidden = true;
     };
 
+    const auto neq0 = [](SHORT param) -> bool {
+        return param != 0;
+    };
+
     std::vector<hotkey*> registeredKeys;
-    registeredKeys.push_back(new hotkey([]() -> bool {
+    registeredKeys.push_back(new hotkey([&]() -> bool {
         return (
-            GetAsyncKeyState(VK_LCONTROL) && 
-            GetAsyncKeyState(VK_LSHIFT) && 
-            GetAsyncKeyState(VK_SPACE)
+            neq0(GetAsyncKeyState(VK_LCONTROL)) && 
+            neq0(GetAsyncKeyState(VK_LSHIFT)) && 
+            neq0(GetAsyncKeyState(VK_SPACE))
         ) || (!paletteHidden && GetAsyncKeyState(VK_ESCAPE));
     }, [&]() {
         if (paletteHidden)
@@ -416,11 +420,11 @@ int main(int, char**) {
             hidePalette(hwnd);
         }
     }));
-    registeredKeys.push_back(new hotkey([]() -> bool {
+    registeredKeys.push_back(new hotkey([&]() -> bool {
         return (
-            GetAsyncKeyState(VK_LCONTROL) &&
-            GetAsyncKeyState(VK_LSHIFT) &&
-            GetAsyncKeyState('1')
+            neq0(GetAsyncKeyState(VK_LCONTROL)) &&
+            neq0(GetAsyncKeyState(VK_LSHIFT)) &&
+            neq0(GetAsyncKeyState('1'))
         );
     }, [&]() {
         const char* output = notification::lastBigNotification.c_str();
@@ -433,11 +437,11 @@ int main(int, char**) {
         SetClipboardData(CF_TEXT, hMem);
         CloseClipboard();
     }));
-    registeredKeys.push_back(new hotkey([]() -> bool {
+    registeredKeys.push_back(new hotkey([&]() -> bool {
         return (
-            GetAsyncKeyState(VK_LCONTROL) &&
-            GetAsyncKeyState(VK_LSHIFT) &&
-            GetAsyncKeyState('2')
+            neq0(GetAsyncKeyState(VK_LCONTROL)) &&
+            neq0(GetAsyncKeyState(VK_LSHIFT)) &&
+            neq0(GetAsyncKeyState('2'))
         );
     }, [&]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -453,11 +457,11 @@ int main(int, char**) {
             SendInput(2, inputs, sizeof(INPUT));
         }
     }));
-    registeredKeys.push_back(new hotkey([]() -> bool {
+    registeredKeys.push_back(new hotkey([&]() -> bool {
         return (
-            GetAsyncKeyState(VK_LCONTROL) &&
-            GetAsyncKeyState(VK_LSHIFT) &&
-            GetAsyncKeyState('3')
+            neq0(GetAsyncKeyState(VK_LCONTROL)) &&
+            neq0(GetAsyncKeyState(VK_LSHIFT)) &&
+            neq0(GetAsyncKeyState('3'))
         );
     }, [&]() {
         isPreferencesVisible = !isPreferencesVisible;
@@ -468,6 +472,7 @@ int main(int, char**) {
     // Main loop
     bool done = false;
     ImVec2 paletteSize;
+    hidePalette(hwnd);
 
     while (!done) {
 

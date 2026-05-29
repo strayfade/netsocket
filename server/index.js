@@ -28,7 +28,7 @@ const wss = new WebSocket.Server({ server });
 let connectedClients = [];
 
 // Store connected clients
-const { setWsServerConnectedClients } = require('./utils/alert.js')
+const { setWsServerConnectedClients, registerConversation, unregisterSocket } = require('./utils/alert.js')
 const { executeGraph } = require('./manager/execute')
 var cookieParser = require('cookie-parser')
 app.use(cookieParser())
@@ -57,6 +57,7 @@ wss.on('connection', (socket, request) => {
         socket.on('close', () => {
             connectedClients = connectedClients.filter((s) => s !== socket);
             setWsServerConnectedClients(connectedClients)
+            unregisterSocket(socket)
             //log('Client disconnected');
         });
     }
@@ -69,20 +70,40 @@ wss.on('connection', (socket, request) => {
             message = JSON.parse(message)
             if (connectedClients.includes(socket)) {
                 switch (message.broadcastPurpose) {
-                    case "command":
-                        if (message.broadcastData == "/noti") {
+                    case "command": {
+                        const payload = message.broadcastData
+                        let commandText = ""
+                        let conversationId = null
+
+                        if (typeof payload === "string") {
+                            commandText = payload
+                        } else if (payload && typeof payload === "object") {
+                            commandText = String(payload.command ?? payload.text ?? "")
+                            conversationId = payload.conversationId ?? null
+                        }
+
+                        if (conversationId) {
+                            registerConversation(conversationId, socket)
+                        }
+
+                        if (commandText === "/noti") {
                             socket.send(JSON.stringify({
                                 broadcastPurpose: "overlay",
-                                broadcastData: "this is a test notification!"
+                                broadcastData: {
+                                    text: "this is a test notification!",
+                                    conversationId: conversationId,
+                                },
                             }))
+                        } else {
+                            await onNewCommand(commandText, conversationId)
                         }
-                        else {
-                            onNewCommand(message.broadcastData)
-                        }
+
                         socket.send(JSON.stringify({
                             broadcastPurpose: 'ack',
+                            conversationId: conversationId,
                         }));
                         break;
+                    }
                     case "ping":
                         socket.send(JSON.stringify({
                             broadcastPurpose: 'pong',

@@ -3,7 +3,7 @@ const { log, logColors } = require('../log')
 const { getNodes, setNodes } = require('../manager/saveState')
 const { executeGraph } = require('../manager/execute')
 
-const onNewCommand = async (textContent) => {
+const onNewCommand = async (textContent, conversationId = null) => {
     log(`Command received: ${textContent}`)
 
     // Trigger proper nodes in graph
@@ -13,6 +13,7 @@ const onNewCommand = async (textContent) => {
         if (i.type == "Triggers/Command Palette") {
             await executeGraph(i, {
                 "Content": textContent,
+                "Conversation ID": conversationId
             })
         }
     }
