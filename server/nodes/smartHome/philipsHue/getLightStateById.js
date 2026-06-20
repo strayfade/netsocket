@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Get Light State by ID"
+NodeDefinition.prototype.description = "Retrieves the current state object for a Philips Hue light by its ID. Requires a configured Hue bridge connection."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 const NodeFunction = async (node, params, behaviors) => {

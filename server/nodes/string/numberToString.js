@@ -8,6 +8,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "String/To String (number)"
+NodeDefinition.prototype.description = "Converts a number input to its string representation."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

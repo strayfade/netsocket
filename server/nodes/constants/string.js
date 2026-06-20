@@ -8,6 +8,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Constants/String"
+NodeDefinition.prototype.description = "Outputs a fixed text value configured in the node property."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "input"
 const NodeFunction = async (node, params, behaviors) => {

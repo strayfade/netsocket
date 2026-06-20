@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Time/Get Month"
+NodeDefinition.prototype.description = "Extracts the month (0–11) from a timestamp in local time."
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

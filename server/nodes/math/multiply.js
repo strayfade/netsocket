@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Multiply"
+NodeDefinition.prototype.description = "Multiplies two numbers A and B and outputs the product."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "X"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

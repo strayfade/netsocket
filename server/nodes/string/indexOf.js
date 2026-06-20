@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "String/Index Of"
+NodeDefinition.prototype.description = "Returns the zero-based index of the first occurrence of a search substring, or -1 if not found."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "document_search"
 const NodeFunction = async (node, params, behaviors) => {

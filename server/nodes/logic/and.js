@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Logic/AND"
+NodeDefinition.prototype.description = "Outputs true only when both boolean inputs A and B are true."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "AND"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

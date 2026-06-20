@@ -120,7 +120,11 @@ body,
   transition:
     transform 320ms var(--bounce),
     box-shadow 220ms var(--ease-out),
-    border-color 160ms var(--ease-out);
+    border-color 0.15s ease;
+}
+
+.command-card:focus-within {
+  border-color: #ffffff;
 }
 
 .command-card.disconnected {
@@ -387,18 +391,19 @@ body,
 
 .settings-input {
   width: 100%;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid #333333;
+  border-radius: 8px;
+  background: #111111;
   color: #f5f5f5;
   padding: 10px 12px;
   font-family: inherit;
   font-size: 13px;
+  transition: border-color 0.15s ease;
 }
 
 .settings-input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: #ffffff;
 }
 
 .settings-slider {

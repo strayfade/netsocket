@@ -6,11 +6,12 @@ class NodeDefinition {
         this.addInput("A", "string");
         this.addInput("B", "string");
         this.addInput("Case-sensitive", "boolean");
-        this.addProperty("Case-sensitive", "true");
+        this.addEnumProperty("Case-sensitive", "True", ["True", "False"]);
         this.addOutput("", "boolean");
     }
 }
 NodeDefinition.prototype.title = "String/Equals"
+NodeDefinition.prototype.description = "Compares two strings for equality with optional case sensitivity and outputs \"true\" or \"false\" as a string."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "="
 NodeDefinition.prototype.icon = "calculate"

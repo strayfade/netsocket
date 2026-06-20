@@ -8,6 +8,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "String/Length"
+NodeDefinition.prototype.description = "Returns the character count of the input string."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "straighten"
 const NodeFunction = async (node, params, behaviors) => {

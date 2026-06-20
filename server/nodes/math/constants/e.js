@@ -7,6 +7,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Constants/e"
+NodeDefinition.prototype.description = "Outputs the mathematical constant e (Euler's number)."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "e"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

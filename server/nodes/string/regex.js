@@ -11,6 +11,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "String/Regex"
+NodeDefinition.prototype.description = "Tests whether the input string matches a regular expression pattern and outputs true or false."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "regular_expression"
 const NodeFunction = async (node, params, behaviors) => {

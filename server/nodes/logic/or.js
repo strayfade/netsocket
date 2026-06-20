@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Logic/OR"
+NodeDefinition.prototype.description = "Outputs true when either boolean input A or B is true."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "OR"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

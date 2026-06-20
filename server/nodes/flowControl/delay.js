@@ -10,6 +10,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Flow Control/Delay"
+NodeDefinition.prototype.description = "Pauses execution for the specified number of milliseconds before continuing on its event output."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "timer"
 const NodeFunction = async (node, params, behaviors) => {

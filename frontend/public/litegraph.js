@@ -12653,19 +12653,106 @@ LGraphNode.prototype.executeAction = function(action)
             root.content.appendChild(elem);
         }
 
+        var isBooleanEnumOptions = function (values) {
+            if (!values || values.length !== 2) {
+                return false;
+            }
+            var normalized = values.map(function (v) {
+                return String(v).trim().toLowerCase();
+            });
+            return (
+                (normalized[0] === "true" && normalized[1] === "false") ||
+                (normalized[0] === "false" && normalized[1] === "true")
+            );
+        };
+
+        var getPropertySlotType = function (propName, widgetType, widgetOptions) {
+            var panelNode = root.node;
+            if (panelNode && panelNode.inputs) {
+                for (var i = 0; i < panelNode.inputs.length; ++i) {
+                    var input = panelNode.inputs[i];
+                    if (input.name === propName && input.type) {
+                        return String(input.type).toLowerCase();
+                    }
+                }
+            }
+
+            if (widgetType === "number") {
+                return "number";
+            }
+            if (widgetType === "boolean") {
+                return "boolean";
+            }
+            if (widgetType === "enum" || widgetType === "combo") {
+                if (isBooleanEnumOptions(widgetOptions && widgetOptions.values)) {
+                    return "boolean";
+                }
+                return "string";
+            }
+            if (widgetType === "object") {
+                return "object";
+            }
+            return "string";
+        };
+
+        var getSlotTypeBulletColor = function (slotType) {
+            var fallback = {
+                number: "#7F7",
+                string: "#F7F",
+                boolean: "red",
+                object: "orange",
+            };
+            var byType =
+                (LGraphCanvas.active_canvas && LGraphCanvas.active_canvas.default_connection_color_byType) ||
+                fallback;
+            if (!byType.number) {
+                byType = fallback;
+            }
+            return byType[slotType] || byType.string || fallback.string;
+        };
+
+        var applyPropertyFieldBulletColor = function (shell, propName, widgetType, widgetOptions) {
+            if (!shell) {
+                return;
+            }
+            var slotType = getPropertySlotType(propName, widgetType, widgetOptions);
+            var bullet = shell.querySelector(".property_field_bullet");
+            if (bullet) {
+                bullet.style.backgroundColor = getSlotTypeBulletColor(slotType);
+            }
+            shell.dataset.slotType = slotType;
+        };
+
+        var createPropertyFieldShell = function (extraClass) {
+            var shell = document.createElement("div");
+            shell.className = "property_field" + (extraClass ? " " + extraClass : "");
+            var bullet = document.createElement("span");
+            bullet.className = "property_field_bullet";
+            bullet.setAttribute("aria-hidden", "true");
+            shell.appendChild(bullet);
+            return shell;
+        };
+
         root.addWidget = function (type, name, value, options, callback) {
             options = options || {};
             var str_value = String(value);
             type = type.toLowerCase();
-            if (type == "number")
-                str_value = value.toFixed(3);
+            if (type == "number") {
+                var numericValue = Number(value);
+                str_value = Number.isFinite(numericValue) ? String(Math.round(numericValue * 1000) / 1000) : "0";
+            }
 
             var elem = document.createElement("div");
             elem.className = "property";
-            elem.innerHTML = "<span class='property_name'></span><span class='property_value'></span>";
+            elem.innerHTML = "<span class='property_name'></span>";
             elem.querySelector(".property_name").innerText = options.label || name;
-            var value_element = elem.querySelector(".property_value");
+            var field_shell = createPropertyFieldShell();
+            var value_element = document.createElement("span");
+            value_element.className = "property_value";
             value_element.innerText = str_value;
+            field_shell.appendChild(value_element);
+            elem.appendChild(field_shell);
+            applyPropertyFieldBulletColor(field_shell, name, type, options);
             elem.dataset["property"] = name;
             elem.dataset["type"] = options.type || type;
             elem.options = options;
@@ -12687,46 +12774,133 @@ LGraphNode.prototype.executeAction = function(action)
                     innerChange(propname, this.value);
                 });
             }
-            else if (type == "string" || type == "number") {
+            else if (type == "number") {
+                elem.classList.add("number");
+                elem.removeChild(field_shell);
+
+                var number_row = createPropertyFieldShell("property_number_row");
+
+                value_element = document.createElement("span");
+                value_element.className = "property_value";
+                value_element.setAttribute("contenteditable", true);
+                value_element.innerText = str_value;
+
+                var steppers = document.createElement("div");
+                steppers.className = "property_number_steppers";
+
+                var formatNumberValue = function (num) {
+                    if (!Number.isFinite(num)) {
+                        return "0";
+                    }
+                    var rounded = Math.round(num * 1000) / 1000;
+                    return String(rounded);
+                };
+
+                var readNumberValue = function () {
+                    var parsed = Number(String(value_element.innerText).trim());
+                    return Number.isFinite(parsed) ? parsed : 0;
+                };
+
+                var applyNumberValue = function (num, notify) {
+                    var formatted = formatNumberValue(num);
+                    value_element.innerText = formatted;
+                    elem.value = num;
+                    if (notify) {
+                        innerChange(name, num);
+                    }
+                };
+
+                var stepButtons = [
+                    { label: "+1", step: 1 },
+                    { label: "+0.1", step: 0.1 },
+                    { label: "-0.1", step: -0.1 },
+                    { label: "-1", step: -1 },
+                ];
+
+                for (var si = 0; si < stepButtons.length; ++si) {
+                    (function (stepDef) {
+                        var step_btn = document.createElement("button");
+                        step_btn.type = "button";
+                        step_btn.className = "property_number_step";
+                        step_btn.textContent = stepDef.label;
+                        step_btn.addEventListener("click", function (e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            applyNumberValue(readNumberValue() + stepDef.step, true);
+                        });
+                        steppers.appendChild(step_btn);
+                    })(stepButtons[si]);
+                }
+
+                value_element.addEventListener("keydown", function (e) {
+                    if (e.code == "Enter") {
+                        e.preventDefault();
+                        this.blur();
+                    }
+                });
+                value_element.addEventListener("blur", function () {
+                    applyNumberValue(readNumberValue(), true);
+                });
+
+                number_row.appendChild(value_element);
+                number_row.appendChild(steppers);
+                applyPropertyFieldBulletColor(number_row, name, "number", options);
+                elem.appendChild(number_row);
+            }
+            else if (type == "string") {
                 value_element.setAttribute("contenteditable", true);
                 value_element.addEventListener("keydown", function (e) {
-                    if (e.code == "Enter" && (type != "string" || !e.shiftKey)) // allow for multiline
-                    {
+                    if (e.code == "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         this.blur();
                     }
                 });
                 value_element.addEventListener("blur", function () {
                     var v = this.innerText;
-                    var propname = this.parentNode.dataset["property"];
-                    var proptype = this.parentNode.dataset["type"];
-                    if (proptype == "number")
-                        v = Number(v);
+                    var propname = this.closest(".property").dataset["property"];
                     innerChange(propname, v);
                 });
             }
             else if (type == "enum" || type == "combo") {
-                var str_value = LGraphCanvas.getPropertyPrintableValue(value, options.values);
-                value_element.innerText = str_value;
+                elem.classList.add("enum");
+                elem.removeChild(field_shell);
 
-                value_element.addEventListener("click", function (event) {
-                    var values = options.values || [];
-                    var propname = this.parentNode.dataset["property"];
-                    var elem_that = this;
-                    var menu = new LiteGraph.ContextMenu(values, {
-                        event: event,
-                        className: "dark",
-                        callback: inner_clicked
-                    },
-                        ref_window);
-                    function inner_clicked(v, option, event) {
-                        //node.setProperty(propname,v); 
-                        //graphcanvas.dirty_canvas = true;
-                        elem_that.innerText = v;
-                        innerChange(propname, v);
-                        return false;
+                field_shell = createPropertyFieldShell("property_enum_field");
+
+                var values = options.values || [];
+                var select = document.createElement("select");
+                select.className = "property_value property_select";
+
+                if (values.constructor === Array) {
+                    for (var vi = 0; vi < values.length; ++vi) {
+                        var arrayOpt = document.createElement("option");
+                        arrayOpt.value = values[vi];
+                        arrayOpt.textContent = String(values[vi]);
+                        if (String(values[vi]) === String(value)) {
+                            arrayOpt.selected = true;
+                        }
+                        select.appendChild(arrayOpt);
                     }
+                } else if (values.constructor === Object) {
+                    for (var key in values) {
+                        var objectOpt = document.createElement("option");
+                        objectOpt.value = values[key];
+                        objectOpt.textContent = key;
+                        if (String(values[key]) === String(value)) {
+                            objectOpt.selected = true;
+                        }
+                        select.appendChild(objectOpt);
+                    }
+                }
+
+                select.addEventListener("change", function () {
+                    elem.value = this.value;
+                    innerChange(name, this.value);
                 });
+
+                field_shell.appendChild(select);
+                applyPropertyFieldBulletColor(field_shell, name, type, options);
+                elem.appendChild(field_shell);
             }
 
             root.content.appendChild(elem);
@@ -12903,8 +13077,89 @@ LGraphNode.prototype.executeAction = function(action)
         panel.node = node;
         panel.classList.add("settings");
 
+        function ensurePanelTypedInputs(node) {
+            if (!node || !node.inputs) {
+                return;
+            }
+
+            var booleanValues = ["True", "False"];
+
+            for (var i = 0; i < node.inputs.length; ++i) {
+                var input = node.inputs[i];
+                if (!input || !input.name) {
+                    continue;
+                }
+
+                if (input.type === "number") {
+                    if (node.properties[input.name] === undefined) {
+                        node.properties[input.name] = 0;
+                    }
+
+                    if (!node.properties_info) {
+                        node.properties_info = [];
+                    }
+
+                    var numberInfo = null;
+                    for (var ni = 0; ni < node.properties_info.length; ++ni) {
+                        if (node.properties_info[ni].name == input.name) {
+                            numberInfo = node.properties_info[ni];
+                            break;
+                        }
+                    }
+
+                    if (!numberInfo) {
+                        node.properties_info.push({
+                            name: input.name,
+                            type: "number",
+                        });
+                    } else {
+                        numberInfo.type = "number";
+                    }
+                    continue;
+                }
+
+                if (input.type !== "boolean") {
+                    continue;
+                }
+
+                if (node.properties[input.name] === undefined) {
+                    node.properties[input.name] = "False";
+                } else {
+                    var normalized = String(node.properties[input.name]).trim().toLowerCase();
+                    node.properties[input.name] =
+                        normalized === "true" || normalized === "1" || normalized === "yes"
+                            ? "True"
+                            : "False";
+                }
+
+                if (!node.properties_info) {
+                    node.properties_info = [];
+                }
+
+                var info = null;
+                for (var j = 0; j < node.properties_info.length; ++j) {
+                    if (node.properties_info[j].name == input.name) {
+                        info = node.properties_info[j];
+                        break;
+                    }
+                }
+
+                if (!info) {
+                    node.properties_info.push({
+                        name: input.name,
+                        type: "enum",
+                        values: booleanValues,
+                    });
+                } else {
+                    info.type = "enum";
+                    info.values = booleanValues;
+                }
+            }
+        }
+
         function inner_refresh() {
             panel.content.innerHTML = ""; //clear
+            ensurePanelTypedInputs(node);
 
             var fUpdate = function (name, value) {
                 graphcanvas.graph.beforeChange(node);

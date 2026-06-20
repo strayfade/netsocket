@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Modulus"
+NodeDefinition.prototype.description = "Outputs the remainder of A divided by B."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "%"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

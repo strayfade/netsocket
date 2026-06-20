@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Time/Get Hours"
+NodeDefinition.prototype.description = "Extracts the hour (0–23) from a timestamp in local time."
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

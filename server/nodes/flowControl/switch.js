@@ -27,6 +27,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Flow Control/Switch"
+NodeDefinition.prototype.description = "Compares an input string against up to five condition values and routes execution to the matching output, or to Default if none match."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "arrow_split"
 const NodeFunction = async (node, params, behaviors) => {

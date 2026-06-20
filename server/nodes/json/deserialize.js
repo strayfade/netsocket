@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "JSON/Deserialize"
+NodeDefinition.prototype.description = "Parses a JSON string into a structured value and outputs it as a JSON string."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_object"
 const NodeFunction = async (node, params, behaviors) => {

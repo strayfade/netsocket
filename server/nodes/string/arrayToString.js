@@ -8,6 +8,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "String/To String (array)"
+NodeDefinition.prototype.description = "Converts a JSON array into its JSON string representation."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

@@ -29,6 +29,9 @@ const DATA_DIR = path.dirname(config.storage.nodes)
 const BACKUP_DIR = path.join(DATA_DIR, '_backups')
 const BACKUP_INTERVAL_MS = 15 * 60 * 1000
 const BACKUP_MAX_SNAPSHOTS = 96
+/** Graph/settings snapshots may restore these; auth files are never overwritten by backup restore. */
+const RESTORABLE_JSON_FILES = new Set(['state.json', 'vars.json', 'settings.json'])
+const AUTH_FILES = ['users.json', 'credentials.json']
 
 const isLiteGraphSerialize = (value) => {
     return (
@@ -193,6 +196,25 @@ const loadNodesFromDisk = async () => {
     graphNodes = cloneEmptyGraph()
 }
 
+const readAuthFileSnapshots = async () => {
+    const preserved = new Map()
+    for (const name of AUTH_FILES) {
+        const filePath = path.join(DATA_DIR, name)
+        try {
+            preserved.set(name, await fs.readFile(filePath))
+        } catch {
+            /* file may not exist yet */
+        }
+    }
+    return preserved
+}
+
+const writeAuthFileSnapshots = async (preserved) => {
+    for (const [name, content] of preserved) {
+        await fs.writeFile(path.join(DATA_DIR, name), content)
+    }
+}
+
 const restoreJsonFromLatestSnapshot = async () => {
     const latestPath = await getLatestValidSnapshotDir()
     if (!latestPath) {
@@ -202,7 +224,7 @@ const restoreJsonFromLatestSnapshot = async () => {
     const files = await fs.readdir(latestPath, { withFileTypes: true })
     let n = 0
     for (const e of files) {
-        if (e.isFile() && e.name.toLowerCase().endsWith('.json')) {
+        if (e.isFile() && RESTORABLE_JSON_FILES.has(e.name.toLowerCase())) {
             await fs.copyFile(path.join(latestPath, e.name), path.join(DATA_DIR, e.name))
             n++
         }
@@ -235,8 +257,10 @@ const restoreLatestBackup = async () => {
     if (!latestPath) {
         return false
     }
+    const preservedAuth = await readAuthFileSnapshots()
     await clearDataDir()
     await copyDir(latestPath, DATA_DIR, null)
+    await writeAuthFileSnapshots(preservedAuth)
     return true
 }
 

@@ -10,12 +10,20 @@ class NodeDefinition {
         this.addInput("Body", "string")
         this.addProperty("Body", "{}")
         this.addInput("Content Type", "string")
-        this.addProperty("Content Type", "application/json")
+        this.addEnumProperty("Content Type", "application/json", [
+            "application/json",
+            "application/x-www-form-urlencoded",
+            "text/plain",
+            "text/html",
+            "application/xml",
+            "application/octet-stream",
+        ])
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("Response", "string")
     }
 }
 NodeDefinition.prototype.title = "Web/POST Request"
+NodeDefinition.prototype.description = "Sends an HTTP POST request with a body and content type header, outputting the response body as a JSON string."
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "arrow_upload_progress"
 const NodeFunction = async (node, params, behaviors) => {

@@ -6,18 +6,135 @@ const fs = require('fs').promises
 const availableNodes = {}
 
 let nodeData = ""
-const getInputPropertyParams = (str) => {
-    const match = str.match(/\((.*)\)/);
-    if (!match) return null;
 
-    const params = match[1]
-        .split(',')
-        .map(p => p.trim().replace(/^["']|["']$/g, ''));
+const parseCallArguments = (str) => {
+    const match = str.match(/\(([\s\S]*)\)/)
+    if (!match) {
+        return null
+    }
+
+    const args = []
+    let index = 0
+    const argsStr = match[1]
+
+    while (index < argsStr.length) {
+        while (index < argsStr.length && /[\s,]/.test(argsStr[index])) {
+            index++
+        }
+        if (index >= argsStr.length) {
+            break
+        }
+
+        const quote = argsStr[index]
+        if (quote === '"' || quote === "'") {
+            index++
+            let value = ''
+            while (index < argsStr.length) {
+                if (argsStr[index] === '\\') {
+                    index++
+                    if (index >= argsStr.length) {
+                        break
+                    }
+                    const escaped = argsStr[index]
+                    switch (escaped) {
+                        case 'n': value += '\n'; break
+                        case 'r': value += '\r'; break
+                        case 't': value += '\t'; break
+                        case '"': value += '"'; break
+                        case "'": value += "'"; break
+                        case '\\': value += '\\'; break
+                        default: value += escaped; break
+                    }
+                    index++
+                } else if (argsStr[index] === quote) {
+                    index++
+                    break
+                } else {
+                    value += argsStr[index]
+                    index++
+                }
+            }
+            args.push(value)
+            continue
+        }
+
+        const start = index
+        while (index < argsStr.length && argsStr[index] !== ',') {
+            index++
+        }
+        args.push(argsStr.slice(start, index).trim())
+    }
+
+    return args
+}
+
+const getInputPropertyParams = (str) => {
+    const params = parseCallArguments(str)
+    if (!params || params.length < 2) {
+        return null
+    }
 
     return {
         first: params[0],
-        last: params[params.length - 1]
-    };
+        last: params[1],
+    }
+}
+
+const parseEnumPropertyCall = (line) => {
+    const match = line.match(/addEnumProperty\s*\(\s*(['"])(.*?)\1\s*,\s*(['"])(.*?)\3\s*,\s*\[([\s\S]*?)\]\s*\)/)
+    if (!match) return null
+
+    const values = []
+    const valueRegex = /(['"])(.*?)\1/g
+    let valueMatch
+    while ((valueMatch = valueRegex.exec(match[5])) !== null) {
+        values.push(valueMatch[2])
+    }
+
+    if (!values.length) return null
+
+    return {
+        name: match[2],
+        defaultValue: match[4],
+        enumValues: values,
+    }
+}
+
+const BOOLEAN_ENUM_VALUES = ["True", "False"]
+
+const normalizeBooleanDefault = (value) => {
+    if (value == null || value === "") {
+        return "False"
+    }
+    const normalized = String(value).trim().toLowerCase()
+    return normalized === "true" || normalized === "1" || normalized === "yes" ? "True" : "False"
+}
+
+const formatBooleanPropertyLine = (name, defaultValue = "False") => {
+    return formatPropertyLine({
+        name,
+        defaultValue: normalizeBooleanDefault(defaultValue),
+        enumValues: BOOLEAN_ENUM_VALUES,
+    })
+}
+
+const formatPropertyLine = (property) => {
+    const escapedDefault = String(property.defaultValue)
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\r/g, '\\r')
+        .replace(/\n/g, '\\n')
+        .replace(/\t/g, '\\t')
+
+    if (property.enumValues && property.enumValues.length) {
+        return `\t\tthis.addProperty("${property.name}", "${escapedDefault}", "enum", { values: ${JSON.stringify(property.enumValues)} })\n`
+    }
+
+    if (property.type === "number") {
+        return `\t\tthis.addProperty("${property.name}", "${escapedDefault}", "number")\n`
+    }
+
+    return `\t\tthis.addProperty("${property.name}", "${escapedDefault}")\n`
 }
 let numNodesImported = 0;
 const importNode = async (node) => {
@@ -32,20 +149,46 @@ ${(() => {
             let foundProperties = []
             let hasSkippedLines = 0;
             let hasCompletedLines = 0;
-            for (line of oNodeDefinition.prototype.constructor.toString().split("\n")) {
+            let pendingEnumProperty = ""
+            const constructorLines = oNodeDefinition.prototype.constructor.toString().split("\n")
+            for (line of constructorLines) {
                 hasCompletedLines++;
                 if (hasSkippedLines < 2) {
                     hasSkippedLines++;
                     continue;
                 }
-                if (hasCompletedLines >= oNodeDefinition.prototype.constructor.toString().split("\n").length - 1) continue;
+                if (hasCompletedLines >= constructorLines.length - 1) continue;
                 line = line.trim()
+
+                if (pendingEnumProperty) {
+                    pendingEnumProperty += ` ${line}`
+                    if (!line.includes("]);")) {
+                        continue
+                    }
+                    const enumProperty = parseEnumPropertyCall(pendingEnumProperty)
+                    pendingEnumProperty = ""
+                    if (enumProperty) {
+                        foundProperties.push(enumProperty)
+                    }
+                    continue
+                }
+
                 if (line.includes("addInput")) {
                     let params = getInputPropertyParams(line)
                     expectedInputs.push({
                         name: params.first,
                         type: params.last
                     })
+                }
+                else if (line.includes("addEnumProperty")) {
+                    if (line.includes("]);")) {
+                        const enumProperty = parseEnumPropertyCall(line)
+                        if (enumProperty) {
+                            foundProperties.push(enumProperty)
+                        }
+                    } else {
+                        pendingEnumProperty = line
+                    }
                 }
                 else if (line.includes("addProperty")) {
                     let params = getInputPropertyParams(line)
@@ -71,30 +214,40 @@ ${(() => {
                     outConstructor += `\t\tthis.addInput("${input.name}", ${input.type != "LiteGraph.EVENT" ? `"${input.type}"` : input.type})\n`
 
                     if (property && input.type != "LiteGraph.EVENT") {
-                        outConstructor += `\t\tthis.addProperty("${input.name}", "${property.defaultValue}")\n`
+                        if (input.type === "boolean") {
+                            outConstructor += formatBooleanPropertyLine(input.name, property.defaultValue)
+                        } else if (input.type === "number") {
+                            outConstructor += formatPropertyLine({ ...property, name: input.name, type: "number" })
+                        } else {
+                            outConstructor += formatPropertyLine({ ...property, name: input.name })
+                        }
                     }
                     else if (input.type != "LiteGraph.EVENT") {
-                        outConstructor += `\t\tthis.addProperty("${input.name}", "${(() => {
-                            switch (input.type) {
-                                case "string":
-                                    return ""
-                                case "number":
-                                    return "0.0"
-                                case "boolean":
-                                    return "false"
-                                case "array":
-                                    return "[]"
-                                case "object":
-                                    return "{}"
-                            }
-                        })()}")\n`
+                        if (input.type === "boolean") {
+                            outConstructor += formatBooleanPropertyLine(input.name, "False")
+                        } else if (input.type === "number") {
+                            outConstructor += formatPropertyLine({ name: input.name, defaultValue: "0", type: "number" })
+                        } else {
+                            outConstructor += `\t\tthis.addProperty("${input.name}", "${(() => {
+                                switch (input.type) {
+                                    case "string":
+                                        return ""
+                                    case "number":
+                                        return "0.0"
+                                    case "array":
+                                        return "[]"
+                                    case "object":
+                                        return "{}"
+                                }
+                            })()}")\n`
+                        }
                     }
                 }
                 if (property)
                     foundProperties.splice(foundProperties.indexOf(property), 1)
             }
             for (property of foundProperties) {
-                outConstructor += `\t\tthis.addProperty("${property.name}", "${property.defaultValue}")\n`
+                outConstructor += formatPropertyLine(property)
             }
             outConstructor = outConstructor.substring(0, outConstructor.lastIndexOf("\n"))
             return outConstructor
@@ -123,7 +276,8 @@ ${(() => {
             case "collapsible":
             case "icon":
             case "title_mode":
-                nodeData += `\nNodeDefinition.prototype.${elem.toString()} = "${currentPrototypeVal}"`
+            case "description":
+                nodeData += `\nNodeDefinition.prototype.${elem.toString()} = "${currentPrototypeVal.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/\t/g, '\\t')}"`
                 break;
             default:
                 nodeData += `\nNodeDefinition.prototype.${elem.toString()} = ${currentPrototypeVal}`
@@ -160,4 +314,13 @@ const getNumNodesImported = () => {
     return numNodesImported;
 }
 
-module.exports = { getAvailableNodes, setupNodes, getNumNodesImported }
+module.exports = {
+    getAvailableNodes,
+    setupNodes,
+    getNumNodesImported,
+    parseCallArguments,
+    parseEnumPropertyCall,
+    formatPropertyLine,
+    formatBooleanPropertyLine,
+    normalizeBooleanDefault,
+}

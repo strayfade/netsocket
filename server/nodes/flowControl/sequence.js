@@ -13,6 +13,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Flow Control/Sequence"
+NodeDefinition.prototype.description = "Fires five sequential event outputs in order, waiting a configurable delay between each step."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "order_play"
 const NodeFunction = async (node, params, behaviors) => {

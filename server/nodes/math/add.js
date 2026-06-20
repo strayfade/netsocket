@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Add"
+NodeDefinition.prototype.description = "Adds two numbers A and B and outputs the sum."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "+"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

@@ -1,4 +1,4 @@
-use crate::config::Settings;
+use crate::config::{is_valid_overlay_hotkey, Settings};
 use crate::overlay::{set_hotkey_suppress, OverlayHandle};
 use crate::settings_store::SettingsHandle;
 use std::str::FromStr;
@@ -86,6 +86,22 @@ pub fn complete_hotkey_capture(
     set_hotkey_suppress(app, 900);
 
     let canonical = canonical_hotkey_string(&hotkey);
+    if target == "hotkey" {
+        if let Err(error) = is_valid_overlay_hotkey(&canonical) {
+            let settings = app.state::<SettingsHandle>().get();
+            register_all_hotkeys(app, &settings)?;
+            let _ = app.emit(
+                "overlay:hotkey-captured",
+                serde_json::json!({
+                    "ok": false,
+                    "error": error,
+                    "target": target,
+                }),
+            );
+            return Ok(());
+        }
+    }
+
     let mut settings = app.state::<SettingsHandle>().get();
     match target.as_str() {
         "hotkey" => settings.hotkey = canonical.clone(),

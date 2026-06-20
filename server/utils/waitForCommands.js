@@ -1,22 +1,12 @@
-const { log, logColors } = require('../log')
-
-const { getNodes, setNodes } = require('../manager/saveState')
-const { executeGraph } = require('../manager/execute')
+const { log } = require('../log')
+const { triggerNodesByType } = require('../manager/execute')
 
 const onNewCommand = async (textContent, conversationId = null) => {
     log(`Command received: ${textContent}`)
-
-    // Trigger proper nodes in graph
-    if (!getNodes().nodes) return;
-    let nodes = getNodes().nodes.nodes
-    for (i of nodes) {
-        if (i.type == "Triggers/Command Palette") {
-            await executeGraph(i, {
-                "Content": textContent,
-                "Conversation ID": conversationId
-            })
-        }
-    }
+    await triggerNodesByType('Triggers/Command Palette', {
+        'Content': textContent,
+        'Conversation ID': conversationId,
+    })
 }
 
 module.exports = { onNewCommand }

@@ -8,6 +8,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Trigonometry/cos"
+NodeDefinition.prototype.description = "Computes the cosine of A, where A is in radians."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "cos"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

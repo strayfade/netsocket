@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Less Than"
+NodeDefinition.prototype.description = "Outputs true if A is less than B."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "<"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

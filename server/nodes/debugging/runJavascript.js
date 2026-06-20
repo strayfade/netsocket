@@ -12,6 +12,7 @@ class NodeDefinition {
 }
 
 NodeDefinition.prototype.title = "Debugging/Run Javascript"
+NodeDefinition.prototype.description = "Executes arbitrary JavaScript code in a sandboxed VM with a one-second timeout. Outputs the result as a string and continues the flow, or an error message if execution fails."
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "terminal"
 

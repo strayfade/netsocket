@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Divide"
+NodeDefinition.prototype.description = "Divides A by B and outputs the quotient, failing if B is zero."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "/"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

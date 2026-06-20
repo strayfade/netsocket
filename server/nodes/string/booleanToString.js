@@ -8,6 +8,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "String/To String (boolean)"
+NodeDefinition.prototype.description = "Converts a boolean input to the literal strings \"true\" or \"false\"."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

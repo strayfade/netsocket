@@ -9,11 +9,14 @@ const string = (str) => {
     return str.toString()
 }
 const bool = (b) => {
-    if (!b)
+    if (b == null || b === '' || b === false || b === 0) {
         return false
-    if (b.toString() == "true")
+    }
+    if (b === true || b === 1) {
         return true
-    return false
+    }
+    const normalized = String(b).trim().toLowerCase()
+    return normalized === 'true' || normalized === '1' || normalized === 'yes'
 }
 const json = (str) => {
     if (!str)

@@ -13,6 +13,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Flow Control/For Each"
+NodeDefinition.prototype.description = "Iterates over a JSON array, firing On Element with each item (as a JSON string) and its index, then fires On Finish when done."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "data_array"
 const NodeFunction = async (node, params, behaviors) => {

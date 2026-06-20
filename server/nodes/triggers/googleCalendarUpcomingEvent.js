@@ -13,6 +13,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Triggers/Google Calendar Upcoming Event"
+NodeDefinition.prototype.description = "Triggers when a Google Calendar event is approaching within a configurable lookahead window. Outputs event ID, summary, start, end, calendar ID, and payload."
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "event"
 

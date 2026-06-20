@@ -13,6 +13,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "JSON/Set Array Item"
+NodeDefinition.prototype.description = "Replaces the element at a given index in a JSON array and outputs the updated array as a JSON string."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_array"
 const NodeFunction = async (node, params, behaviors) => {

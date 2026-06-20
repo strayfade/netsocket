@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Subtract"
+NodeDefinition.prototype.description = "Subtracts B from A and outputs the difference."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "-"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

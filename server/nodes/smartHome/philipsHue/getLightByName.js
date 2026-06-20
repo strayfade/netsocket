@@ -11,6 +11,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Get Light by Name"
+NodeDefinition.prototype.description = "Looks up a Philips Hue light by its friendly name and outputs the light object and its ID. Requires a configured Hue bridge connection."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 const NodeFunction = async (node, params, behaviors) => {

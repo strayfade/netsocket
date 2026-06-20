@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Trigonometry/atan2"
+NodeDefinition.prototype.description = "Computes the angle in radians from the x-axis to the point (B, A) using Math.atan2."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "atan2"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

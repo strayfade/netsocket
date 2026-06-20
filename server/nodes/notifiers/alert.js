@@ -12,10 +12,17 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Notifiers/Alert"
+NodeDefinition.prototype.description = "Displays a user-facing alert notification with optional conversation ID routing. Sends the alert through the server's notification system."
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "notification_add"
 const NodeFunction = async (node, params, behaviors) => {
-    await alert(string(params.Text), string(params["Conversation ID"]))
+    const text = string(params.Text)
+    const conversationId = string(params["Conversation ID"])
+    log(
+        `[Alert] ${text}${conversationId ? ` (conversation: ${conversationId})` : ""}`,
+        logColors.Warning
+    )
+    await alert(text, conversationId)
     await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[0]);
     return true
 }

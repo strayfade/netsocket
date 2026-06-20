@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "String/Includes"
+NodeDefinition.prototype.description = "Outputs true if the input string contains the search substring."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "document_search"
 const NodeFunction = async (node, params, behaviors) => {

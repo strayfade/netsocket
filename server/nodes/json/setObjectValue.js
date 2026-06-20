@@ -11,6 +11,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "JSON/Set Object Value"
+NodeDefinition.prototype.description = "Sets or overwrites a property on a JSON object by key name and outputs the modified object."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_object"
 const NodeFunction = async (node, params, behaviors) => {

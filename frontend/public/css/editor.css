@@ -1,3 +1,9 @@
+:root {
+    --input-border: #333333;
+    --input-focus-border: #ffffff;
+    --input-radius: 8px;
+}
+
 * {
     font-family: 'Geist', sans-serif, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-optical-sizing: auto;
@@ -235,6 +241,7 @@ header #node-count-visible {
 #log:focus {
     outline: none;
     border: none;
+    border-top: 1px solid var(--input-focus-border);
 }
 
 .visually-hidden {
@@ -421,12 +428,19 @@ header #node-count-visible {
     flex: 1;
     min-width: 0;
     padding: 8px 10px;
-    background-color: #1c1c1c;
-    border: none;
-    border-radius: 4px;
+    background-color: #111111;
+    border: 1px solid var(--input-border);
+    border-radius: var(--input-radius);
     font-size: 13px;
     box-sizing: border-box;
     color: white;
+    transition: border-color 0.15s ease;
+}
+
+#settings-modal .settings-field-row input[type="text"]:focus,
+#settings-modal .settings-field-row input[type="number"]:focus {
+    outline: none;
+    border-color: var(--input-focus-border);
 }
 
 #settings-modal .settings-field-row button {
@@ -450,11 +464,11 @@ header #node-count-visible {
     position: fixed;
     inset: 0;
     z-index: 44;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.72);
     cursor: pointer;
 }
 
-/* LiteGraph node / options panel — match app settings: left dock, light chrome */
+/* LiteGraph node / options panel — left dock, OLED black theme */
 .litegraph .dialog.settings {
     position: fixed;
     left: 0;
@@ -471,9 +485,10 @@ header #node-count-visible {
     margin-left: 0;
     transform: none;
     z-index: 45;
-    background: #fff;
+    background: #000;
     border-radius: 0;
-    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.12);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.85);
     display: flex;
     flex-direction: column;
     font-family: 'Geist', sans-serif, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -488,9 +503,9 @@ header #node-count-visible {
     height: auto;
     min-height: 44px;
     padding: 12px 14px;
-    background: #1c1c1c;
-    border-bottom: 1px solid #00000060;
-    color: white;
+    background: #000;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: #f0f0f0;
 }
 
 .litegraph .dialog.settings .dialog-header .close {
@@ -505,8 +520,8 @@ header #node-count-visible {
     padding: 8px;
     cursor: pointer;
     border-radius: 4px;
-    background: #343434;
-    color: white;
+    background: #141414;
+    color: #f0f0f0;
 }
 
 .litegraph .dialog.settings .dialog-header .close:hover {
@@ -519,7 +534,7 @@ header #node-count-visible {
     padding: 4px 0;
     font-size: 16px;
     font-weight: 600;
-    color: white;
+    color: #f0f0f0;
 }
 
 .litegraph .dialog.settings .dialog-content,
@@ -529,8 +544,8 @@ header #node-count-visible {
     height: auto !important;
     min-height: 0;
     width: 100%;
-    color: white;
-    background: #292929;
+    color: #e8e8e8;
+    background: #000;
     overflow: auto;
     padding: 12px var(--dialog-settings-pad-x);
     box-sizing: border-box;
@@ -541,8 +556,8 @@ header #node-count-visible {
     height: auto;
     min-height: 50px;
     padding: 10px 14px;
-    border-top: 1px solid #e5e5e5;
-    background: red;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: #000;
     box-sizing: border-box;
 }
 
@@ -554,7 +569,7 @@ header #node-count-visible {
 }
 
 .litegraph .dialog.settings .dialog-content h3 {
-    color: #222;
+    color: #f0f0f0;
     margin: 12px 10px 10px 10px;
 }
 
@@ -565,7 +580,7 @@ header #node-count-visible {
     max-width: none;
     margin-left: calc(-1 * var(--dialog-settings-pad-x, 14px));
     margin-right: calc(-1 * var(--dialog-settings-pad-x, 14px));
-    border-top-color: #e5e5e5;
+    border-top-color: rgba(255, 255, 255, 0.08);
     box-sizing: border-box;
 }
 
@@ -585,9 +600,47 @@ header #node-count-visible {
     text-align: left;
     font-size: 16px;
     font-weight: 600;
-    color: white;
+    color: #f0f0f0;
     overflow: visible;
     line-height: 1.3;
+}
+
+.litegraph .dialog.settings .property_field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 38px;
+    padding: 0 10px;
+    border: 1px solid var(--input-border);
+    border-radius: var(--input-radius);
+    background-color: #111111;
+    transition: border-color 0.15s ease;
+}
+
+.litegraph .dialog.settings .property_field:focus-within {
+    border-color: var(--input-focus-border);
+}
+
+.litegraph .dialog.settings .property_field_bullet {
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.litegraph .dialog.settings .property_field > .property_value,
+.litegraph .dialog.settings .property_field > .property_select {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background-color: transparent;
+    min-height: 0;
+    box-shadow: none;
 }
 
 /* Match #settings-modal .settings-field-row text inputs */
@@ -597,47 +650,120 @@ header #node-count-visible {
     max-width: none;
     min-width: 0;
     box-sizing: border-box;
-    margin: 0;
-    padding: 8px 10px;
+    padding: 8px 0;
     text-align: left;
     font-size: 13px;
     line-height: 1.4;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    background-color: #1c1c1c;
-    min-height: 38px;
+    color: #e8e8e8;
     max-height: 300px;
     overflow: auto;
 }
 
+.litegraph .dialog.settings .property_field > .property_value:hover,
+.litegraph .dialog.settings .property_field > .property_value:focus {
+    outline: none;
+    border: none;
+    background-color: transparent;
+}
+
 .litegraph .dialog.settings .property.boolean .property_value {
-    color: #8a4444;
+    color: #c96a6a;
 }
 
 .litegraph .dialog.settings .property.boolean.bool-on .property_name {
-    color: #2d6a2d;
+    color: #5cb85c;
 }
 
 .litegraph .dialog.settings .property.boolean.bool-on .property_value {
-    color: #2d6a2d;
+    color: #5cb85c;
+}
+
+.litegraph .dialog.settings .property.number .property_number_row {
+    gap: 4px;
+    padding-right: 4px;
+}
+
+.litegraph .dialog.settings .property.number .property_number_row .property_value {
+    padding: 8px 0;
+}
+
+.litegraph .dialog.settings .property.number .property_number_steppers {
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+}
+
+.litegraph .dialog.settings .property.number .property_number_step {
+    min-width: 0;
+    padding: 0 5px;
+    height: 26px;
+    border: 1px solid var(--input-border);
+    border-radius: 3px;
+    background-color: #1a1a1a;
+    color: #e8e8e8;
+    font-family: 'Google Sans Code', 'Courier New', Courier, monospace;
+    font-size: 10px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.litegraph .dialog.settings .property.number .property_number_step:hover {
+    background-color: #242424;
+    border-color: var(--input-focus-border);
+}
+
+.litegraph .dialog.settings .property.number .property_number_step:active {
+    background-color: #2a2a2a;
+}
+
+.litegraph .dialog.settings .property.enum .property_enum_field > .property_select {
+    display: block;
+    box-sizing: border-box;
+    padding: 8px 24px 8px 0;
+    text-align: left;
+    font-family: 'Google Sans Code', 'Courier New', Courier, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #e8e8e8;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23e8e8e8' d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right center;
+    background-size: 12px;
+}
+
+.litegraph .dialog.settings .property.enum .property_enum_field > .property_select:focus {
+    outline: none;
+}
+
+.litegraph .dialog.settings .property.enum .property_select option {
+    background-color: #000;
+    color: #e8e8e8;
 }
 
 .litegraph .dialog.settings .btn {
-    border: 1px solid #bbb;
-    background-color: #f5f5f5;
-    color: #222;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background-color: #0a0a0a;
+    color: #e8e8e8;
 }
 
 .litegraph .dialog.settings .btn:hover {
-    background-color: #eaeaea;
-    color: #111;
+    background-color: #161616;
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #fff;
 }
 
 .litegraph .dialog.settings .btn.delete:hover {
-    background-color: #f8d7da;
-    border-color: #dc3545;
-    color: #721c24;
+    background-color: #2a1214;
+    border-color: #c0392b;
+    color: #ff8a8a;
 }
 
 a,

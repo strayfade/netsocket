@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Logic/XOR"
+NodeDefinition.prototype.description = "Outputs true when exactly one of boolean inputs A or B is true."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "XOR"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

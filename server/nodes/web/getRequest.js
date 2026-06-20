@@ -12,6 +12,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Web/GET Request"
+NodeDefinition.prototype.description = "Sends an HTTP GET request to a URL and outputs the response body as a JSON string."
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "downloading"
 const NodeFunction = async (node, params, behaviors) => {

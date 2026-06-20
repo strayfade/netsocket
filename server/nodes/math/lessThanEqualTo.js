@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Less Than or Equal To"
+NodeDefinition.prototype.description = "Outputs true if A is less than or equal to B."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "<="
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

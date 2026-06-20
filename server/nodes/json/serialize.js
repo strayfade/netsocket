@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "JSON/Serialize"
+NodeDefinition.prototype.description = "Converts a JSON object or array into a compact JSON string."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_object"
 const NodeFunction = async (node, params, behaviors) => {

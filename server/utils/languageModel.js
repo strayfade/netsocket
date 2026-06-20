@@ -11,6 +11,35 @@ require('../manager/nodePreferencesRegistry').addPref(
 )
 
 const { createOllama } = require('ollama-ai-provider-v2');
+
+// Keep models resident in Ollama memory; omitting keep_alive resets the timer to ~5m per request.
+const OLLAMA_KEEP_ALIVE = -1
+
+const createOllamaFetch = (baseFetch = globalThis.fetch) => {
+    return async (url, options = {}) => {
+        const urlStr = typeof url === 'string'
+            ? url
+            : url instanceof URL
+                ? url.href
+                : url.url
+
+        if (urlStr.includes('/chat') || urlStr.includes('/generate')) {
+            const body = options.body
+            if (typeof body === 'string') {
+                try {
+                    const parsed = JSON.parse(body)
+                    if (parsed.keep_alive === undefined) {
+                        parsed.keep_alive = OLLAMA_KEEP_ALIVE
+                    }
+                    options = { ...options, body: JSON.stringify(parsed) }
+                } catch (_) { /* leave body unchanged */ }
+            }
+        }
+
+        return baseFetch(url, options)
+    }
+}
+
 let ollama
 let ollamaInitialized = false
 const initOllama = () => {
@@ -19,13 +48,19 @@ const initOllama = () => {
         const ollamaHost = settingsManager.getSetting('ollama.ip') || '127.0.0.1'
         const baseURL = `http://${ollamaHost}:11434/api`
         ollama = createOllama({
-            baseURL
+            baseURL,
+            fetch: createOllamaFetch()
         })
         ollamaInitialized = true
     }
     catch (e) {
         log(`Failed to initialize Ollama client: ${e.message}`, logColors.Error)
     }
+}
+const reinitOllama = () => {
+    ollamaInitialized = false
+    ollama = undefined
+    initOllama()
 }
 const { generateText } = require('ai')
 const defaultSystemPrompt = `You are an intelligent robot that is able to 
@@ -89,7 +124,7 @@ const askAI = async (userText, systemPrompt, model) => {
         if (!systemPrompt)
             systemPrompt = defaultSystemPrompt
         if (!model)
-            model = "gemma3:270m"
+            model = "lfm2.5"
         currentConversation = [{
             role: "system",
             content: systemPrompt
@@ -119,4 +154,9 @@ const askAI = async (userText, systemPrompt, model) => {
     }
 }
 
-module.exports = { askAI, reinitOllama: initOllama }
+const getOllamaProvider = () => {
+    initOllama()
+    return ollama
+}
+
+module.exports = { askAI, reinitOllama, getOllamaProvider, sanitizeAiOutput }

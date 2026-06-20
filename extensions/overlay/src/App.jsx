@@ -12,7 +12,7 @@ const MAX_RESPONSE_TIMEOUT_SECONDS = 300;
 const DEFAULT_RESPONSE_TIMEOUT_SECONDS = 120;
 
 const defaultSettings = {
-  hotkey: "Alt+Space",
+  hotkey: "Ctrl+Shift+Space",
   copyLastResponseHotkey: "Alt+Shift+C",
   typeLastResponseHotkey: "Alt+Shift+T",
   openAtLogin: false,
@@ -54,6 +54,18 @@ const HOTKEY_FIELDS = [
 ];
 
 const formatHotkeyLabel = (value) => value || "Not set";
+
+const isValidOverlayHotkey = (accelerator) => {
+  const parts = accelerator.split("+").map((part) => part.trim()).filter(Boolean);
+  const hasAlt = parts.some((part) => part.toLowerCase() === "alt");
+  if (!hasAlt) return true;
+  const hasShift = parts.some((part) => part.toLowerCase() === "shift");
+  const hasCtrl = parts.some((part) => {
+    const lower = part.toLowerCase();
+    return lower === "control" || lower === "ctrl" || lower === "commandorcontrol";
+  });
+  return hasShift || hasCtrl;
+};
 
 const inputToAccelerator = (event) => {
   const parts = [];
@@ -380,6 +392,12 @@ export default function App() {
 
       const accelerator = inputToAccelerator(event);
       if (!accelerator) return;
+
+      if (capturingHotkeyTarget === "hotkey" && !isValidOverlayHotkey(accelerator)) {
+        setSaveNotice("Show/hide hotkey cannot use Alt without Shift or Control.");
+        setTimeout(() => setSaveNotice(""), 2200);
+        return;
+      }
 
       await api.completeHotkeyCapture?.({
         target: capturingHotkeyTarget,

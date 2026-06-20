@@ -5,6 +5,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Triggers/Cron"
+NodeDefinition.prototype.description = "Triggers on a cron schedule defined by a cron expression property (e.g. \"0 * * * *\" for hourly)."
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "schedule"
 

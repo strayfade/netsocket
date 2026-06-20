@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Time/To Locale String"
+NodeDefinition.prototype.description = "Formats a timestamp as a locale-aware date and time string using the server's default locale."
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

@@ -83,9 +83,18 @@
     <textarea id="log" spellcheck="false"></textarea>
     <script>
 
+        (async () => {
+            const session = await fetch('/v1/session', { credentials: 'same-origin' });
+            if (!session.ok) {
+                const redirect = encodeURIComponent('/dashboard');
+                window.location.replace(`/login?redirect=${redirect}`);
+            }
+        })();
+
         LiteGraph.use_uuids = true;
         let graph = new LGraph();
         let canvas = new LGraphCanvas("#nodegraph", graph);
+        canvas.allow_searchbox = false;
 
         // Update node counts in the header: total nodes and visible nodes
         const updateNodeCounts = () => {
@@ -152,7 +161,6 @@
             }
             if (n > 0) {
                 appendKeybindItem(["Double-click"], "Set Inputs");
-                appendKeybindItem(["Right-click"], "Copy node ID (menu)");
                 appendKeybindItem(["Alt", "Drag"], "Clone");
                 appendKeybindItem(["Shift"], "Multiselect");
                 appendKeybindItem(["CTRL", "C"], "Copy");
@@ -367,7 +375,25 @@
             }
         };
 
+        let wsRedirectingToLogin = false;
+
+        const redirectToLoginIfSessionExpired = async () => {
+            if (wsRedirectingToLogin) return true;
+            try {
+                const res = await fetch("/v1/session", { credentials: "same-origin" });
+                if (res.ok) return false;
+            } catch {
+                return false;
+            }
+            wsRedirectingToLogin = true;
+            clearWsReconnectTimer();
+            const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+            window.location.href = `/login?redirect=${redirect}`;
+            return true;
+        };
+
         const scheduleWsReconnect = () => {
+            if (wsRedirectingToLogin) return;
             clearWsReconnectTimer();
             reconnectTimerId = setTimeout(() => {
                 reconnectTimerId = null;
@@ -416,10 +442,15 @@
                 }));
             }, { signal });
 
-            ws.addEventListener("close", () => {
+            ws.addEventListener("close", async (event) => {
                 if (activeWs !== ws) return;
                 activeWs = null;
                 setConnected(false);
+                if (event.code === 4401) {
+                    await redirectToLoginIfSessionExpired();
+                    return;
+                }
+                if (await redirectToLoginIfSessionExpired()) return;
                 scheduleWsReconnect();
             }, { signal });
 

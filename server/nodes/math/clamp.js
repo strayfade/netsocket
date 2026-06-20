@@ -12,6 +12,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Clamp"
+NodeDefinition.prototype.description = "Constrains a number between a minimum and maximum value and outputs the clamped result."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "arrow_range"
 const NodeFunction = async (node, params, behaviors) => {

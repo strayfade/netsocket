@@ -12,6 +12,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "String/Substring"
+NodeDefinition.prototype.description = "Extracts a portion of a string starting at Begin for Count characters, or to the end if Count is -1."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "content_cut"
 const NodeFunction = async (node, params, behaviors) => {

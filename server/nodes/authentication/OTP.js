@@ -10,6 +10,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Authentication/OTP"
+NodeDefinition.prototype.description = "Generates a time-based one-time password (TOTP) for a named account using secrets stored in authentication preferences. Outputs the current numeric code string."
 NodeDefinition.prototype.color = "cyan"
 NodeDefinition.prototype.icon = "security"
 const NodeFunction = async (node, params, behaviors) => {

@@ -9,11 +9,12 @@ class NodeDefinition {
         this.addInput("Id", "number");
         this.addProperty("Id", "2");
         this.addInput("Command", "string");
-        this.addProperty("Command", "On");
+        this.addEnumProperty("Command", "On", ["On", "Off"]);
         this.addOutput("", LiteGraph.EVENT);
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Netsocket/Send Command"
+NodeDefinition.prototype.description = "Sends an On or Off command to a Netsocket device identified by name and ID. Controls local smart home hardware."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "code"
 const { getDevices, discoverWirelessAdapters, sendCommand } = require('../../../utils/netsocketSmartHome')

@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Greater Than"
+NodeDefinition.prototype.description = "Outputs true if A is greater than B."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = ">"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

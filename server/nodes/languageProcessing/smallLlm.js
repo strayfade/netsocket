@@ -7,13 +7,14 @@ class NodeDefinition {
         this.addInput("Prompt", "string");
         this.addInput("System Prompt", "string");
         this.addInput("Model", "string");
-        this.addProperty("Model", "gemma3:270m");
+        this.addProperty("Model", "lfm2.5");
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("Response", "string");
         this.desc = "Uses a language model to process natural language."
     }
 }
 NodeDefinition.prototype.title = "Language Processing/Small LLM"
+NodeDefinition.prototype.description = "Sends a prompt and optional system prompt to a configurable language model and outputs the text response. Makes an external LLM API call."
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "network_intelligence"
 const { askAI } = require('../../utils/languageModel')

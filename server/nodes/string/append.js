@@ -10,6 +10,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "String/Append"
+NodeDefinition.prototype.description = "Concatenates three string inputs A, B, and C into a single output string."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "add_comment"
 const NodeFunction = async (node, params, behaviors) => {

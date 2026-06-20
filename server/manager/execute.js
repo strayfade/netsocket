@@ -1,127 +1,155 @@
 const { log, logColors } = require('../log')
-const NodeRegistry = require('../manager/nodeImporter').getAvailableNodes()
-
+const NodeRegistry = require('./nodeImporter').getAvailableNodes()
 const { getNodes, setNodes } = require('./saveState')
+const {
+    LINK,
+    findLink,
+    findNodeById,
+    getLiteGraph,
+    findNodesByType,
+    isEventLink,
+    isPureNode,
+    getLinkValue,
+    ensureLinkValueSlot,
+    resolvePropertyInput,
+} = require('./graphUtils')
 
-const padValues = (graphJSON, toIdx) => {
-  if (!graphJSON.currentValues) {
-    graphJSON.currentValues = []
-  }
-  while (graphJSON.currentValues.length <= toIdx)
-    graphJSON.currentValues.push(null)
-  return graphJSON
+async function resolveInputs(node, customInputs, runNode) {
+    if (customInputs) {
+        return customInputs
+    }
+
+    let graphRoot = getNodes()
+    const inputs = {}
+
+    if (!node.inputs) {
+        if (node.properties) {
+            Object.assign(inputs, node.properties)
+        }
+        return inputs
+    }
+
+    for (const input of node.inputs) {
+        if (input.link != null) {
+            const link = findLink(graphRoot, input.link)
+            if (!link || isEventLink(link)) {
+                continue
+            }
+
+            const connectedNode = findNodeById(graphRoot, link[LINK.ORIGIN_ID])
+            if (isPureNode(connectedNode)) {
+                await runNode(connectedNode)
+                graphRoot = getNodes()
+            }
+            inputs[input.name] = getLinkValue(graphRoot, link[LINK.ID])
+        } else {
+            inputs[input.name] = resolvePropertyInput(node.properties, input.name)
+        }
+    }
+
+    return inputs
+}
+
+function populateOutputLinkValues(node, outputValues) {
+    let graphRoot = getNodes()
+    if (!node.outputs) {
+        return
+    }
+
+    for (let outIdx = 0; outIdx < node.outputs.length; outIdx++) {
+        const output = node.outputs[outIdx]
+        if (!output.links) {
+            continue
+        }
+        const value = outIdx < outputValues.length ? outputValues[outIdx] : undefined
+        for (const linkId of output.links) {
+            graphRoot = ensureLinkValueSlot(graphRoot, linkId)
+            if (value !== undefined) {
+                graphRoot.currentValues[linkId] = value
+            }
+        }
+    }
+
+    setNodes(graphRoot)
+}
+
+function getEventOutputGroups(node) {
+    const graphRoot = getNodes()
+    const groups = []
+    if (!node.outputs) {
+        return groups
+    }
+
+    for (let outIdx = 0; outIdx < node.outputs.length; outIdx++) {
+        const output = node.outputs[outIdx]
+        const group = []
+        if (output.links) {
+            for (const linkId of output.links) {
+                const link = findLink(graphRoot, linkId)
+                if (!link || !isEventLink(link)) {
+                    continue
+                }
+                const target = findNodeById(graphRoot, link[LINK.TARGET_ID])
+                if (target) {
+                    group.push(target)
+                }
+            }
+        }
+        groups[outIdx] = group
+    }
+
+    return groups
 }
 
 async function executeGraph(nodeToTrigger, customInputs) {
-  if (!nodeToTrigger) return;
-  const impl = NodeRegistry[nodeToTrigger.type]
-  if (impl) {
+    if (!nodeToTrigger) {
+        return
+    }
+
+    const impl = NodeRegistry[nodeToTrigger.type]
+    if (!impl) {
+        log(`No implementation found for ${nodeToTrigger.type}`, logColors.Error)
+        return
+    }
+
     try {
-      const getInputs = async () => {
-        let inputs = {}
-        if (customInputs)
-          return customInputs
-        let allNodes = getNodes();
-        if (nodeToTrigger.inputs) {
-          for (const i of nodeToTrigger.inputs) {
-            if (i.link) {
-              let link = allNodes.nodes.links.find((link) => link[0] == i.link)
-              if (link[5] == -1) continue;
-              let connectedNode = allNodes.nodes.nodes.find((node) => node.id == link[1])
-              let isPureNode = true;
-              if (connectedNode.inputs) {
-                for (linkType of connectedNode.inputs) {
-                  if (linkType.type == -1)
-                    isPureNode = false;
+        const behaviors = {
+            populateNextNodeLinks: async (outputValues = []) => {
+                populateOutputLinkValues(nodeToTrigger, outputValues)
+            },
+            getOutputNodeGroups: () => getEventOutputGroups(nodeToTrigger),
+            triggerNodeGroup: async (nodes = []) => {
+                for (const node of nodes) {
+                    await executeGraph(node)
                 }
-              }
-              if (connectedNode.outputs) {
-                for (linkType of connectedNode.outputs) {
-                  if (linkType.type == -1)
-                    isPureNode = false;
-                }
-              }
-              if (isPureNode) {
-                await executeGraph(connectedNode)
-                allNodes = getNodes()
-              }
-              inputs[i.name] = allNodes.currentValues[link[0]]
-            }
-            else {
-              inputs[i.name] = null
-              if (nodeToTrigger.properties[i.name]) {
-                inputs[i.name] = nodeToTrigger.properties[i.name]
-              }
-            }
-          }
+            },
         }
-        else {
-          if (nodeToTrigger.properties) {
-            for (property in nodeToTrigger.properties) {
-              inputs[property] = nodeToTrigger.properties[property]
-            }
-          }
-        }
-        return inputs
-      }
-      const populateNextNodeLinks = async (nodeOutputValues = []) => {
-        let graphJSON = getNodes()
-        let currentNodeConnectedOutputLinks = nodeToTrigger.outputs
-        for (output of currentNodeConnectedOutputLinks) {
-          if (output.links) {
-            for (linkId of output.links) {
-              graphJSON = padValues(graphJSON, linkId)
-              let outValIdx = currentNodeConnectedOutputLinks.indexOf(output);
-              if (outValIdx <= nodeOutputValues.length - 1) {
-                graphJSON.currentValues[linkId] = nodeOutputValues[outValIdx]
-              }
-            }
-          }
-        }
-        setNodes(graphJSON)
-      }
-      const getOutputNodeGroups = () => {
-        let outputNodeGroups = []
-        let currentNodeConnectedOutputLinks = nodeToTrigger.outputs
-        let currIdx = 0
-        for (output of currentNodeConnectedOutputLinks) {
-          if (output.links) {
-            for (linkId of output.links) {
-              let graphJSON = getNodes()
-              if (graphJSON.nodes.links.find((link) => link[0] == linkId)[5] == -1) {
-                while (outputNodeGroups.length <= currIdx)
-                  outputNodeGroups.push([])
-                outputNodeGroups[currIdx].push(graphJSON.nodes.nodes.find((node) => node.id == graphJSON.nodes.links.find((link) => link[0] == linkId)[3]))
-              }
-            }
-          }
-          currIdx++
-        }
-        return outputNodeGroups
-      }
-      const triggerNodeGroup = async (nodes = []) => {
-        for (currNode of nodes) {
-          await executeGraph(currNode)
-        }
-      }
-      let inputs = await getInputs(nodeToTrigger)
-      await impl(
-        nodeToTrigger.properties,
-        inputs,
-        {
-          populateNextNodeLinks,
-          getOutputNodeGroups,
-          triggerNodeGroup
-        }
-      );
+
+        const inputs = await resolveInputs(nodeToTrigger, customInputs, executeGraph)
+        await impl(nodeToTrigger.properties, inputs, behaviors)
+    } catch (exception) {
+        log(exception, logColors.Error)
     }
-    catch (exception) {
-      log(exception, logColors.Error)
-    }
-  }
-  else {
-    log(`No implementation found for ${nodeToTrigger.type}`, logColors.Error)
-  }
 }
 
-module.exports = { executeGraph }
+async function triggerNodesByType(nodeType, inputsOrBuilder, options = {}) {
+    const graphRoot = getNodes()
+    if (!getLiteGraph(graphRoot)) {
+        return
+    }
+
+    const filter = options.filter
+    const nodes = findNodesByType(graphRoot, nodeType)
+
+    for (const node of nodes) {
+        if (filter && !filter(node)) {
+            continue
+        }
+        const inputs = typeof inputsOrBuilder === 'function'
+            ? inputsOrBuilder(node)
+            : inputsOrBuilder
+        await executeGraph(node, inputs)
+    }
+}
+
+module.exports = { executeGraph, triggerNodesByType }

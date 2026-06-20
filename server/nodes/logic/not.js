@@ -8,6 +8,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Logic/NOT"
+NodeDefinition.prototype.description = "Outputs the logical negation of boolean input A."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "NOT"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

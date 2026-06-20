@@ -10,6 +10,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Hash/bcrypt"
+NodeDefinition.prototype.description = "Hashes input data with bcrypt using the provided salt and outputs the resulting hash string."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "tag"
 const NodeFunction = async (node, params, behaviors) => {

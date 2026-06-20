@@ -1,6 +1,7 @@
 const { google } = require('googleapis')
 const { log, logColors } = require('../log')
 const { getNodes } = require('../manager/saveState')
+const { getGraphNodes } = require('../manager/graphUtils')
 const { number } = require('./inputParser')
 const { getAuthorizedGoogleClient } = require('./googleAuth')
 const { onNewGmailEmail, onUpcomingCalendarEvent } = require('./waitForGoogleEvents')
@@ -18,11 +19,10 @@ const capSet = (set, maxSize = 300) => {
 }
 
 const getTriggerNodes = () => {
-    const graph = getNodes().nodes
-    if (!graph || !Array.isArray(graph.nodes)) return { gmail: [], calendar: [] }
+    const nodes = getGraphNodes(getNodes())
     return {
-        gmail: graph.nodes.filter((n) => n.type == "Triggers/New Email (Gmail)"),
-        calendar: graph.nodes.filter((n) => n.type == "Triggers/Google Calendar Upcoming Event")
+        gmail: nodes.filter((n) => n.type === 'Triggers/New Email (Gmail)'),
+        calendar: nodes.filter((n) => n.type === 'Triggers/Google Calendar Upcoming Event'),
     }
 }
 

@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Time/To UTC String"
+NodeDefinition.prototype.description = "Formats a timestamp as a UTC date and time string."
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

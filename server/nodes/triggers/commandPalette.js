@@ -16,6 +16,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Triggers/Command Palette"
+NodeDefinition.prototype.description = "Triggers when a command is received from the authenticated command palette integration. Outputs the command content and conversation ID."
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "input"
 const NodeFunction = async (node, params, behaviors) => {

@@ -12,6 +12,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "JSON/Push Array Item"
+NodeDefinition.prototype.description = "Appends a new item to a JSON array and outputs the updated array as a JSON string."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_array"
 const NodeFunction = async (node, params, behaviors) => {

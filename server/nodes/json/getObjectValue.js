@@ -10,6 +10,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "JSON/Get Object Value"
+NodeDefinition.prototype.description = "Looks up a property by key name in a JSON object and outputs its value."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_object"
 const NodeFunction = async (node, params, behaviors) => {

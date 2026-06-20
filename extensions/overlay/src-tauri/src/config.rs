@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub const DEFAULT_HOTKEY: &str = "Alt+Space";
+pub const DEFAULT_HOTKEY: &str = "Ctrl+Shift+Space";
 pub const DEFAULT_COPY_LAST_RESPONSE_HOTKEY: &str = "Alt+Shift+C";
 pub const DEFAULT_TYPE_LAST_RESPONSE_HOTKEY: &str = "Alt+Shift+T";
 pub const DEFAULT_PROFILE: &str = "production";
@@ -76,6 +76,15 @@ impl Settings {
         }
     }
 
+    pub fn normalize_overlay_hotkey(value: &str) -> String {
+        let trimmed = Self::normalize_hotkey(value, DEFAULT_HOTKEY);
+        if is_valid_overlay_hotkey(&trimmed).is_ok() {
+            trimmed
+        } else {
+            DEFAULT_HOTKEY.to_string()
+        }
+    }
+
     pub fn active_connection(&self) -> (String, String, String) {
         let profile_name = if self.activeProfile == "development" {
             "development"
@@ -96,7 +105,7 @@ impl Settings {
 
     pub fn from_saved(raw: Settings) -> Self {
         Settings {
-            hotkey: Self::normalize_hotkey(&raw.hotkey, DEFAULT_HOTKEY),
+            hotkey: Self::normalize_overlay_hotkey(&raw.hotkey),
             copyLastResponseHotkey: Self::normalize_hotkey(
                 &raw.copyLastResponseHotkey,
                 DEFAULT_COPY_LAST_RESPONSE_HOTKEY,
@@ -223,4 +232,53 @@ pub fn parse_overlay_broadcast(parsed: &serde_json::Value) -> Option<(String, Op
 
 pub fn is_external_url(url: &str) -> bool {
     url.starts_with("http://") || url.starts_with("https://") || url.starts_with("mailto:")
+}
+
+pub fn is_valid_overlay_hotkey(hotkey: &str) -> Result<(), String> {
+    let parts: Vec<&str> = hotkey
+        .split('+')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .collect();
+    let has_alt = parts.iter().any(|part| part.eq_ignore_ascii_case("alt"));
+    if !has_alt {
+        return Ok(());
+    }
+    let has_shift = parts.iter().any(|part| part.eq_ignore_ascii_case("shift"));
+    let has_ctrl = parts.iter().any(|part| {
+        part.eq_ignore_ascii_case("control")
+            || part.eq_ignore_ascii_case("ctrl")
+            || part.eq_ignore_ascii_case("commandorcontrol")
+    });
+    if has_shift || has_ctrl {
+        Ok(())
+    } else {
+        Err("Show/hide hotkey cannot use Alt without Shift or Control.".to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn overlay_hotkey_rejects_alt_without_chord_modifier() {
+        assert!(is_valid_overlay_hotkey("Alt+Space").is_err());
+        assert!(is_valid_overlay_hotkey("alt+space").is_err());
+    }
+
+    #[test]
+    fn overlay_hotkey_allows_alt_with_shift_or_control() {
+        assert!(is_valid_overlay_hotkey("Alt+Shift+Space").is_ok());
+        assert!(is_valid_overlay_hotkey("Control+Alt+Space").is_ok());
+        assert!(is_valid_overlay_hotkey("Ctrl+Space").is_ok());
+    }
+
+    #[test]
+    fn normalize_overlay_hotkey_migrates_invalid_alt_only_binding() {
+        assert_eq!(
+            Settings::normalize_overlay_hotkey("Alt+Space"),
+            DEFAULT_HOTKEY
+        );
+    }
 }

@@ -1,24 +1,16 @@
 const { askAI } = require('./languageModel')
 const { log, logColors } = require('../log')
+const { triggerNodesByType } = require('../manager/execute')
 
-const { getNodes, setNodes } = require('../manager/saveState')
-const { executeGraph } = require('../manager/execute')
+let newOTP = false
+let lastOTP = 0
 
-let newOTP = false;
-let lastOTP = 0;
 const onNewNotification = async (notificationContent) => {
-    // Trigger proper nodes in graph
-    if (!getNodes().nodes) return;
-    let nodes = getNodes().nodes.nodes
-    for (i of nodes) {
-        if (i.type == "Triggers/iOS Notification") {
-            await executeGraph(i, {
-                "Title": notificationContent.title,
-                "Content": notificationContent.textContent,
-                "Bundle ID": notificationContent.bundleIdentifier
-            })
-        }
-    }
+    await triggerNodesByType('Triggers/iOS Notification', {
+        'Title': notificationContent.title,
+        'Content': notificationContent.textContent,
+        'Bundle ID': notificationContent.bundleIdentifier,
+    })
 
     const prompt = `
     The following is the content of an iOS notification. If the notification contains a two-factor/OTP authentication code, respond with ONLY the code, isolating it from the rest of the text. If it does NOT contain a two-factor/OTP code, simply respond with "None". Codes will usually be six-digit numerical values, so prioritize those if they exist in the notification.
@@ -26,25 +18,23 @@ const onNewNotification = async (notificationContent) => {
     ${notificationContent.textContent}
     `
     try {
-        const code = await askAI(prompt, null, "gemma3:4b")
-        if (code.trim().toLowerCase() != "none") {
+        const code = await askAI(prompt, null, 'lfm2.5')
+        if (code.trim().toLowerCase() != 'none') {
             lastOTP = code
             log(`OTP Received: ${lastOTP}`, logColors.SuccessVisible)
-            newOTP = true;
+            newOTP = true
         }
-    }
-    catch (e) {
+    } catch (e) {
         log(`Error: ${e}`, logColors.Error)
     }
 }
+
 const waitForOTP = async () => {
-
     while (!newOTP) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100))
     }
-    newOTP = false;
-
-    return lastOTP.toString();
+    newOTP = false
+    return lastOTP.toString()
 }
 
 module.exports = { onNewNotification, waitForOTP }

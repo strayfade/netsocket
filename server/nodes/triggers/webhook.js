@@ -19,6 +19,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Triggers/Webhook"
+NodeDefinition.prototype.description = "Triggers when an authenticated generic HTTP webhook is received. Outputs the request method, path, query, headers, and body."
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "webhook"
 

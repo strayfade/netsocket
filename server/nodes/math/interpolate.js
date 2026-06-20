@@ -11,6 +11,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Interpolate"
+NodeDefinition.prototype.description = "Linearly interpolates between A and B using Alpha (0–1) as the blend factor."
 NodeDefinition.prototype.color = "green"
 const lerp = (a, b, alpha) => {
     return (b - a) * alpha + a

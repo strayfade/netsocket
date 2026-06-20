@@ -6,9 +6,40 @@ const fs = require('fs').promises
 var compression = require('compression')
 
 const { log, logColors, setOnPushLog, getLines } = require('./log')
+console.log(`               __                  __        __
+   ____  ___  / /__________  _____/ /_____  / /_
+  / __ \\/ _ \\/ __/ ___/ __ \\/ ___/ //_/ _ \\/ __/
+ / / / /  __/ /_(__  ) /_/ / /__/ ,< /  __/ /_
+/_/ /_/\\___/\\__/____/\\____/\\___/_/|_|\\___/\\__/
+                                                `)
 const { config } = require('./config')
 
 const app = express();
+const {
+    authSkipped,
+    MIN_PASSWORD_LENGTH,
+    getSessionCookieOpts,
+    parseRememberMe,
+    clearCookieOpts,
+    secureCookies,
+    validateToken,
+    getTokenFromCookieHeader,
+    hasUserSession,
+    createToken,
+    revokeToken,
+    canAccessPrivateApi,
+    canAccessWithSessionOrIntegrationSecret,
+    integrationSecretMatches,
+    isProtectedPagePath,
+    requireUserSession,
+    loginRateLimit,
+    recordFailedLoginAttempt,
+    securityHeaders,
+} = require('./utils/sessionAuth')
+if (secureCookies) {
+    app.set('trust proxy', 1)
+}
+app.use(securityHeaders)
 app.use(express.json({ limit: '32mb' }));
 app.use(compression())
 
@@ -32,25 +63,11 @@ const { setWsServerConnectedClients, registerConversation, unregisterSocket } = 
 const { executeGraph } = require('./manager/execute')
 var cookieParser = require('cookie-parser')
 app.use(cookieParser())
+let lastWsAuthDeniedLog = 0
 wss.on('connection', (socket, request) => {
+    const sessionToken = getTokenFromCookieHeader(request.headers.cookie)
 
-    const cookiesHeader = request.headers.cookie;
-    let cookies = (() => {
-        if (!cookiesHeader) {
-            return {
-                tk: "_blank"
-            }
-        }
-        const cookies2 = Object.fromEntries(
-            cookiesHeader.split(';').map(c => {
-                const [key, ...v] = c.trim().split('=');
-                return [key, v.join('=')];
-            })
-        );
-        return cookies2
-    })()
-
-    if (validateToken(cookies.tk) || request.headers?.['x-socket-auth'] == settingsManager.getSetting('triggersCommandPalette.secret')) {
+    if (validateToken(sessionToken) || integrationSecretMatches({ headers: request.headers }, settingsManager.getSetting('triggersCommandPalette.secret'))) {
         connectedClients.push(socket);
         //log('Client connected');
         setWsServerConnectedClients(connectedClients)
@@ -62,8 +79,12 @@ wss.on('connection', (socket, request) => {
         });
     }
     else {
-        log('Connection denied');
-        socket.close();
+        const now = Date.now()
+        if (now - lastWsAuthDeniedLog > 5000) {
+            lastWsAuthDeniedLog = now
+            log('Connection denied (session missing or expired — sign in again)')
+        }
+        socket.close(4401, 'session required')
     }
     socket.on('message', async (message) => {
         try {
@@ -264,7 +285,7 @@ app.post("/v1/triggers/github/:secret", async (req, res) => {
 })
 
 app.get("/v1/google/auth/start", (req, res) => {
-    if (!hasUserSession(req)) return res.sendStatus(403)
+    if (!hasUserSession(req, res)) return res.sendStatus(403)
     const oAuth2Client = buildOAuthClient(req)
     if (!oAuth2Client) {
         return res.status(400).send('Google OAuth is not configured. Set client ID and secret in Integrations > Google.')
@@ -278,7 +299,7 @@ app.get("/v1/google/auth/start", (req, res) => {
 })
 
 app.get("/v1/google/auth/callback", async (req, res) => {
-    if (!hasUserSession(req)) return res.sendStatus(403)
+    if (!hasUserSession(req, res)) return res.sendStatus(403)
     const code = req.query?.code
     if (!code) return res.status(400).send('Missing OAuth code')
     const oAuth2Client = buildOAuthClient(req)
@@ -303,7 +324,7 @@ app.get("/v1/mirror", (req, res) => {
 })
 
 // Web
-const { getUsers, setUsers, populateUsers } = require('./manager/saveUsers.js')
+const { populateUsers, flushUsersSync } = require('./manager/saveUsers.js')
 const {
     populateCredentials,
     hasAccount,
@@ -312,81 +333,19 @@ const {
 } = require('./manager/saveCredentials.js')
 const bcrypt = require('bcrypt')
 const BCRYPT_ROUNDS = 12
-const authSkipped = () => process.argv.includes("--skip-auth");
-const SESSION_IDLE_MS = 1000 * 60 * 60 * 24 * 7;
-const SESSION_COOKIE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
-const sessionCookieOpts = {
-    maxAge: SESSION_COOKIE_MAX_AGE_MS,
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-};
 
-/**
- * Validates token, drops stale sessions, and refreshes last-activity time (sliding expiration).
- */
-const sessionIsValidAndTouch = (tk) => {
-    if (!tk) return false;
-    const now = Date.now();
-    let users = getUsers();
-    const fresh = users.filter((u) => now - u.ts <= SESSION_IDLE_MS);
-    if (fresh.length !== users.length) {
-        users = fresh;
-        setUsers(users);
-    }
-    const idx = users.findIndex((u) => {
-        return u.tk === decodeURIComponent(tk)
-    });
-    if (idx === -1) return false;
-    users[idx].ts = now;
-    setUsers(users);
-    return true;
-};
-
-const validateToken = (tk) => {
-    if (authSkipped()) return true;
-    return sessionIsValidAndTouch(tk);
-};
-
-/** True when a real session cookie is present and valid (never true when --skip-auth). */
-const hasUserSession = (req) => {
-    if (authSkipped()) return false;
-    return sessionIsValidAndTouch(req.cookies?.tk);
-};
-const crypto = require('crypto');
-function generateRandomString(length) {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let result = "";
-    for (let i = 0; i < length; i++) {
-        result += chars.charAt(crypto.randomInt(chars.length));
-    }
-    return result;
-}
-const createToken = () => {
-    const tk = btoa(generateRandomString(128));
-    const users = getUsers();
-    users.push({
-        ts: Date.now(),
-        tk,
-    });
-    setUsers(users);
-    return tk;
-};
-const blacklistedPaths = ["/createNode.js", "constructNodes.js", "/litegraph-editor.css", "/litegraph.css", "/litegraph.js", "/netsocket-editor.css", "/dashboard"]
 app.use((req, res, next) => {
-    if (blacklistedPaths.includes(req.originalUrl.toLowerCase()))
-        if (validateToken(req.cookies?.tk))
-            next()
-        else
-            res.clearCookie("tk", { path: "/" }).status(403).redirect(`/login?redirect=${encodeURIComponent(`/dashboard`)}`)
-    else
-        next()
+    if (isProtectedPagePath(req.originalUrl)) {
+        return requireUserSession(req, res, next)
+    }
+    next()
 })
 let constructedNodes = ""
 app.get('/constructNodes.js', (req, res) => {
     res.status(200).type("application/javascript").send(constructedNodes)
 })
 app.get("/dashboard", (req, res) => {
+    res.setHeader('Cache-Control', 'no-store')
     res.status(200).sendFile(path.join(__dirname, "../frontend/editor.html"))
 })
 app.use('/', express.static(path.join(__dirname, '../frontend/public')));
@@ -395,15 +354,24 @@ app.get("/", (req, res) => {
 });
 const { onNewCommand } = require('./utils/waitForCommands.js')
 app.post("/v1/postCommand", async (req, res) => {
-    await onNewCommand(req.body.command)
+    const commandSecret = settingsManager.getSetting('triggersCommandPalette.secret')
+    if (!canAccessWithSessionOrIntegrationSecret(req, res, commandSecret)) {
+        return res.sendStatus(401)
+    }
+    const command = req.body?.command
+    if (typeof command !== 'string' || !command.trim()) {
+        return res.sendStatus(400)
+    }
+    await onNewCommand(command)
     res.sendStatus(200);
 })
 app.get("/v1/auth-state", (req, res) => {
     res.status(200).json({ needsRegistration: !hasAccount() });
 });
 
-app.post("/login", async (req, res) => {
-    const { username, password, passwordConfirm } = req.body || {};
+app.post("/login", loginRateLimit, async (req, res) => {
+    const { username, password, passwordConfirm, rememberMe } = req.body || {};
+    const persistSession = parseRememberMe(rememberMe);
     if (typeof username !== "string" || typeof password !== "string") {
         return res.sendStatus(400);
     }
@@ -411,41 +379,41 @@ app.post("/login", async (req, res) => {
     if (!u || !password.length) {
         return res.sendStatus(400);
     }
+    const issueSession = (tk) => res.cookie("tk", tk, getSessionCookieOpts(persistSession)).sendStatus(200);
     if (authSkipped()) {
-        const tk = createToken();
-        return res.cookie("tk", tk, sessionCookieOpts).sendStatus(200);
+        const tk = createToken({ rememberMe: persistSession });
+        return issueSession(tk);
     }
     try {
-        const cmp = async (str1, str2) => {
-            let eq = str1 === str2
-            await new Promise((resolve) => setTimeout(resolve, 10))
-            return eq;
-        }
         if (!hasAccount()) {
-            if (!(await cmp(password, passwordConfirm))) {
+            if (typeof passwordConfirm !== 'string' || password !== passwordConfirm) {
                 return res.status(400).json({ error: "password_mismatch" });
+            }
+            if (password.length < MIN_PASSWORD_LENGTH) {
+                return res.status(400).json({ error: "password_too_short" });
             }
             const usernameHash = await bcrypt.hash(u, BCRYPT_ROUNDS);
             const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
             await setCredentials(usernameHash, passwordHash);
-            const tk = createToken();
-            return res.cookie("tk", tk, sessionCookieOpts).sendStatus(200);
+            const tk = createToken({ rememberMe: persistSession });
+            return issueSession(tk);
         }
         const creds = getHashes();
         const userOk = await bcrypt.compare(u, creds.usernameHash);
         const passOk = await bcrypt.compare(password, creds.passwordHash);
         if (!userOk || !passOk) {
+            recordFailedLoginAttempt(req);
             return res.sendStatus(401);
         }
-        const tk = createToken();
-        return res.cookie("tk", tk, sessionCookieOpts).sendStatus(200);
+        const tk = createToken({ rememberMe: persistSession });
+        return issueSession(tk);
     } catch (e) {
         log(`Login error: ${e}`, logColors.Error);
         return res.sendStatus(500);
     }
 })
 app.get("/login", (req, res) => {
-    if (hasUserSession(req)) {
+    if (hasUserSession(req, res)) {
         return res.redirect(302, "/dashboard");
     }
     res.status(200).sendFile(path.join(__dirname, "../frontend/index.html"));
@@ -454,14 +422,12 @@ app.get("/documentation", (req, res) => {
     res.status(200).sendFile(path.join(__dirname, "../frontend/index.html"))
 })
 app.get("/v1/session", (req, res) => {
-    if (hasUserSession(req)) res.sendStatus(200);
+    if (authSkipped() || hasUserSession(req, res)) res.sendStatus(200);
     else res.sendStatus(401);
 });
 
 const FULL_EXPORT_SCHEMA = 'netsocketFullExport'
 const FULL_EXPORT_VERSION = 1
-
-const canAccessPrivateApi = (req) => authSkipped() || hasUserSession(req)
 
 const broadcastGraphToClients = () => {
     const payload = JSON.stringify({
@@ -476,7 +442,7 @@ const broadcastGraphToClients = () => {
 }
 
 app.get('/v1/export-full-state', async (req, res) => {
-    if (!canAccessPrivateApi(req)) {
+    if (!canAccessPrivateApi(req, res)) {
         return res.sendStatus(401)
     }
     try {
@@ -501,7 +467,7 @@ app.get('/v1/export-full-state', async (req, res) => {
 })
 
 app.post('/v1/import-full-state', async (req, res) => {
-    if (!canAccessPrivateApi(req)) {
+    if (!canAccessPrivateApi(req, res)) {
         return res.sendStatus(401)
     }
     const payload = req.body
@@ -543,7 +509,8 @@ app.post('/v1/import-full-state', async (req, res) => {
 })
 
 app.get('/logout', (req, res) => {
-    res.clearCookie("tk", { path: "/" }).redirect("/login");
+    revokeToken(req.cookies?.tk);
+    res.clearCookie('tk', clearCookieOpts).redirect('/login');
 });
 app.get('/:page', (req, res) => {
     res.sendStatus(404)
@@ -553,8 +520,8 @@ const PORT = process.env.PORT || 4675;
 const HOSTNAME = process.env.HOSTNAME || undefined;
 (async () => {
     try {
-        await populateNodes()
         await populateUsers()
+        await populateNodes()
         await populateCredentials()
         await reloadVars()
         await settingsManager.reloadSettings()
@@ -570,3 +537,18 @@ const HOSTNAME = process.env.HOSTNAME || undefined;
         log(`Dashboard URL: http://127.0.0.1:${PORT}/dashboard`)
     })
 })()
+
+let shuttingDown = false
+const shutdown = (signal) => {
+    if (shuttingDown) return
+    shuttingDown = true
+    log(`Received ${signal}, flushing session store…`)
+    try {
+        flushUsersSync()
+    } catch (e) {
+        log(`Session flush error: ${e}`, logColors.Error)
+    }
+    process.exit(0)
+}
+process.on('SIGINT', () => { shutdown('SIGINT') })
+process.on('SIGTERM', () => { shutdown('SIGTERM') })

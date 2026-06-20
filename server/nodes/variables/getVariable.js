@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Variables/Get Variable"
+NodeDefinition.prototype.description = "Reads a named global variable from server storage and outputs its string value."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "database"
 const NodeFunction = async (node, params, behaviors) => {

@@ -10,6 +10,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Log"
+NodeDefinition.prototype.description = "Computes the logarithm of A with a configurable base (default 10)."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "log"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

@@ -56,16 +56,79 @@ Inside `NodeDefinition.constructor()`:
 - Declare inputs with `this.addInput(name, type)`.
 - Declare outputs with `this.addOutput(name, type)`.
 - Add editable defaults with `this.addProperty(name, defaultValue)` when input fallback is desired.
+- For fixed-choice string parameters, use `this.addEnumProperty(name, defaultValue, valuesArray)` so the editor shows a combo box instead of free text.
 - For event ports, use `LiteGraph.EVENT`.
+
+Enum property example:
+
+```js
+this.addInput("Mode", "string");
+this.addEnumProperty("Mode", "Boolean", ["Boolean", "Variable", "HTTP"]);
+```
+
+The importer converts enum properties into LiteGraph combo widgets in the node parameters panel.
 
 Common prototype metadata used by the frontend:
 
 - `title` (required)
-- `color`
+- `color` (see [Node colors](#node-colors))
 - `icon`
 - `bigText`
 - `title_mode`
 - `collapsible`
+
+## Node colors
+
+Set the node header color with a named palette key:
+
+```js
+NodeDefinition.prototype.color = "green";
+```
+
+At registration time, `frontend/public/createNode.js` maps that key through `LGraphCanvas.node_colors` in `frontend/public/litegraph.js`. If the name is missing or unknown, the node keeps LiteGraph's default styling.
+
+### Valid palette keys
+
+Use only these established keys (defined in `LGraphCanvas.node_colors`):
+
+| Key | Typical use |
+| --- | --- |
+| `green` | Pure data transforms (math, logic, string, JSON, hash, encoding, constants) |
+| `white` | Flow control and smart-home / device integration |
+| `yellow` | Time and date nodes |
+| `black` | Triggers (graph entry points) |
+| `blue` | External I/O, side effects, AI, and debugging |
+| `cyan` | Authentication |
+| `red` | Reserved; not used by established nodes (auth uses `cyan`) |
+| `purple` | Available in the palette but unused by established nodes |
+
+Do not invent new names such as `orange` or `gray` — they are ignored by the frontend and the node will not get the intended color.
+
+### Color by category
+
+These patterns come from long-standing nodes in `server/nodes` (recently added nodes were excluded because they may not follow conventions yet):
+
+| Category / folder | Color | Notes |
+| --- | --- | --- |
+| `math/`, `logic/`, `string/`, `json/`, `hash/`, `encoding/`, `constants/` | `green` | Value-in, value-out transforms |
+| `flowControl/` | `white` | Branching, loops, delays, sequencing |
+| `time/` | `yellow` | Timestamps, date parts, formatting |
+| `triggers/` | `black` | Webhooks, cron, buttons, external events |
+| `web/`, `languageProcessing/`, `debugging/` | `blue` | HTTP, LLM calls, print/run-js helpers |
+| `authentication/` | `cyan` | OTP, account lookup |
+| `smartHome/` | `white` | Device queries and commands (Hue, Netsocket, etc.) |
+
+### Pure vs side-effect coloring
+
+Color usually reflects **what the node does**, not only whether it has event ports:
+
+- **Pure transforms → `green`**. Most nodes with only data inputs/outputs use green, including JSON mutators like `JSON/Push Array Item` and `JSON/Set Array Item` even though they accept an event input to run in sequence.
+- **Flow orchestration → `white`**. Nodes whose main job is controlling execution order or device state (If, For, Delay, Hue set-state, etc.).
+- **Side effects / external systems → `blue`**. Network calls, LLM inference, arbitrary JS execution, debug logging, and writes to shared runtime state. Example: `Variables/Get Variable` is `green` (read), but `Variables/Set Variable` is `blue` (write + event flow).
+- **Graph sources → `black`**. Triggers never sit in the middle of a value chain; they start flows.
+- **Time → `yellow`**. All nodes under `time/` use yellow consistently, including simple getters like `Time/Get Current Timestamp`.
+
+When adding a node, match the color of similar established nodes in the same category. If a node spans roles (for example, a JSON transform that also sends email), prefer the color that matches the primary user-facing purpose.
 
 Example event node definition:
 
@@ -111,6 +174,8 @@ From `execute.js`, input values are resolved in this order:
 1. If the input is linked, value comes from upstream link state.
 2. If not linked, runtime attempts fallback from `node.properties[inputName]`.
 3. Otherwise value is `null`.
+
+This means that if a node needs to have a default value, the Property should be added to the node design.
 
 ### Property fallback caveat
 

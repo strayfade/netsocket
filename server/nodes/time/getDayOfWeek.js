@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Time/Get Day of Week"
+NodeDefinition.prototype.description = "Extracts the day of the week (0=Sunday through 6=Saturday) from a timestamp in local time."
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

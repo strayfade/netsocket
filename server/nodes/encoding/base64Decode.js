@@ -8,6 +8,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Encoding/Base64 Decode"
+NodeDefinition.prototype.description = "Decodes a Base64-encoded string back into plain text."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "code_off"
 const NodeFunction = async (node, params, behaviors) => {

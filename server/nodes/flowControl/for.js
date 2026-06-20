@@ -13,6 +13,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Flow Control/For"
+NodeDefinition.prototype.description = "Repeats a loop a fixed number of times, firing the On Loop output with the current index each iteration and optionally waiting between iterations. Fires On Finish when all iterations complete."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "cached"
 const NodeFunction = async (node, params, behaviors) => {

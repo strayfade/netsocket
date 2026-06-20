@@ -4,10 +4,11 @@ const { number, string, bool } = require('../../utils/inputParser')
 class NodeDefinition {
     constructor() {
         this.addOutput("Value", "boolean");
-        this.addProperty("Value", "false");
+        this.addEnumProperty("Value", "False", ["True", "False"]);
     }
 }
 NodeDefinition.prototype.title = "Constants/Boolean"
+NodeDefinition.prototype.description = "Outputs a fixed boolean value selected from True or False in the node property."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "input"
 const NodeFunction = async (node, params, behaviors) => {

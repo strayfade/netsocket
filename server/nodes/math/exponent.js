@@ -10,6 +10,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Exponent"
+NodeDefinition.prototype.description = "Raises A to the power of the Exponent input and outputs the result."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "^"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "JSON/Get Object Keys"
+NodeDefinition.prototype.description = "Returns the top-level keys of a JSON object as a JSON array string."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_object"
 const NodeFunction = async (node, params, behaviors) => {

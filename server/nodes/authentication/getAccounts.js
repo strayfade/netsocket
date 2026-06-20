@@ -7,6 +7,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Authentication/Get OTP Accounts"
+NodeDefinition.prototype.description = "Lists all configured OTP account keys (Issuer:Account name) from server authentication preferences. Outputs the account list as a JSON array string."
 NodeDefinition.prototype.color = "cyan"
 NodeDefinition.prototype.icon = "security"
 const NodeFunction = async (node, params, behaviors) => {

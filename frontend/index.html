@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#000000">
     <meta name="author" content="strayfade">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta property="og:site_name" content="Login">
@@ -14,130 +14,87 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Caladea:ital,wght@0,400;0,700;1,400;1,700&family=Geist:wght@100..900&family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&family=Instrument+Serif:ital@0;1&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/css/homepage.css">
-    <link rel="stylesheet" href="/css/hero.css">
     <link rel="stylesheet" href="/css/login.css">
     <title>Login</title>
 </head>
 
-<body>
-    <header>
-        <a href="/">
-            <img class="logo" src="/favicon.png" style="filter: invert();">
-        </a>
-    </header>
-    <div class="section-separator"></div>
+<body class="login-page">
+    <div class="login-bg" aria-hidden="true">
+        <div class="login-bg-grid"></div>
+    </div>
 
-    <section>
-        <form class="form">
-            <div id="loginNotice" class="login-notice" hidden role="status" aria-live="polite">
-                <span id="loginNoticeText" class="login-notice-text"></span>
-                <button type="button" id="loginNoticeDismiss" class="login-notice-dismiss" aria-label="Dismiss message">×</button>
-            </div>
-            <div class="flex-column">
-                <label>Username</label>
-            </div>
-            <div class="inputForm">
-                <input id="username" name="username" placeholder="Enter your username" class="input" type="text" autocomplete="username">
+    <main class="login-shell">
+        <div class="login-card">
+            <div class="login-brand">
+                <a href="/" class="login-logo-lockup" aria-label="Home">
+                    <img class="login-logo" src="/favicon.png" alt="">
+                    <span class="login-title" id="loginTitle">Good morning</span>
+                </a>
             </div>
 
-            <div class="flex-column">
-                <label>Password</label>
-            </div>
-            <div class="inputForm">
-                <input id="password" name="password" placeholder="Enter your password" class="input" type="password" autocomplete="current-password">
-            </div>
-            <div id="passwordConfirmRow" class="login-extra hidden">
-                <div class="flex-column">
-                    <label>Confirm password</label>
+            <form class="form">
+                <div id="loginNotice" class="login-notice" hidden role="status" aria-live="polite">
+                    <span id="loginNoticeText" class="login-notice-text"></span>
+                    <button type="button" id="loginNoticeDismiss" class="login-notice-dismiss" aria-label="Dismiss message">×</button>
                 </div>
-                <div class="inputForm">
-                    <input id="passwordConfirm" placeholder="Re-enter your password" class="input" type="password" autocomplete="new-password">
+
+                <div class="field">
+                    <label for="username">Username</label>
+                    <div class="inputForm">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                            <path d="M20 21a8 8 0 0 0-16 0"/>
+                            <circle cx="12" cy="8" r="4"/>
+                        </svg>
+                        <input id="username" name="username" placeholder="Enter your username" class="input" type="text" autocomplete="username">
+                    </div>
                 </div>
-            </div>
-            <button type="submit" class="button-submit" id="submitBtn">Sign In</button>
-            <script>
-                let needsRegistration = false;
 
-                function showLoginNotice(message, variant) {
-                    const el = document.getElementById('loginNotice');
-                    const text = document.getElementById('loginNoticeText');
-                    text.textContent = message;
-                    el.classList.remove('login-notice--error', 'login-notice--info');
-                    el.classList.add(variant === 'info' ? 'login-notice--info' : 'login-notice--error');
-                    el.removeAttribute('hidden');
-                    el.setAttribute('role', variant === 'info' ? 'status' : 'alert');
-                    el.setAttribute('aria-live', variant === 'info' ? 'polite' : 'assertive');
-                }
+                <div class="field">
+                    <label for="password">Password</label>
+                    <div class="inputForm">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                            <rect x="3" y="11" width="18" height="11" rx="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        <input id="password" name="password" placeholder="Enter your password" class="input" type="password" autocomplete="current-password">
+                    </div>
+                </div>
 
-                function hideLoginNotice() {
-                    const el = document.getElementById('loginNotice');
-                    el.setAttribute('hidden', '');
-                    document.getElementById('loginNoticeText').textContent = '';
-                    el.classList.remove('login-notice--error', 'login-notice--info');
-                }
+                <div id="passwordConfirmRow" class="login-extra hidden">
+                    <div class="field">
+                        <label for="passwordConfirm">Confirm password</label>
+                        <div class="inputForm">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                            <input id="passwordConfirm" placeholder="Re-enter your password" class="input" type="password" autocomplete="new-password">
+                        </div>
+                    </div>
+                </div>
 
-                async function applyAuthState() {
-                    const r = await fetch('/v1/auth-state');
-                    if (!r.ok) return;
-                    const data = await r.json();
-                    needsRegistration = !!data.needsRegistration;
-                    document.getElementById('passwordConfirmRow').classList.toggle('hidden', !needsRegistration);
-                    document.getElementById('submitBtn').textContent = needsRegistration ? 'Create account' : 'Sign In';
-                    document.getElementById('footerHint').classList.toggle('hidden', needsRegistration);
-                }
+                <div class="login-remember">
+                    <label class="login-switch" for="rememberMe">
+                        <input id="rememberMe" name="rememberMe" type="checkbox" class="login-switch-input" checked>
+                        <span class="login-switch-track" aria-hidden="true">
+                            <span class="login-switch-thumb"></span>
+                        </span>
+                        <span class="login-switch-label">Remember me</span>
+                    </label>
+                    <p class="login-remember-hint">Stay signed in after closing the browser or restarting the server.</p>
+                </div>
 
-                async function login(event) {
-                    event.preventDefault();
-                    hideLoginNotice();
-                    const username = document.getElementById('username').value.trim();
-                    const password = document.getElementById('password').value;
-                    const passwordConfirm = document.getElementById('passwordConfirm').value;
-                    if (!username || !password) {
-                        showLoginNotice('Enter a username and password.');
-                        return;
-                    }
-                    if (needsRegistration) {
-                        if (password !== passwordConfirm) {
-                            showLoginNotice('Passwords do not match.');
-                            return;
-                        }
-                    }
-                    const body = needsRegistration
-                        ? { username, password, passwordConfirm }
-                        : { username, password };
-                    const response = await fetch('/login', {
-                        method: 'POST',
-                        body: JSON.stringify(body),
-                        headers: { 'Content-Type': 'application/json' },
-                    });
-                    if (response.status === 200) {
-                        window.location.href = '/dashboard';
-                        return;
-                    }
-                    if (response.status === 400) {
-                        try {
-                            const err = await response.json();
-                            if (err.error === 'password_mismatch') {
-                                showLoginNotice('Passwords do not match.');
-                                return;
-                            }
-                        } catch (_) { /* ignore */ }
-                    }
-                    showLoginNotice(needsRegistration
-                        ? 'Could not create account. Check your input and try again.'
-                        : 'Invalid username or password.');
-                }
-            </script>
-        </form>
-        <script>
-            document.querySelector('form').addEventListener('submit', login);
-            document.getElementById('loginNoticeDismiss').addEventListener('click', hideLoginNotice);
-            applyAuthState();
-        </script>
-    </section>
+                <button type="submit" class="button-submit" id="submitBtn">
+                    <span class="button-submit-label">Sign In</span>
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <script src="/js/loginLogic.js"></script>
+    <script src="/js/loginPage.js"></script>
 </body>
 
 </html>

@@ -3,6 +3,7 @@ const { log, logColors } = require('../log')
 const settingsManager = require('../manager/settingsManager')
 const { getNodes } = require('../manager/saveState')
 const { executeGraph } = require('../manager/execute')
+const { getGraphNodes } = require('../manager/graphUtils')
 
 /** JSON array of { id, cron } mirrors active schedules; updated when the graph’s Cron nodes change. */
 const SETTINGS_KEY = 'triggers.cron.schedules'
@@ -11,12 +12,7 @@ let tasks = []
 let lastCronNodesStr = null
 
 const getCronNodes = (graphRoot) => {
-    const inner = graphRoot?.nodes
-    const list = inner?.nodes
-    if (!Array.isArray(list)) {
-        return []
-    }
-    return list
+    return getGraphNodes(graphRoot)
         .filter((n) => n.type === 'Triggers/Cron')
         .map((n) => ({
             id: n.id,

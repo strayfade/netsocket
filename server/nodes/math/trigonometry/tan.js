@@ -8,6 +8,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Trigonometry/tan"
+NodeDefinition.prototype.description = "Computes the tangent of A, where A is in radians."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "tan"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

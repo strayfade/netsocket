@@ -10,6 +10,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "JSON/Get Array Item"
+NodeDefinition.prototype.description = "Returns the element at a given index from a JSON array as a JSON string, or an empty object if the index is out of range."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_array"
 const NodeFunction = async (node, params, behaviors) => {

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<body class="login-page">
+    <main class="login-shell">
+        <div class="login-card">
+            <span class="login-title" id="loginTitle">Good morning</span>
+            <form class="form">
+                <div id="loginNotice" hidden role="status" aria-live="polite">
+                    <span id="loginNoticeText" class="login-notice-text"></span>
+                    <button type="button" id="loginNoticeDismiss" aria-label="Dismiss message">×</button>
+                </div>
+                <input id="username" type="text">
+                <input id="password" type="password">
+                <div id="passwordConfirmRow" class="login-extra hidden">
+                    <input id="passwordConfirm" type="password">
+                </div>
+                <label for="rememberMe">
+                    <input id="rememberMe" type="checkbox" checked>
+                    Remember me
+                </label>
+                <button type="submit" id="submitBtn">
+                    <span class="button-submit-label">Sign In</span>
+                </button>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

@@ -7,15 +7,17 @@
     "start": "node server/index.js",
     "develop": "node server/index.js",
     "develop-noauth": "npm i && node server/index.js --skip-auth",
-    "reset-credentials": "node server/scripts/resetCredentials.js"
+    "reset-credentials": "node server/scripts/resetCredentials.js",
+    "test": "node --test --test-force-exit tests/loginLogic.test.js tests/sessionAuth.test.js tests/saveUsers.test.js tests/saveStateRestore.test.js tests/loginPage.dom.test.js tests/indexHtml.test.js tests/webResearchTools.test.js tests/newNodes.test.js",
+    "test:watch": "node --test --watch --test-force-exit tests/loginLogic.test.js tests/sessionAuth.test.js tests/saveUsers.test.js tests/saveStateRestore.test.js tests/loginPage.dom.test.js tests/indexHtml.test.js tests/webResearchTools.test.js tests/newNodes.test.js"
   },
   "keywords": [],
   "author": "strayfade",
   "license": "GPLv3",
   "type": "commonjs",
   "dependencies": {
-    "ai": "^5.0.109",
-    "axios": "^1.13.2",
+    "ai": "^6.0.197",
+    "axios": "^1.17.0",
     "bcrypt": "^6.0.0",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
@@ -24,10 +26,13 @@
     "hi-base32": "^0.5.1",
     "node-cron": "^4.2.1",
     "node-hue-api": "^5.0.0-beta.16",
-    "ollama-ai-provider-v2": "^1.5.5",
+    "ollama-ai-provider-v2": "^3.5.1",
     "otplib": "^13.3.0",
     "serialport": "^13.0.0",
     "uglify-js": "^3.19.3",
-    "ws": "^8.18.3"
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
   }
 }

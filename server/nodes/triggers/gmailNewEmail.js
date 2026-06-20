@@ -12,6 +12,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Triggers/New Email (Gmail)"
+NodeDefinition.prototype.description = "Triggers when a new Gmail message is detected via Google polling. Outputs sender, subject, snippet, message ID, thread ID, and full payload."
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "mail"
 

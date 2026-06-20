@@ -8,6 +8,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Triggers/Button"
+NodeDefinition.prototype.description = "Starts a graph run when clicked in the editor UI. Acts as a manual trigger with no inputs."
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "ads_click"
 NodeDefinition.prototype.onDrawForeground = function (ctx) {

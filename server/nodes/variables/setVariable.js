@@ -12,6 +12,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Variables/Set Variable"
+NodeDefinition.prototype.description = "Writes a new value to a named global variable and outputs the stored value, persisting it for later reads."
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "database_upload"
 const NodeFunction = async (node, params, behaviors) => {

@@ -9,6 +9,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Debugging/Print"
+NodeDefinition.prototype.description = "Logs the input text to the server console for debugging and continues the flow on its event output."
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "browse_activity"
 const NodeFunction = async (node, params, behaviors) => {

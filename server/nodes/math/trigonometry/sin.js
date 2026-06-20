@@ -8,6 +8,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Math/Trigonometry/sin"
+NodeDefinition.prototype.description = "Computes the sine of A, where A is in radians."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "sin"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

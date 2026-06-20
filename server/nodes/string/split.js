@@ -10,6 +10,7 @@ class NodeDefinition {
   }
 }
 NodeDefinition.prototype.title = 'String/Split'
+NodeDefinition.prototype.description = "Splits a string by a delimiter and outputs the resulting parts as a JSON array string."
 NodeDefinition.prototype.color = 'green'
 NodeDefinition.prototype.icon = "call_split"
 const NodeFunction = async (node, params, behaviors) => {

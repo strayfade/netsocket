@@ -20,6 +20,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = "Triggers/GitHub Webhook"
+NodeDefinition.prototype.description = "Triggers when an authenticated GitHub webhook is received. Outputs event type, delivery ID, repository, action, sender, and full payload."
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "data_object"
 

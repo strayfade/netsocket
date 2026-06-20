@@ -7,11 +7,12 @@ class NodeDefinition {
         this.addInput("Search for", "string");
         this.addInput("Replace with", "string");
         this.addInput("Replace all", "boolean");
-        this.addProperty("Replace all", "true");
+        this.addEnumProperty("Replace all", "True", ["True", "False"]);
         this.addOutput("Output", "string");
     }
 }
 NodeDefinition.prototype.title = "String/Replace"
+NodeDefinition.prototype.description = "Finds a substring in the original text and replaces it with new text, optionally replacing all occurrences."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "sync_alt"
 const NodeFunction = async (node, params, behaviors) => {
