@@ -149,6 +149,47 @@ const revokeToken = (tk) => {
 
 const canAccessPrivateApi = (req, res = null) => authSkipped() || hasUserSession(req, res)
 
+const normalizeClientAddress = (address) => {
+    if (!address || typeof address !== 'string') return ''
+    let normalized = address.split('%')[0]
+    const ipv4Mapped = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i)
+    if (ipv4Mapped) return ipv4Mapped[1]
+    if (normalized.startsWith('[') && normalized.endsWith(']')) {
+        normalized = normalized.slice(1, -1)
+    }
+    return normalized.toLowerCase()
+}
+
+const isPrivateIpv4 = (host) => {
+    const parts = host.split('.').map((part) => Number(part))
+    if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+        return false
+    }
+    if (parts[0] === 10) return true
+    if (parts[0] === 127) return true
+    if (parts[0] === 169 && parts[1] === 254) return true
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true
+    if (parts[0] === 192 && parts[1] === 168) return true
+    if (parts[0] === 0) return true
+    return false
+}
+
+const isLanAddress = (rawAddress) => {
+    const address = normalizeClientAddress(rawAddress)
+    if (!address) return false
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(address)) return isPrivateIpv4(address)
+    if (address === '::1') return true
+    if (address.startsWith('fe80:')) return true
+    if (/^f[cd][0-9a-f]{2}:/i.test(address)) return true
+    return false
+}
+
+const getClientSocketAddress = (req) =>
+    req?.socket?.remoteAddress || req?.connection?.remoteAddress || ''
+
+/** True when the TCP peer is on a local/private network (loopback, RFC1918, link-local, ULA). */
+const isLanClient = (req) => isLanAddress(getClientSocketAddress(req))
+
 const integrationSecretMatches = (req, expectedSecret) => {
     if (!expectedSecret) return false
     const header = req.headers?.['x-socket-auth']
@@ -248,6 +289,9 @@ module.exports = {
     canAccessPrivateApi,
     canAccessWithSessionOrIntegrationSecret,
     integrationSecretMatches,
+    isLanAddress,
+    isLanClient,
+    getClientSocketAddress,
     safeRedirectPath,
     isProtectedPagePath,
     requireUserSession,

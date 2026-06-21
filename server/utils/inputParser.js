@@ -1,3 +1,5 @@
+const { log } = require('../log')
+
 const number = (num) => {
     if (!num)
         return 0

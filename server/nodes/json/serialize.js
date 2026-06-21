@@ -14,15 +14,22 @@ NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_object"
 const NodeFunction = async (node, params, behaviors) => {
     try {
-        let parsed = json(params["JSON"])
-        if (typeof parsed === "string") {
-            parsed = JSON.parse(parsed)
+        const input = params["JSON"]
+        let value = input
+        if (input == null || input === '')
+            value = json(input)
+        else if (typeof input === 'string') {
+            try {
+                value = JSON.parse(input)
+            } catch {
+                value = input
+            }
         }
-        await behaviors.populateNextNodeLinks([JSON.stringify(parsed)]);
+        await behaviors.populateNextNodeLinks([JSON.stringify(value)]);
         return true
     }
     catch (e) {
-        log(`Error: ${e}`)
+        log(`Error: ${e}`, logColors.Error)
         await behaviors.populateNextNodeLinks(["{}"]);
         return false
     }

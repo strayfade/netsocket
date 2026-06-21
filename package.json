@@ -8,14 +8,18 @@
     "develop": "node server/index.js",
     "develop-noauth": "npm i && node server/index.js --skip-auth",
     "reset-credentials": "node server/scripts/resetCredentials.js",
-    "test": "node --test --test-force-exit tests/loginLogic.test.js tests/sessionAuth.test.js tests/saveUsers.test.js tests/saveStateRestore.test.js tests/loginPage.dom.test.js tests/indexHtml.test.js tests/webResearchTools.test.js tests/newNodes.test.js",
-    "test:watch": "node --test --watch --test-force-exit tests/loginLogic.test.js tests/sessionAuth.test.js tests/saveUsers.test.js tests/saveStateRestore.test.js tests/loginPage.dom.test.js tests/indexHtml.test.js tests/webResearchTools.test.js tests/newNodes.test.js"
+    "test": "node --test --test-force-exit tests/loginLogic.test.js tests/sessionAuth.test.js tests/saveUsers.test.js tests/saveStateRestore.test.js tests/loginPage.dom.test.js tests/indexHtml.test.js tests/webResearchTools.test.js tests/newNodes.test.js tests/mcpExecuteStandalone.test.js tests/killProcessOnPort.test.js tests/hueNodes.test.js tests/forEach.test.js",
+    "test:watch": "node --test --watch --test-force-exit tests/loginLogic.test.js tests/sessionAuth.test.js tests/saveUsers.test.js tests/saveStateRestore.test.js tests/loginPage.dom.test.js tests/indexHtml.test.js tests/webResearchTools.test.js tests/newNodes.test.js tests/mcpExecuteStandalone.test.js tests/killProcessOnPort.test.js tests/hueNodes.test.js tests/forEach.test.js"
   },
   "keywords": [],
   "author": "strayfade",
   "license": "GPLv3",
   "type": "commonjs",
   "dependencies": {
+    "@cfworker/json-schema": "^4.1.1",
+    "@modelcontextprotocol/express": "^2.0.0-alpha.2",
+    "@modelcontextprotocol/node": "^2.0.0-alpha.2",
+    "@modelcontextprotocol/server": "^2.0.0-alpha.2",
     "ai": "^6.0.197",
     "axios": "^1.17.0",
     "bcrypt": "^6.0.0",
@@ -30,7 +34,8 @@
     "otplib": "^13.3.0",
     "serialport": "^13.0.0",
     "uglify-js": "^3.19.3",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "jsdom": "^26.1.0"

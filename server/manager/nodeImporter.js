@@ -4,6 +4,7 @@ const { log, logColors } = require('../log')
 const fs = require('fs').promises
 
 const availableNodes = {}
+const nodeMetadata = {}
 
 let nodeData = ""
 
@@ -285,6 +286,8 @@ ${(() => {
     }
     nodeData += `\n\treturn NodeDefinition\n})())\n\n`
     availableNodes[title] = NodeFunction
+    const { extractNodeSchemaFromDefinition } = require('./nodeSchema')
+    nodeMetadata[title] = extractNodeSchemaFromDefinition(oNodeDefinition)
     numNodesImported++;
     //log(`Imported node ${title}`)
 }
@@ -314,10 +317,17 @@ const getNumNodesImported = () => {
     return numNodesImported;
 }
 
+const getNodeMetadata = (title) => nodeMetadata[title] || null
+
+const getNodeMetadataList = () =>
+    Object.values(nodeMetadata).sort((a, b) => a.title.localeCompare(b.title))
+
 module.exports = {
     getAvailableNodes,
     setupNodes,
     getNumNodesImported,
+    getNodeMetadata,
+    getNodeMetadataList,
     parseCallArguments,
     parseEnumPropertyCall,
     formatPropertyLine,

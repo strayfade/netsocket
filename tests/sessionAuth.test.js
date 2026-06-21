@@ -12,6 +12,8 @@ const {
     safeRedirectPath,
     isProtectedPagePath,
     integrationSecretMatches,
+    isLanAddress,
+    isLanClient,
     getTokenFromCookieHeader,
     createToken,
     validateToken,
@@ -107,6 +109,32 @@ describe('sessionAuth', () => {
             assert.equal(integrationSecretMatches({ headers: { 'x-socket-auth': 'wrong' } }, secret), false);
             assert.equal(integrationSecretMatches({ headers: {} }, secret), false);
             assert.equal(integrationSecretMatches({ headers: { 'x-socket-auth': secret } }, ''), false);
+        });
+    });
+
+    describe('isLanClient', () => {
+        it('accepts loopback and private IPv4 addresses', () => {
+            assert.equal(isLanAddress('127.0.0.1'), true);
+            assert.equal(isLanAddress('10.0.0.5'), true);
+            assert.equal(isLanAddress('192.168.1.42'), true);
+            assert.equal(isLanAddress('172.16.0.1'), true);
+            assert.equal(isLanAddress('169.254.10.1'), true);
+            assert.equal(isLanAddress('::ffff:192.168.1.42'), true);
+            assert.equal(isLanClient({ socket: { remoteAddress: '127.0.0.1' } }), true);
+            assert.equal(isLanClient({ socket: { remoteAddress: '::ffff:10.0.0.2' } }), true);
+        });
+
+        it('accepts local IPv6 addresses', () => {
+            assert.equal(isLanAddress('::1'), true);
+            assert.equal(isLanAddress('fe80::1'), true);
+            assert.equal(isLanAddress('fd12:3456:789a:1::1'), true);
+        });
+
+        it('rejects public internet addresses', () => {
+            assert.equal(isLanAddress('8.8.8.8'), false);
+            assert.equal(isLanAddress('203.0.113.10'), false);
+            assert.equal(isLanAddress('2001:4860:4860::8888'), false);
+            assert.equal(isLanClient({ socket: { remoteAddress: '203.0.113.10' } }), false);
         });
     });
 

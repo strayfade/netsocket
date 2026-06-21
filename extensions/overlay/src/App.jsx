@@ -609,7 +609,14 @@ export default function App() {
               type="password"
               value={activeProfileConfig.secret || ""}
               onChange={(event) => updateProfileField("secret", event.target.value)}
+              placeholder="Must match Dashboard → Preferences → Command Palette secret"
             />
+            {!activeProfileConfig.secret ? (
+              <div className="hint-row">
+                Required for overlay WebSocket auth. Set the same value in Netsocket dashboard
+                preferences under Command Palette.
+              </div>
+            ) : null}
 
             {HOTKEY_FIELDS.map(({ key, label }) => (
               <div key={key}>

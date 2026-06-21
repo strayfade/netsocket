@@ -67,7 +67,8 @@ let lastWsAuthDeniedLog = 0
 wss.on('connection', (socket, request) => {
     const sessionToken = getTokenFromCookieHeader(request.headers.cookie)
 
-    if (validateToken(sessionToken) || integrationSecretMatches({ headers: request.headers }, settingsManager.getSetting('triggersCommandPalette.secret'))) {
+    const commandPaletteSecret = settingsManager.getSetting('triggersCommandPalette.secret')
+    if (validateToken(sessionToken) || integrationSecretMatches({ headers: request.headers }, commandPaletteSecret)) {
         connectedClients.push(socket);
         //log('Client connected');
         setWsServerConnectedClients(connectedClients)
@@ -512,12 +513,16 @@ app.get('/logout', (req, res) => {
     revokeToken(req.cookies?.tk);
     res.clearCookie('tk', clearCookieOpts).redirect('/login');
 });
+
+require('./mcp/mount').mountMcpRoutes(app)
+
 app.get('/:page', (req, res) => {
     res.sendStatus(404)
 })
 
 const PORT = process.env.PORT || 4675;
 const HOSTNAME = process.env.HOSTNAME || undefined;
+const { killProcessOnPort } = require('./utils/killProcessOnPort');
 (async () => {
     try {
         await populateUsers()
@@ -530,11 +535,24 @@ const HOSTNAME = process.env.HOSTNAME || undefined;
     } catch (e) {
         log(`Startup init error: ${e}`, logColors.Error)
     }
+    try {
+        const killedPids = killProcessOnPort(PORT)
+        if (killedPids.length) {
+            log(`Freed port ${PORT} by stopping process(es): ${killedPids.join(', ')}`, logColors.Warning)
+        }
+    } catch (e) {
+        log(`Could not free port ${PORT}: ${e}`, logColors.Warning)
+    }
     server.listen(PORT, HOSTNAME, () => {
         startGoogleTriggerPoller()
         log(`Imported ${require('./manager/nodeImporter').getNumNodesImported()} nodes`)
         log(`Server running on http://127.0.0.1:${PORT}`)
         log(`Dashboard URL: http://127.0.0.1:${PORT}/dashboard`)
+        log(`MCP endpoint: http://127.0.0.1:${PORT}/mcp`)
+        if (!authSkipped() && !settingsManager.getSetting('triggersCommandPalette.secret')) {
+            log('Overlay/automation WebSocket auth: Command Palette secret is not configured.', logColors.Warning)
+            log('Dashboard → Preferences → Command Palette → Command Palette Secret Key, then enter the same value in the overlay Authentication secret field.', logColors.Warning)
+        }
     })
 })()
 

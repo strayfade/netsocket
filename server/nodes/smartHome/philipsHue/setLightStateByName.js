@@ -11,7 +11,7 @@ class NodeDefinition {
         this.addOutput("", LiteGraph.EVENT);
     }
 }
-NodeDefinition.prototype.title = "Smart Home/Philips Hue/Set Light State by Name"
+NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Set Light State by Name"
 NodeDefinition.prototype.description = "Finds a Philips Hue light by name and sets it on with an RGB hex color or off if black. Controls the light via the Hue bridge API."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"

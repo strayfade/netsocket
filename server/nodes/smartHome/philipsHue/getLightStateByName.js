@@ -9,7 +9,7 @@ class NodeDefinition {
         this.addOutput("State Object", "object");
     }
 }
-NodeDefinition.prototype.title = "Smart Home/Philips Hue/Get Light State by Name"
+NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Get Light State by Name"
 NodeDefinition.prototype.description = "Finds a Philips Hue light by name and returns its current state object. Requires a configured Hue bridge connection."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"

@@ -10,7 +10,13 @@ use tauri::{AppHandle, Emitter};
 use tokio::sync::mpsc;
 use tokio_tungstenite::{
     connect_async,
-    tungstenite::{client::IntoClientRequest, http::HeaderValue, Message},
+    tungstenite::{
+        client::IntoClientRequest,
+        http::HeaderValue,
+        protocol::frame::coding::CloseCode,
+        protocol::CloseFrame,
+        Message,
+    },
 };
 
 #[derive(Debug)]
@@ -143,7 +149,7 @@ async fn ws_loop(
                 &connection,
                 false,
                 false,
-                "Connection closed before authentication.",
+                &auth_error_message(&secret, None),
                 &url,
                 &profile,
                 &app,
@@ -185,7 +191,19 @@ async fn ws_loop(
                         Some(Ok(Message::Ping(payload))) => {
                             let _ = write.send(Message::Pong(payload)).await;
                         }
-                        Some(Ok(Message::Close(_))) | Some(Err(_)) | None => {
+                        Some(Ok(Message::Close(frame))) => {
+                            update_connection(
+                                &connection,
+                                false,
+                                false,
+                                &auth_error_message(&secret, frame.as_ref()),
+                                &url,
+                                &profile,
+                                &app,
+                            );
+                            break;
+                        }
+                        Some(Err(_)) | None => {
                             break;
                         }
                         _ => {}
@@ -207,13 +225,28 @@ async fn ws_loop(
             &connection,
             false,
             false,
-            "Connection lost.",
+            &auth_error_message(&secret, None),
             &url,
             &profile,
             &app,
         );
         tokio::time::sleep(std::time::Duration::from_millis(RECONNECT_DELAY_MS)).await;
     }
+}
+
+fn auth_error_message(secret: &str, close_frame: Option<&CloseFrame>) -> String {
+    let session_required = close_frame
+        .map(|frame| frame.code == CloseCode::Library(4401))
+        .unwrap_or(true);
+
+    if session_required {
+        if secret.trim().is_empty() {
+            return "Authentication required: set the Command Palette secret in overlay settings (Dashboard → Preferences → Command Palette).".to_string();
+        }
+        return "Authentication failed: secret does not match the server's Command Palette secret.".to_string();
+    }
+
+    "Connection lost.".to_string()
 }
 
 fn update_connection(

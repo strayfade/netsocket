@@ -1,5 +1,5 @@
 const { log, logColors } = require('../../log')
-const { number, string, bool } = require('../../utils/inputParser')
+const { number, string, bool, json } = require('../../utils/inputParser')
 
 class NodeDefinition {
     constructor() {
@@ -7,23 +7,24 @@ class NodeDefinition {
         this.addInput("Array", "array");
         this.addInput("Delay (ms)", "number");
         this.addOutput("On Element", LiteGraph.EVENT);
-        this.addOutput("Element", "string")
+        this.addOutput("Element", "object")
         this.addOutput("Index", "number")
         this.addOutput("On Finish", LiteGraph.EVENT);
     }
 }
 NodeDefinition.prototype.title = "Flow Control/For Each"
-NodeDefinition.prototype.description = "Iterates over a JSON array, firing On Element with each item (as a JSON string) and its index, then fires On Finish when done."
+NodeDefinition.prototype.description = "Iterates over a JSON array, firing On Element with each item as a JSON object and its index, then fires On Finish when done."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "data_array"
 const NodeFunction = async (node, params, behaviors) => {
     try {
-        const array = JSON.parse(string(params.Array))
-        for (i in array) {
-            const currentElement = JSON.stringify(array[i]).toString()
-            const currentIndex = i;
+        const array = json(params.Array)
+        if (!Array.isArray(array))
+            throw new Error('Array input must be a JSON array')
+        for (let i = 0; i < array.length; i++) {
+            const currentElement = array[i]
             await behaviors.populateNextNodeLinks([
-                null, currentElement, currentIndex, null
+                null, currentElement, i, null
             ]);
             await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[0]);
             if (i < array.length - 1)

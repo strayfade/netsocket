@@ -113,6 +113,19 @@ describe('nodeImporter enum properties', () => {
     })
 })
 
+describe('inputParser json', () => {
+    const { json } = require('../server/utils/inputParser')
+
+    it('returns objects unchanged', () => {
+        const value = { name: 'Desk' }
+        assert.deepEqual(json(value), value)
+    })
+
+    it('does not throw when JSON parsing fails', () => {
+        assert.deepEqual(json('not valid json'), {})
+    })
+})
+
 describe('inputParser bool', () => {
     const { bool } = require('../server/utils/inputParser')
 

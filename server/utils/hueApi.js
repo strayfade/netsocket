@@ -27,7 +27,11 @@ require('../manager/nodePreferencesRegistry').addPref(
 )
 
 const hueApiLib = require('node-hue-api').v3.api
-const LightState = require('node-hue-api').v3.lightStates.LightState;
+const LightState = require('node-hue-api').v3.lightStates.LightState
+const GroupState = require('node-hue-api').v3.lightStates.GroupLightState
+const SceneLightState = require('node-hue-api').v3.lightStates.SceneLightState
+const hueModel = require('node-hue-api').model
+const hueDiscovery = require('node-hue-api').discovery
 
 let hueApi;
 let hueApiStable = false;
@@ -39,7 +43,8 @@ const setupHueApi = async () => {
             log('Philips Hue settings not configured; skipping connection', logColors.Warning)
             return
         }
-        hueApi = await hueApiLib.createLocal(ip).connect(user);
+        const clientKey = settingsManager.getSetting('philipsHue.clientKey') || undefined
+        hueApi = await hueApiLib.createLocal(ip).connect(user, clientKey)
         hueApiStable = true
     }
     catch (e) {
@@ -56,4 +61,14 @@ const doesHueApiWork = () => {
         log(`Failed to connect to Philips Hue from netsocket!`)
     return hueApiStable
 }
-module.exports = { getHueApi, LightState, hueApiLib, doesHueApiWork, setupHueApi }
+module.exports = {
+    getHueApi,
+    LightState,
+    GroupState,
+    SceneLightState,
+    hueModel,
+    hueDiscovery,
+    hueApiLib,
+    doesHueApiWork,
+    setupHueApi,
+}

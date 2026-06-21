@@ -1,26 +1,30 @@
 const { log, logColors } = require('../../../log')
 const { number, string, bool } = require('../../../utils/inputParser')
 const { getHueApi, LightState, hueApiLib, doesHueApiWork } = require('../../../utils/hueApi')
+const { serializeHueArray, failArrayJson } = require('../../../utils/hueNodeHelpers')
 
 class NodeDefinition {
     constructor() {
         this.addInput("Name", "string");
         this.addProperty("Name", "Hue bloom 1");
-        this.addOutput("Light Object", "object");
+        this.addOutput("Light Object", "array");
         this.addOutput("ID", "string");
     }
 }
-NodeDefinition.prototype.title = "Smart Home/Philips Hue/Get Light by Name"
-NodeDefinition.prototype.description = "Looks up a Philips Hue light by its friendly name and outputs the light object and its ID. Requires a configured Hue bridge connection."
+NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Get Light by Name"
+NodeDefinition.prototype.description = "Looks up a Philips Hue light by its friendly name and outputs matching lights as a JSON array string plus the first match ID. Requires a configured Hue bridge connection."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 const NodeFunction = async (node, params, behaviors) => {
     if (!doesHueApiWork()) {
-        await behaviors.populateNextNodeLinks([{}, ""]);
+        await behaviors.populateNextNodeLinks([failArrayJson, ""]);
         return false;
     }
     let light = await getHueApi()?.lights?.getLightByName(string(params.Name))
-    await behaviors.populateNextNodeLinks([light, light[0].data.id]);
+    await behaviors.populateNextNodeLinks([
+        serializeHueArray(light),
+        light?.[0]?.data?.id ?? "",
+    ]);
     return true
 }
 module.exports = { NodeDefinition, NodeFunction }
