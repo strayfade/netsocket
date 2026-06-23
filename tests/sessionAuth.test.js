@@ -12,6 +12,8 @@ const {
     safeRedirectPath,
     isProtectedPagePath,
     integrationSecretMatches,
+    getBearerTokenFromHeader,
+    bearerTokenMatches,
     isLanAddress,
     isLanClient,
     getTokenFromCookieHeader,
@@ -109,6 +111,25 @@ describe('sessionAuth', () => {
             assert.equal(integrationSecretMatches({ headers: { 'x-socket-auth': 'wrong' } }, secret), false);
             assert.equal(integrationSecretMatches({ headers: {} }, secret), false);
             assert.equal(integrationSecretMatches({ headers: { 'x-socket-auth': secret } }, ''), false);
+        });
+    });
+
+    describe('bearerTokenMatches', () => {
+        it('parses Authorization Bearer tokens from requests', () => {
+            assert.equal(getBearerTokenFromHeader({ headers: { authorization: 'Bearer abc123' } }), 'abc123');
+            assert.equal(getBearerTokenFromHeader({ headers: { Authorization: 'bearer token-value' } }), 'token-value');
+            assert.equal(getBearerTokenFromHeader({ headers: { authorization: 'Bearer  trimmed  ' } }), 'trimmed');
+            assert.equal(getBearerTokenFromHeader({ headers: {} }), null);
+            assert.equal(getBearerTokenFromHeader({ headers: { authorization: 'Basic abc' } }), null);
+            assert.equal(getBearerTokenFromHeader({ headers: { authorization: 'Bearer' } }), null);
+        });
+
+        it('compares bearer tokens in constant time semantics via tokensEqual', () => {
+            const secret = 'mcp-api-token';
+            assert.equal(bearerTokenMatches({ headers: { authorization: `Bearer ${secret}` } }, secret), true);
+            assert.equal(bearerTokenMatches({ headers: { authorization: 'Bearer wrong' } }, secret), false);
+            assert.equal(bearerTokenMatches({ headers: {} }, secret), false);
+            assert.equal(bearerTokenMatches({ headers: { authorization: `Bearer ${secret}` } }, ''), false);
         });
     });
 

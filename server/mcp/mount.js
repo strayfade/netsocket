@@ -1,10 +1,15 @@
 const { log, logColors } = require('../log')
-const { authSkipped, isLanClient } = require('../utils/sessionAuth')
+const { authSkipped, bearerTokenMatches, hasUserSession } = require('../utils/sessionAuth')
+const { getMcpApiToken } = require('./token')
 const { getNodeMetadataList, getNodeMetadata } = require('../manager/nodeImporter')
 const { executeStandaloneNode } = require('../manager/executeStandalone')
 const { buildExampleUsage } = require('../manager/nodeSchema')
 
-const canAccessMcp = (req) => authSkipped() || isLanClient(req)
+const canAccessMcp = (req, res = null) => {
+    if (authSkipped()) return true
+    if (bearerTokenMatches(req, getMcpApiToken())) return true
+    return hasUserSession(req, res)
+}
 
 const listNodeSummaries = (categoryFilter) => {
     let nodes = getNodeMetadataList()
@@ -51,10 +56,10 @@ const mcpCors = (req, res, next) => {
 }
 
 const requireMcpAuth = (req, res, next) => {
-    if (canAccessMcp(req)) return next()
-    return res.status(403).json({
-        error: 'forbidden',
-        hint: 'MCP is only available to clients on the same local network.',
+    if (canAccessMcp(req, res)) return next()
+    return res.status(401).json({
+        error: 'unauthorized',
+        hint: 'Provide Authorization: Bearer <token>. Get the token from Dashboard → Preferences → MCP API Token.',
     })
 }
 
@@ -89,15 +94,26 @@ const ensureMcpReady = () => {
 
 const mountMcpRoutes = (app) => {
     app.get('/v1/mcp/info', requireMcpAuth, (req, res) => {
+        const port = process.env.PORT || 4675
+        const host = process.env.HOSTNAME || '127.0.0.1'
         res.status(200).json({
             name: 'netsocket',
             transport: 'streamable-http',
             mcpEndpoint: '/mcp',
             auth: {
-                lanOnly: true,
+                required: !authSkipped(),
+                methods: authSkipped() ? [] : ['bearer', 'session'],
+                header: 'Authorization: Bearer <token>',
+                preference: 'mcp.apiToken',
                 openWhenAuthSkipped: authSkipped(),
+                cursorExample: {
+                    url: `http://${host}:${port}/mcp`,
+                    headers: {
+                        Authorization: 'Bearer ${env:NETSOCKET_MCP_TOKEN}',
+                    },
+                },
             },
-            ready: canAccessMcp(req),
+            ready: true,
             tools: ['list_nodes', 'get_node_info', 'execute_node'],
         })
     })

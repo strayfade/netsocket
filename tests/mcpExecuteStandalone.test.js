@@ -1,6 +1,6 @@
 'use strict'
 
-const { describe, it, before } = require('node:test')
+const { describe, it, before, beforeEach, afterEach } = require('node:test')
 const assert = require('node:assert/strict')
 const path = require('path')
 
@@ -79,10 +79,22 @@ describe('node metadata', () => {
 })
 
 describe('MCP helpers', () => {
+    const originalArgv = [...process.argv]
+
     before(async () => {
         await require('../server/manager/nodeImporter').setupNodes(
             path.join(__dirname, '../server/nodes')
         )
+    })
+
+    beforeEach(() => {
+        process.argv = originalArgv.filter((arg) => arg !== '--skip-auth')
+        require('../server/manager/saveUsers').setUsers([])
+        require('../server/manager/settingsManager').setSetting('mcp.apiToken', 'test-mcp-token')
+    })
+
+    afterEach(() => {
+        process.argv = [...originalArgv]
     })
 
     it('lists node summaries with optional category filter', () => {
@@ -93,7 +105,35 @@ describe('MCP helpers', () => {
         assert.ok(all.length > 0)
         assert.ok(math.every((node) => node.category === 'Math'))
         assert.ok(math.some((node) => node.nodeType === 'Math/Add'))
-        assert.equal(canAccessMcp({ socket: { remoteAddress: '127.0.0.1' } }), true)
-        assert.equal(canAccessMcp({ socket: { remoteAddress: '203.0.113.10' } }), false)
+    })
+
+    it('allows MCP access with bearer token, session, or skip-auth', () => {
+        const { canAccessMcp } = require('../server/mcp/mount')
+        const { createToken } = require('../server/utils/sessionAuth')
+
+        assert.equal(
+            canAccessMcp({ headers: { authorization: 'Bearer test-mcp-token' }, cookies: {} }),
+            true
+        )
+        const sessionToken = createToken({ rememberMe: false })
+        assert.equal(canAccessMcp({ cookies: { tk: sessionToken }, headers: {} }), true)
+        assert.equal(canAccessMcp({ socket: { remoteAddress: '203.0.113.10' }, headers: {}, cookies: {} }), false)
+
+        process.argv.push('--skip-auth')
+        assert.equal(canAccessMcp({ socket: { remoteAddress: '203.0.113.10' }, headers: {}, cookies: {} }), true)
+    })
+
+    it('rejects LAN clients without credentials', () => {
+        const { canAccessMcp } = require('../server/mcp/mount')
+
+        assert.equal(canAccessMcp({ socket: { remoteAddress: '127.0.0.1' }, headers: {}, cookies: {} }), false)
+        assert.equal(
+            canAccessMcp({
+                socket: { remoteAddress: '127.0.0.1' },
+                headers: { authorization: 'Bearer wrong-token' },
+                cookies: {},
+            }),
+            false
+        )
     })
 })

@@ -197,6 +197,23 @@ const integrationSecretMatches = (req, expectedSecret) => {
     return tokensEqual(header, expectedSecret)
 }
 
+/** Parse `Authorization: Bearer <token>` from a request (scheme is case-insensitive). */
+const getBearerTokenFromHeader = (req) => {
+    const header = req?.headers?.authorization ?? req?.headers?.Authorization
+    if (typeof header !== 'string' || !header.length) return null
+    const match = header.match(/^Bearer\s+(.+)$/i)
+    if (!match) return null
+    const token = match[1].trim()
+    return token.length ? token : null
+}
+
+const bearerTokenMatches = (req, expectedSecret) => {
+    if (!expectedSecret) return false
+    const token = getBearerTokenFromHeader(req)
+    if (!token) return false
+    return tokensEqual(token, expectedSecret)
+}
+
 const canAccessWithSessionOrIntegrationSecret = (req, res, expectedSecret) => {
     if (authSkipped()) return true
     if (hasUserSession(req, res)) return true
@@ -289,6 +306,8 @@ module.exports = {
     canAccessPrivateApi,
     canAccessWithSessionOrIntegrationSecret,
     integrationSecretMatches,
+    getBearerTokenFromHeader,
+    bearerTokenMatches,
     isLanAddress,
     isLanClient,
     getClientSocketAddress,

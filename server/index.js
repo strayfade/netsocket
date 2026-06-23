@@ -514,6 +514,21 @@ app.get('/logout', (req, res) => {
     res.clearCookie('tk', clearCookieOpts).redirect('/login');
 });
 
+const { ensureMcpApiToken, regenerateMcpApiToken } = require('./mcp/token')
+
+app.post('/v1/mcp/regenerate-token', async (req, res) => {
+    if (!canAccessPrivateApi(req, res)) {
+        return res.sendStatus(401)
+    }
+    try {
+        const token = await regenerateMcpApiToken()
+        return res.status(200).json({ token })
+    } catch (e) {
+        log(`MCP token regenerate error: ${e}`, logColors.Error)
+        return res.status(500).json({ error: 'regenerate_failed' })
+    }
+})
+
 require('./mcp/mount').mountMcpRoutes(app)
 
 app.get('/:page', (req, res) => {
@@ -530,6 +545,14 @@ const { killProcessOnPort } = require('./utils/killProcessOnPort');
         await populateCredentials()
         await reloadVars()
         await settingsManager.reloadSettings()
+        if (!authSkipped()) {
+            const existingMcpToken = settingsManager.getSetting('mcp.apiToken')
+            const mcpToken = await ensureMcpApiToken()
+            if (!existingMcpToken && mcpToken) {
+                log('MCP API token was auto-generated.', logColors.Warning)
+                log('Dashboard → Preferences → MCP API Token, or set NETSOCKET_MCP_TOKEN for Cursor.', logColors.Warning)
+            }
+        }
         constructedNodes = await require('./manager/nodeImporter').setupNodes()
         cronTriggerManager.syncFromGraphIfNeeded()
     } catch (e) {
