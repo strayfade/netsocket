@@ -47,13 +47,13 @@ describe('loginLogic', () => {
     describe('pickLoginGreeting', () => {
         it('returns a greeting from the matching period pool', () => {
             const greeting = pickLoginGreeting(14, () => 0);
-            assert.ok(LOGIN_GREETINGS.afternoon.includes(greeting));
+            assert.ok(LOGIN_GREETINGS.afternoon.map((item) => item.toLowerCase()).includes(greeting));
         });
 
         it('uses randomFn to select among options', () => {
             const lastIndex = LOGIN_GREETINGS.morning.length - 1;
             const greeting = pickLoginGreeting(9, () => 0.999);
-            assert.equal(greeting, LOGIN_GREETINGS.morning[lastIndex]);
+            assert.equal(greeting, LOGIN_GREETINGS.morning[lastIndex].toLowerCase());
         });
     });
 
@@ -64,7 +64,7 @@ describe('loginLogic', () => {
 
         it('returns a time-based greeting for sign-in mode', () => {
             const title = getLoginTitle(false, 10, () => 0);
-            assert.equal(title, LOGIN_GREETINGS.morning[0]);
+            assert.equal(title, LOGIN_GREETINGS.morning[0].toLowerCase());
         });
     });
 
