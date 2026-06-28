@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Groups/Get Group by ID"
 NodeDefinition.prototype.description = "Returns a single Hue group by ID."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		ID: {"description":"Unique ID of the target resource.","structure":"Resource identifier string.","required":true},
+	},
+	outputs: {
+		Group: {"description":"Group produced by Get Group by ID.","structure":"JSON object (may be serialized as a string in some nodes).","mcpKey":"Group"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

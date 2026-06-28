@@ -10,6 +10,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Math/Multiply"
 NodeDefinition.prototype.description = "Multiplies two numbers A and B and outputs the product."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		A: {"description":"Input \"A\" for Multiply.","structure":"Numeric value (integer or float).","required":true},
+		B: {"description":"Input \"B\" for Multiply.","structure":"Numeric value (integer or float).","required":true},
+	},
+	outputs: {
+		"": {"description":"Primary output of Multiply.","structure":"Numeric value (integer or float).","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "X"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

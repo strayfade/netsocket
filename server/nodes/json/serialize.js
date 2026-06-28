@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "JSON/Serialize"
 NodeDefinition.prototype.description = "Converts a JSON object or array into a compact JSON string."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		JSON: {"description":"JSON document as text.","structure":"JSON-encoded string.","required":true},
+	},
+	outputs: {
+		"": {"description":"Primary output of Serialize.","structure":"Plain text string (UTF-8).","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_object"
 const NodeFunction = async (node, params, behaviors) => {

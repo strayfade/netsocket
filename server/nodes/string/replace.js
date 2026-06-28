@@ -13,6 +13,17 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Replace"
 NodeDefinition.prototype.description = "Finds a substring in the original text and replaces it with new text, optionally replacing all occurrences."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Original: {"description":"Input text before processing.","structure":"Source string to transform.","required":true},
+		"Search for": {"description":"Input \"Search for\" for Replace.","structure":"Plain text string (UTF-8).","required":true},
+		"Replace with": {"description":"Input \"Replace with\" for Replace.","structure":"Plain text string (UTF-8).","required":true},
+		"Replace all": {"description":"Input \"Replace all\" for Replace.","structure":"Boolean true or false.","required":false},
+	},
+	outputs: {
+		Output: {"description":"Main output value.","structure":"Transformed or computed output value.","mcpKey":"Output"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "sync_alt"
 const NodeFunction = async (node, params, behaviors) => {

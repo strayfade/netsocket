@@ -15,7 +15,8 @@ const config = {
         users: path.join(dataDir, 'users.json'),
         credentials: path.join(dataDir, 'credentials.json'),
         vars: path.join(dataDir, 'vars.json'),
-        settings: path.join(dataDir, 'settings.json')
+        settings: path.join(dataDir, 'settings.json'),
+        mcpAgentMemory: path.join(dataDir, 'mcp-agent-memory.json'),
     }
 }
 

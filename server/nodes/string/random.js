@@ -25,6 +25,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = 'String/Random'
 NodeDefinition.prototype.description = "Generates a cryptographically random string of a given length from a preset or custom character set."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Length: {"description":"Input \"Length\" for Random.","structure":"Numeric value (integer or float).","required":true},
+		Charset: {"description":"Input \"Charset\" for Random.","structure":"Plain text string (UTF-8).","required":false},
+	},
+	outputs: {
+		"": {"description":"Primary output of Random.","structure":"Plain text string (UTF-8).","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = 'green'
 NodeDefinition.prototype.icon = "casino"
 const crypto = require('crypto')

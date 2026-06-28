@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Sensors/Get All Sensors"
 NodeDefinition.prototype.description = "Returns all sensors on the Hue bridge."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Sensors: {"description":"Sensors produced by Get All Sensors.","structure":"Array of Philips Hue resource objects.","mcpKey":"Sensors"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Groups/Get All Groups"
 NodeDefinition.prototype.description = "Returns all groups on the Hue bridge."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Groups: {"description":"Groups produced by Get All Groups.","structure":"Array of Philips Hue resource objects.","mcpKey":"Groups"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Schedules/Get Schedule by Name"
 NodeDefinition.prototype.description = "Returns schedules matching the given name."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Name: {"description":"Resource name to look up or update.","structure":"Human-readable name string.","required":true},
+	},
+	outputs: {
+		Schedules: {"description":"Schedules produced by Get Schedule by Name.","structure":"Array of Philips Hue resource objects.","mcpKey":"Schedules"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

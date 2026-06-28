@@ -13,6 +13,16 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Substring"
 NodeDefinition.prototype.description = "Extracts a portion of a string starting at Begin for Count characters, or to the end if Count is -1."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Input: {"description":"Input \"Input\" for Substring.","structure":"Plain text string (UTF-8).","required":true},
+		Begin: {"description":"Input \"Begin\" for Substring.","structure":"Numeric value (integer or float).","required":true},
+		Count: {"description":"Input \"Count\" for Substring.","structure":"Numeric value (integer or float).","required":false},
+	},
+	outputs: {
+		Output: {"description":"Main output value.","structure":"Transformed or computed output value.","mcpKey":"Output"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "content_cut"
 const NodeFunction = async (node, params, behaviors) => {

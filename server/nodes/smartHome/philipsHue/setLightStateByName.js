@@ -13,6 +13,16 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Set Light State by Name"
 NodeDefinition.prototype.description = "Finds a Philips Hue light by name and sets it on with an RGB hex color or off if black. Controls the light via the Hue bridge API."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Name: {"description":"Resource name to look up or update.","structure":"Human-readable name string.","required":true},
+		"Color (hex)": {"description":"Target light color in hex notation.","structure":"Hex color code such as #ff0000; use #000000 or black to turn a Hue light off.","required":true},
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 const NodeFunction = async (node, params, behaviors) => {

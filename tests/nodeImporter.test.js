@@ -8,6 +8,7 @@ const {
     formatPropertyLine,
     formatBooleanPropertyLine,
     normalizeBooleanDefault,
+    serializePrototypeProperty,
     setupNodes,
 } = require('../server/manager/nodeImporter')
 
@@ -102,6 +103,19 @@ describe('nodeImporter enum properties', () => {
             code,
             /createNode\("Math\/Add"[\s\S]*NodeDefinition\.prototype\.description = "Adds two numbers A and B and outputs the sum\."/
         )
+    })
+
+    it('quotes string prototype metadata such as mcpPreferred', () => {
+        const line = serializePrototypeProperty('mcpPreferred', 'Prefer for OTP account lookup.')
+        assert.equal(
+            line,
+            '\nNodeDefinition.prototype.mcpPreferred = "Prefer for OTP account lookup."'
+        )
+    })
+
+    it('serializes boolean prototype metadata without quotes', () => {
+        const line = serializePrototypeProperty('mcpPreferred', true)
+        assert.equal(line, '\nNodeDefinition.prototype.mcpPreferred = true')
     })
 
     it('preserves JSON schema defaults with commas', async () => {

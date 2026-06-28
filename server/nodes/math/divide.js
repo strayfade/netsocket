@@ -10,6 +10,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Math/Divide"
 NodeDefinition.prototype.description = "Divides A by B and outputs the quotient, failing if B is zero."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		A: {"description":"Input \"A\" for Divide.","structure":"Numeric value (integer or float).","required":true},
+		B: {"description":"Input \"B\" for Divide.","structure":"Numeric value (integer or float).","required":true},
+	},
+	outputs: {
+		"": {"description":"Primary output of Divide.","structure":"Numeric value (integer or float).","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "/"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

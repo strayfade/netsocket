@@ -22,6 +22,22 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "System/Run Command"
 NodeDefinition.prototype.description = "Executes a shell command with optional working directory, timeout, and shell mode. Outputs stdout, stderr, and exit code, routing to Success or Failed."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Command: {"description":"User command to execute.","structure":"Natural-language command for the agent.","required":true},
+		"Working Directory": {"description":"Input \"Working Directory\" for Run Command.","structure":"Plain text string (UTF-8).","required":true},
+		"Timeout (ms)": {"description":"Input \"Timeout (ms)\" for Run Command.","structure":"Numeric value (integer or float).","required":false},
+		"Use Shell": {"description":"Input \"Use Shell\" for Run Command.","structure":"Boolean true or false.","required":false},
+	},
+	outputs: {
+		Success: {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Failed: {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Stdout: {"description":"Stdout produced by Run Command.","structure":"Plain text string (UTF-8).","mcpKey":"Stdout"},
+		Stderr: {"description":"Stderr produced by Run Command.","structure":"Plain text string (UTF-8).","mcpKey":"Stderr"},
+		"Exit Code": {"description":"Exit Code produced by Run Command.","structure":"Numeric value (integer or float).","mcpKey":"Exit Code"},
+	},
+}
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "terminal"
 

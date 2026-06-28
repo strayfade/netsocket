@@ -25,6 +25,17 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Web/PUT Request"
 NodeDefinition.prototype.description = "Sends an HTTP PUT request with a configurable body and content type, outputting the response body and status code."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		URL: {"description":"Request target URL.","structure":"HTTP or HTTPS URL string.","required":true},
+		Body: {"description":"HTTP request payload.","structure":"Request body string (often JSON).","required":false},
+		"Content Type": {"description":"Input \"Content Type\" for PUT Request.","structure":"Text response body (often JSON serialized as a string).","required":true},
+	},
+	outputs: {
+
+	},
+}
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "upload"
 

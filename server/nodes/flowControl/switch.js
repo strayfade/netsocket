@@ -28,6 +28,25 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Flow Control/Switch"
 NodeDefinition.prototype.description = "Compares an input string against up to five condition values and routes execution to the matching output, or to Default if none match."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Input: {"description":"Input \"Input\" for Switch.","structure":"Plain text string (UTF-8).","required":true},
+		"Condition 1": {"description":"Input \"Condition 1\" for Switch.","structure":"Plain text string (UTF-8).","required":false},
+		"Condition 2": {"description":"Input \"Condition 2\" for Switch.","structure":"Plain text string (UTF-8).","required":false},
+		"Condition 3": {"description":"Input \"Condition 3\" for Switch.","structure":"Plain text string (UTF-8).","required":false},
+		"Condition 4": {"description":"Input \"Condition 4\" for Switch.","structure":"Plain text string (UTF-8).","required":false},
+		"Condition 5": {"description":"Input \"Condition 5\" for Switch.","structure":"Plain text string (UTF-8).","required":false},
+	},
+	outputs: {
+		"1": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		"2": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		"3": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		"4": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		"5": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Default: {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "arrow_split"
 const NodeFunction = async (node, params, behaviors) => {

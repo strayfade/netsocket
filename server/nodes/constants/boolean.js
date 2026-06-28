@@ -9,6 +9,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Constants/Boolean"
 NodeDefinition.prototype.description = "Outputs a fixed boolean value selected from True or False in the node property."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Value: {"description":"Data value for the operation.","structure":"Value to store or compare.","mcpKey":"Value"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "input"
 const NodeFunction = async (node, params, behaviors) => {

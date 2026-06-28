@@ -9,6 +9,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Triggers/Button"
 NodeDefinition.prototype.description = "Starts a graph run when clicked in the editor UI. Acts as a manual trigger with no inputs."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+	},
+}
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "ads_click"
 NodeDefinition.prototype.onDrawForeground = function (ctx) {

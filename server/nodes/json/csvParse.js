@@ -12,6 +12,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "JSON/CSV Parse"
 NodeDefinition.prototype.description = "Parses CSV text into an array of row objects, optionally treating the first row as column headers."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		CSV: {"description":"Input \"CSV\" for CSV Parse.","structure":"Plain text string (UTF-8).","required":false},
+		"Has Header": {"description":"Input \"Has Header\" for CSV Parse.","structure":"Boolean true or false.","required":false},
+	},
+	outputs: {
+		Rows: {"description":"Rows produced by CSV Parse.","structure":"JSON object; may be returned as a parsed object or JSON string depending on the node.","mcpKey":"Rows"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "table"
 

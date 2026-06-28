@@ -12,6 +12,8 @@ require('../manager/nodePreferencesRegistry').addPref(
 
 const { createOllama } = require('ollama-ai-provider-v2');
 
+const DEFAULT_MODEL = 'gemma4:e2b'
+
 // Keep models resident in Ollama memory; omitting keep_alive resets the timer to ~5m per request.
 const OLLAMA_KEEP_ALIVE = -1
 
@@ -124,7 +126,7 @@ const askAI = async (userText, systemPrompt, model) => {
         if (!systemPrompt)
             systemPrompt = defaultSystemPrompt
         if (!model)
-            model = "lfm2.5"
+            model = DEFAULT_MODEL
         currentConversation = [{
             role: "system",
             content: systemPrompt
@@ -159,4 +161,4 @@ const getOllamaProvider = () => {
     return ollama
 }
 
-module.exports = { askAI, reinitOllama, getOllamaProvider, sanitizeAiOutput }
+module.exports = { DEFAULT_MODEL, askAI, reinitOllama, getOllamaProvider, sanitizeAiOutput }

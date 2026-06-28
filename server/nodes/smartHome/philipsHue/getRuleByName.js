@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Rules/Get Rule by Name"
 NodeDefinition.prototype.description = "Returns rules matching the given name."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Name: {"description":"Resource name to look up or update.","structure":"Human-readable name string.","required":true},
+	},
+	outputs: {
+		Rules: {"description":"Rules produced by Get Rule by Name.","structure":"Array of Philips Hue resource objects.","mcpKey":"Rules"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

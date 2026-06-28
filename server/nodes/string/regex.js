@@ -12,6 +12,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Regex"
 NodeDefinition.prototype.description = "Tests whether the input string matches a regular expression pattern and outputs true or false."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		String: {"description":"Input \"String\" for Regex.","structure":"Plain text string (UTF-8).","required":false},
+		Regex: {"description":"Input \"Regex\" for Regex.","structure":"Plain text string (UTF-8).","required":false},
+	},
+	outputs: {
+		"": {"description":"Primary output of Regex.","structure":"Boolean true or false.","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "regular_expression"
 const NodeFunction = async (node, params, behaviors) => {

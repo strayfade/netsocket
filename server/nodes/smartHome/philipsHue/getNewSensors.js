@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Sensors/Get New Sensors"
 NodeDefinition.prototype.description = "Returns sensors discovered but not yet configured."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Sensors: {"description":"Sensors produced by Get New Sensors.","structure":"Array of Philips Hue resource objects.","mcpKey":"Sensors"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

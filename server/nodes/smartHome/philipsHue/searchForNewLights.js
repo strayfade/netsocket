@@ -11,6 +11,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Search for New Lights"
 NodeDefinition.prototype.description = "Starts a bridge search for new lights. This can take up to 30 seconds."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Started: {"description":"Started produced by Search for New Lights.","structure":"Boolean true or false.","mcpKey":"Started"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

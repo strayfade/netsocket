@@ -119,6 +119,30 @@ const formatBooleanPropertyLine = (name, defaultValue = "False") => {
     })
 }
 
+const escapePrototypeString = (value) => String(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/\t/g, '\\t')
+
+const serializePrototypeProperty = (name, value) => {
+    const propName = name.toString()
+    if (propName === 'title') return ''
+
+    const valueType = typeof value
+    if (valueType === 'string') {
+        return `\nNodeDefinition.prototype.${propName} = "${escapePrototypeString(value)}"`
+    }
+    if (valueType === 'boolean' || valueType === 'number') {
+        return `\nNodeDefinition.prototype.${propName} = ${value}`
+    }
+    if (valueType === 'function') {
+        return `\nNodeDefinition.prototype.${propName} = ${value.toString()}`
+    }
+    return `\nNodeDefinition.prototype.${propName} = ${JSON.stringify(value)}`
+}
+
 const formatPropertyLine = (property) => {
     const escapedDefault = String(property.defaultValue)
         .replace(/\\/g, '\\\\')
@@ -268,21 +292,7 @@ ${(() => {
     }
     nodeData += `createNode("${title}", (() => { ${NodeDefinition.toString()}`
     for (elem in NodeDefinition.prototype) {
-        currentPrototypeVal = NodeDefinition.prototype[elem].toString();
-        switch (elem.toString()) {
-            case "title":
-                break;
-            case "color":
-            case "bigText":
-            case "collapsible":
-            case "icon":
-            case "title_mode":
-            case "description":
-                nodeData += `\nNodeDefinition.prototype.${elem.toString()} = "${currentPrototypeVal.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/\t/g, '\\t')}"`
-                break;
-            default:
-                nodeData += `\nNodeDefinition.prototype.${elem.toString()} = ${currentPrototypeVal}`
-        }
+        nodeData += serializePrototypeProperty(elem, NodeDefinition.prototype[elem])
     }
     nodeData += `\n\treturn NodeDefinition\n})())\n\n`
     availableNodes[title] = NodeFunction
@@ -333,4 +343,6 @@ module.exports = {
     formatPropertyLine,
     formatBooleanPropertyLine,
     normalizeBooleanDefault,
+    escapePrototypeString,
+    serializePrototypeProperty,
 }

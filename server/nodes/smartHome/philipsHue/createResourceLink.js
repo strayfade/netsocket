@@ -13,6 +13,16 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Resource Links/Create Resource Link"
 NodeDefinition.prototype.description = "Creates a resource link from a JSON payload."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		"Payload (JSON)": {"description":"Input \"Payload (JSON)\" for Create Resource Link.","structure":"Plain text string (UTF-8).","required":false},
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		"Resource Link": {"description":"Resource Link produced by Create Resource Link.","structure":"JSON object (may be serialized as a string in some nodes).","mcpKey":"Resource Link"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

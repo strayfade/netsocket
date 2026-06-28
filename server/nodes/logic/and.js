@@ -10,6 +10,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Logic/AND"
 NodeDefinition.prototype.description = "Outputs true only when both boolean inputs A and B are true."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		A: {"description":"Input \"A\" for AND.","structure":"Boolean true or false.","required":true},
+		B: {"description":"Input \"B\" for AND.","structure":"Boolean true or false.","required":true},
+	},
+	outputs: {
+		"": {"description":"Primary output of AND.","structure":"Boolean true or false.","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "AND"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

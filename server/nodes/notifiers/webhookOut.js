@@ -29,6 +29,20 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Notifiers/Webhook Out"
 NodeDefinition.prototype.description = "Sends an HTTP POST with a JSON body to a URL, optionally signing the payload with HMAC. Outputs the response body and HTTP status code."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		URL: {"description":"Request target URL.","structure":"HTTP or HTTPS URL string.","required":true},
+		Body: {"description":"HTTP request payload.","structure":"Request body string (often JSON).","required":false},
+		Secret: {"description":"Input \"Secret\" for Webhook Out.","structure":"Plain text string (UTF-8).","required":true},
+		"Signature Header": {"description":"Input \"Signature Header\" for Webhook Out.","structure":"Plain text string (UTF-8).","required":false},
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Response: {"description":"Primary text output.","structure":"Text response from the operation.","mcpKey":"Response"},
+		Status: {"description":"Status produced by Webhook Out.","structure":"Numeric value (integer or float).","mcpKey":"Status"},
+	},
+}
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "outbound"
 

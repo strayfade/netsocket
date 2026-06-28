@@ -9,6 +9,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Logic/NOT"
 NodeDefinition.prototype.description = "Outputs the logical negation of boolean input A."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		A: {"description":"Input \"A\" for NOT.","structure":"Boolean true or false.","required":true},
+	},
+	outputs: {
+		"": {"description":"Primary output of NOT.","structure":"Boolean true or false.","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "NOT"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

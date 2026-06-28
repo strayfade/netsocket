@@ -11,6 +11,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Hash/bcrypt"
 NodeDefinition.prototype.description = "Hashes input data with bcrypt using the provided salt and outputs the resulting hash string."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Data: {"description":"Input \"Data\" for bcrypt.","structure":"Plain text string (UTF-8).","required":true},
+		Salt: {"description":"Input \"Salt\" for bcrypt.","structure":"Plain text string (UTF-8).","required":true},
+	},
+	outputs: {
+		Text: {"description":"Text produced by bcrypt.","structure":"Plain text string (UTF-8).","mcpKey":"Text"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "tag"
 const NodeFunction = async (node, params, behaviors) => {

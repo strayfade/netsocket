@@ -8,7 +8,7 @@ const toolResult = (payload) => ({
 
 export function createNetsocketMcpServer(deps) {
     const {
-        listNodeSummaries,
+        listNodesForMcp,
         getNodeInfo,
         executeNode,
     } = deps
@@ -18,10 +18,13 @@ export function createNetsocketMcpServer(deps) {
         {
             instructions: [
                 'Netsocket exposes automation nodes that can run without a canvas graph.',
-                'Typical workflow: list_nodes → get_node_info → execute_node, then pass prior outputs into the next execute_node call.',
-                'Node types use the "Category/Name" format, for example "Math/Add" or "Language Processing/LLM".',
-                'Provide input values in execute_node.inputs. Use execute_node.properties for node settings that are not wired as inputs.',
-                'Use outputSlots or outputs from one call as inputs for the next node to chain automations.',
+                'Typical workflow: list_nodes with a query → get_node_info → execute_node, then pass prior outputs into the next execute_node call.',
+                'Always call get_node_info before execute_node on a new node type. It returns callingGuide with required/optional inputs, output mcpKey names, type/structure notes, and an example payload.',
+                'Node types use full paths, for example "Math/Add" or "Smart Home/Philips Hue/Lights/Get All Lights".',
+                'Provide input values in execute_node.inputs keyed by input name. Match each value to the port type and structure documented on inputs[].structure.',
+                'Use execute_node.properties only for node settings listed under properties, not for inputs that already have their own port.',
+                'Event ports are graph-only; omit them from execute_node.inputs. Read results from execute_node.outputs (named by mcpKey) or execute_node.outputSlots.',
+                'When multiple nodes can fulfill a task, prefer nodes marked mcpPreferred in list_nodes or get_node_info results.',
             ].join(' '),
         }
     )
@@ -30,22 +33,20 @@ export function createNetsocketMcpServer(deps) {
         'list_nodes',
         {
             title: 'List Netsocket Nodes',
-            description: 'List available node types with category, title, and description. Optionally filter by category.',
+            description: 'Search or list available node types with name and description. Prefer passing a query with keywords from the user request.',
             inputSchema: z.object({
-                category: z.string().optional().describe('Optional category filter, e.g. "Math" or "Web"'),
+                query: z.string().optional().describe('Keywords to find relevant nodes, e.g. "philips hue get all lights"'),
+                category: z.string().optional().describe('Optional category filter, e.g. "Math" or "Smart Home"'),
             }),
         },
-        async ({ category }) => toolResult({
-            nodes: listNodeSummaries(category),
-            count: listNodeSummaries(category).length,
-        })
+        async ({ category, query }) => toolResult(listNodesForMcp({ category, query }))
     )
 
     server.registerTool(
         'get_node_info',
         {
             title: 'Get Node Info',
-            description: 'Get full metadata for a node type: inputs, outputs, properties, defaults, and example usage.',
+            description: 'Get full metadata for a node type: callingGuide (required inputs, output keys/types/structures), enriched port metadata, properties, defaults, and example usage.',
             inputSchema: z.object({
                 nodeType: z.string().describe('Node type in Category/Name format, e.g. "Math/Add"'),
             }),
@@ -66,11 +67,11 @@ export function createNetsocketMcpServer(deps) {
         'execute_node',
         {
             title: 'Execute Node',
-            description: 'Run a single node with the provided inputs and optional properties. Returns output values you can pass to another node.',
+            description: 'Run a single node with the provided inputs and optional properties. Call get_node_info first to learn required inputs, value types/structures, and output mcpKey names.',
             inputSchema: z.object({
                 nodeType: z.string().describe('Node type in Category/Name format'),
-                inputs: z.record(z.string(), z.unknown()).optional().describe('Input values keyed by input name'),
-                properties: z.record(z.string(), z.unknown()).optional().describe('Node property overrides keyed by property name'),
+                inputs: z.record(z.string(), z.unknown()).optional().describe('Input values keyed by input port name; types must match get_node_info.inputs[].type and structure guidance'),
+                properties: z.record(z.string(), z.unknown()).optional().describe('Node property overrides keyed by property name (only for settings not already declared as inputs)'),
             }),
         },
         async ({ nodeType, inputs, properties }) => {

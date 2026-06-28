@@ -11,6 +11,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Math/Log"
 NodeDefinition.prototype.description = "Computes the logarithm of A with a configurable base (default 10)."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		A: {"description":"Input \"A\" for Log.","structure":"Numeric value (integer or float).","required":true},
+		Base: {"description":"Input \"Base\" for Log.","structure":"Numeric value (integer or float).","required":false},
+	},
+	outputs: {
+		"": {"description":"Primary output of Log.","structure":"Numeric value (integer or float).","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "log"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

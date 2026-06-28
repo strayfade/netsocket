@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Groups/Get Group by Name"
 NodeDefinition.prototype.description = "Returns Hue groups matching the given name."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Name: {"description":"Resource name to look up or update.","structure":"Human-readable name string.","required":true},
+	},
+	outputs: {
+		Groups: {"description":"Groups produced by Get Group by Name.","structure":"Array of Philips Hue resource objects.","mcpKey":"Groups"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

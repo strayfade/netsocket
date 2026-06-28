@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Groups/Get Group State"
 NodeDefinition.prototype.description = "Returns the current action state for a group."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		ID: {"description":"Unique ID of the target resource.","structure":"Resource identifier string.","required":true},
+	},
+	outputs: {
+		State: {"description":"State produced by Get Group State.","structure":"JSON object (may be serialized as a string in some nodes).","mcpKey":"State"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

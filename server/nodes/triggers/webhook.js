@@ -20,6 +20,19 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Triggers/Webhook"
 NodeDefinition.prototype.description = "Triggers when an authenticated generic HTTP webhook is received. Outputs the request method, path, query, headers, and body."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Method: {"description":"HTTP verb to use.","structure":"HTTP method name such as GET or POST.","mcpKey":"Method"},
+		Path: {"description":"HTTP path segment.","structure":"URL path or route string.","mcpKey":"Path"},
+		Query: {"description":"Web search query text.","structure":"Search query string.","mcpKey":"Query"},
+		Headers: {"description":"Optional HTTP request headers.","structure":"JSON object of HTTP header names to values.","mcpKey":"Headers"},
+		Body: {"description":"HTTP request payload.","structure":"Request body string (often JSON).","mcpKey":"Body"},
+	},
+}
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "webhook"
 

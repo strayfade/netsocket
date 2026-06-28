@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Bridge/Get Bridge Configuration"
 NodeDefinition.prototype.description = "Returns the authenticated bridge configuration object."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Configuration: {"description":"Configuration produced by Get Bridge Configuration.","structure":"JSON object (may be serialized as a string in some nodes).","mcpKey":"Configuration"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

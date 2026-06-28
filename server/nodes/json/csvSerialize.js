@@ -12,6 +12,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "JSON/CSV Serialize"
 NodeDefinition.prototype.description = "Converts an array of objects into CSV text, using an optional comma-separated column list to control field order."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Rows: {"description":"Input \"Rows\" for CSV Serialize.","structure":"JSON object; may be returned as a parsed object or JSON string depending on the node.","required":false},
+		Columns: {"description":"Input \"Columns\" for CSV Serialize.","structure":"Plain text string (UTF-8).","required":true},
+	},
+	outputs: {
+		CSV: {"description":"CSV produced by CSV Serialize.","structure":"Plain text string (UTF-8).","mcpKey":"CSV"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "table"
 

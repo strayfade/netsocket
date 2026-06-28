@@ -11,6 +11,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Math/Exponent"
 NodeDefinition.prototype.description = "Raises A to the power of the Exponent input and outputs the result."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		A: {"description":"Input \"A\" for Exponent.","structure":"Numeric value (integer or float).","required":true},
+		Exponent: {"description":"Input \"Exponent\" for Exponent.","structure":"Numeric value (integer or float).","required":false},
+	},
+	outputs: {
+		"": {"description":"Primary output of Exponent.","structure":"Numeric value (integer or float).","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "^"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

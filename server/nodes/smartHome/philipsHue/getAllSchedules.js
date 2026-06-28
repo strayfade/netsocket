@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Schedules/Get All Schedules"
 NodeDefinition.prototype.description = "Returns all schedules on the Hue bridge."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Schedules: {"description":"Schedules produced by Get All Schedules.","structure":"Array of Philips Hue resource objects.","mcpKey":"Schedules"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

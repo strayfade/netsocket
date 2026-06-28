@@ -20,6 +20,16 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Time/Add Duration"
 NodeDefinition.prototype.description = "Adds a duration (ms, seconds, minutes, hours, or days) to a timestamp and outputs the new timestamp in milliseconds."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Timestamp: {"description":"Point in time for the operation.","structure":"Unix timestamp in milliseconds or ISO date string.","required":true},
+		Amount: {"description":"Input \"Amount\" for Add Duration.","structure":"Numeric value (integer or float).","required":false},
+		Unit: {"description":"Input \"Unit\" for Add Duration.","structure":"Plain text string (UTF-8).","required":false},
+	},
+	outputs: {
+		Timestamp: {"description":"Point in time for the operation.","structure":"Unix timestamp in milliseconds or ISO date string.","mcpKey":"Timestamp"},
+	},
+}
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "more_time"
 

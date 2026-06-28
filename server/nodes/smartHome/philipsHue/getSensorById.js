@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Sensors/Get Sensor by ID"
 NodeDefinition.prototype.description = "Returns a sensor by ID."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		ID: {"description":"Unique ID of the target resource.","structure":"Resource identifier string.","required":true},
+	},
+	outputs: {
+		Sensor: {"description":"Sensor produced by Get Sensor by ID.","structure":"JSON object (may be serialized as a string in some nodes).","mcpKey":"Sensor"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

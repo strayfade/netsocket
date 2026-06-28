@@ -13,6 +13,16 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "JSON/Schema Validate"
 NodeDefinition.prototype.description = "Validates a JSON value against a JSON Schema and outputs whether it is valid plus a semicolon-separated list of error messages."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		JSON: {"description":"JSON document as text.","structure":"JSON-encoded string.","required":true},
+		Schema: {"description":"Schema used for validation or structured output.","structure":"JSON Schema document as a string.","required":false},
+	},
+	outputs: {
+		Valid: {"description":"Valid produced by Schema Validate.","structure":"Boolean true or false.","mcpKey":"Valid"},
+		Errors: {"description":"Errors produced by Schema Validate.","structure":"Plain text string (UTF-8).","mcpKey":"Errors"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "rule"
 

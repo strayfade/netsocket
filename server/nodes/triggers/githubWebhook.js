@@ -21,6 +21,20 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Triggers/GitHub Webhook"
 NodeDefinition.prototype.description = "Triggers when an authenticated GitHub webhook is received. Outputs event type, delivery ID, repository, action, sender, and full payload."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		"Event Type": {"description":"Event Type produced by GitHub Webhook.","structure":"Plain text string (UTF-8).","mcpKey":"Event Type"},
+		"Delivery ID": {"description":"Delivery ID produced by GitHub Webhook.","structure":"Plain text string (UTF-8).","mcpKey":"Delivery ID"},
+		Repository: {"description":"Repository produced by GitHub Webhook.","structure":"Plain text string (UTF-8).","mcpKey":"Repository"},
+		Action: {"description":"Action produced by GitHub Webhook.","structure":"Plain text string (UTF-8).","mcpKey":"Action"},
+		Sender: {"description":"Sender produced by GitHub Webhook.","structure":"Plain text string (UTF-8).","mcpKey":"Sender"},
+		Payload: {"description":"Payload produced by GitHub Webhook.","structure":"Plain text string (UTF-8).","mcpKey":"Payload"},
+	},
+}
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "data_object"
 

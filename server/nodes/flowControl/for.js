@@ -14,6 +14,18 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Flow Control/For"
 NodeDefinition.prototype.description = "Repeats a loop a fixed number of times, firing the On Loop output with the current index each iteration and optionally waiting between iterations. Fires On Finish when all iterations complete."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		"Loop Count": {"description":"Input \"Loop Count\" for For.","structure":"Numeric value (integer or float).","required":false},
+		"Delay (ms)": {"description":"Input \"Delay (ms)\" for For.","structure":"Numeric value (integer or float).","required":true},
+	},
+	outputs: {
+		"On Loop": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Index: {"description":"Index produced by For.","structure":"Numeric value (integer or float).","mcpKey":"Index"},
+		"On Finish": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "cached"
 const NodeFunction = async (node, params, behaviors) => {

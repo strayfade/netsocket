@@ -14,6 +14,20 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Triggers/Google Calendar Upcoming Event"
 NodeDefinition.prototype.description = "Triggers when a Google Calendar event is approaching within a configurable lookahead window. Outputs event ID, summary, start, end, calendar ID, and payload."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		"Event ID": {"description":"Event ID produced by Google Calendar Upcoming Event.","structure":"Plain text string (UTF-8).","mcpKey":"Event ID"},
+		Summary: {"description":"Summary produced by Google Calendar Upcoming Event.","structure":"Plain text string (UTF-8).","mcpKey":"Summary"},
+		Start: {"description":"Start produced by Google Calendar Upcoming Event.","structure":"Plain text string (UTF-8).","mcpKey":"Start"},
+		End: {"description":"End produced by Google Calendar Upcoming Event.","structure":"Plain text string (UTF-8).","mcpKey":"End"},
+		"Calendar ID": {"description":"Calendar ID produced by Google Calendar Upcoming Event.","structure":"Plain text string (UTF-8).","mcpKey":"Calendar ID"},
+		Payload: {"description":"Payload produced by Google Calendar Upcoming Event.","structure":"Plain text string (UTF-8).","mcpKey":"Payload"},
+	},
+}
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "event"
 

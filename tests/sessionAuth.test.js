@@ -12,6 +12,7 @@ const {
     safeRedirectPath,
     isProtectedPagePath,
     integrationSecretMatches,
+    providedSecretMatches,
     getBearerTokenFromHeader,
     bearerTokenMatches,
     isLanAddress,
@@ -111,6 +112,17 @@ describe('sessionAuth', () => {
             assert.equal(integrationSecretMatches({ headers: { 'x-socket-auth': 'wrong' } }, secret), false);
             assert.equal(integrationSecretMatches({ headers: {} }, secret), false);
             assert.equal(integrationSecretMatches({ headers: { 'x-socket-auth': secret } }, ''), false);
+        });
+    });
+
+    describe('providedSecretMatches', () => {
+        it('compares request body secrets in constant time semantics via tokensEqual', () => {
+            const secret = 'command-palette-secret';
+            assert.equal(providedSecretMatches(secret, secret), true);
+            assert.equal(providedSecretMatches('wrong', secret), false);
+            assert.equal(providedSecretMatches('', secret), false);
+            assert.equal(providedSecretMatches(secret, ''), false);
+            assert.equal(providedSecretMatches(null, secret), false);
         });
     });
 

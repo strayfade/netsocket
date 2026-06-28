@@ -11,6 +11,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "JSON/Get Object Value"
 NodeDefinition.prototype.description = "Looks up a property by key name in a JSON object and outputs its value."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		JSON: {"description":"JSON document as text.","structure":"JSON-encoded string.","required":true},
+		"Key Name": {"description":"Input \"Key Name\" for Get Object Value.","structure":"Plain text string (UTF-8).","required":true},
+	},
+	outputs: {
+		"": {"description":"Primary output of Get Object Value.","structure":"JSON object; may be returned as a parsed object or JSON string depending on the node.","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_object"
 const NodeFunction = async (node, params, behaviors) => {

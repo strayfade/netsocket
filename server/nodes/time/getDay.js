@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Time/Get Day"
 NodeDefinition.prototype.description = "Extracts the day of the month (1–31) from a timestamp in local time."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Timestamp: {"description":"Point in time for the operation.","structure":"Unix timestamp in milliseconds or ISO date string.","required":true},
+	},
+	outputs: {
+		"": {"description":"Primary output of Get Day.","structure":"Numeric value (integer or float).","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

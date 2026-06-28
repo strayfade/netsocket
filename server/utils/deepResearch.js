@@ -2,7 +2,7 @@
 
 const { generateText } = require('ai')
 const { log, logColors } = require('../log')
-const { getOllamaProvider, sanitizeAiOutput } = require('./languageModel')
+const { DEFAULT_MODEL, getOllamaProvider, sanitizeAiOutput } = require('./languageModel')
 const {
     gatherSearchSourceContent,
     buildResearchContext,
@@ -10,8 +10,6 @@ const {
     truncateForLog,
     LOG_PREFIX,
 } = require('./webResearchTools')
-
-const DEFAULT_MODEL = 'lfm2.5'
 
 const SYNTHESIS_SYSTEM_PROMPT = `You synthesize a consensus answer from labeled web source excerpts.
 

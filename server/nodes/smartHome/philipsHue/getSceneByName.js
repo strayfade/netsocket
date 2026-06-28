@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Scenes/Get Scene by Name"
 NodeDefinition.prototype.description = "Returns scenes matching the given name."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Name: {"description":"Resource name to look up or update.","structure":"Human-readable name string.","required":true},
+	},
+	outputs: {
+		Scenes: {"description":"Scenes produced by Get Scene by Name.","structure":"Array of Philips Hue resource objects.","mcpKey":"Scenes"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

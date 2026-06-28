@@ -9,6 +9,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/To String (number)"
 NodeDefinition.prototype.description = "Converts a number input to its string representation."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Number: {"description":"Input \"Number\" for To String (number).","structure":"Numeric value (integer or float).","required":true},
+	},
+	outputs: {
+		String: {"description":"String produced by To String (number).","structure":"Plain text string (UTF-8).","mcpKey":"String"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

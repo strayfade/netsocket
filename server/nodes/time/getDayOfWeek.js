@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Time/Get Day of Week"
 NodeDefinition.prototype.description = "Extracts the day of the week (0=Sunday through 6=Saturday) from a timestamp in local time."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Timestamp: {"description":"Point in time for the operation.","structure":"Unix timestamp in milliseconds or ISO date string.","required":true},
+	},
+	outputs: {
+		"": {"description":"Primary output of Get Day of Week.","structure":"Numeric value (integer or float).","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

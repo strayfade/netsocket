@@ -8,6 +8,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Math/Constants/Pi"
 NodeDefinition.prototype.description = "Outputs the mathematical constant pi."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Value: {"description":"Data value for the operation.","structure":"Value to store or compare.","mcpKey":"Value"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "π"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

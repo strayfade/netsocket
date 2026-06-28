@@ -15,6 +15,17 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Scenes/Create Scene"
 NodeDefinition.prototype.description = "Creates a scene from type and JSON payload."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Type: {"description":"Input \"Type\" for Create Scene.","structure":"Plain text string (UTF-8).","required":false},
+		"Payload (JSON)": {"description":"Input \"Payload (JSON)\" for Create Scene.","structure":"Plain text string (UTF-8).","required":false},
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Scene: {"description":"Scene produced by Create Scene.","structure":"JSON object (may be serialized as a string in some nodes).","mcpKey":"Scene"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

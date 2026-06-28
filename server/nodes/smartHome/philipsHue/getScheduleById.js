@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Schedules/Get Schedule by ID"
 NodeDefinition.prototype.description = "Returns a schedule by ID."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		ID: {"description":"Unique ID of the target resource.","structure":"Resource identifier string.","required":true},
+	},
+	outputs: {
+		Schedule: {"description":"Schedule produced by Get Schedule by ID.","structure":"JSON object (may be serialized as a string in some nodes).","mcpKey":"Schedule"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

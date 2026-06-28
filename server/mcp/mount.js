@@ -1,38 +1,13 @@
 const { log, logColors } = require('../log')
 const { authSkipped, bearerTokenMatches, hasUserSession } = require('../utils/sessionAuth')
 const { getMcpApiToken } = require('./token')
-const { getNodeMetadataList, getNodeMetadata } = require('../manager/nodeImporter')
-const { executeStandaloneNode } = require('../manager/executeStandalone')
-const { buildExampleUsage } = require('../manager/nodeSchema')
+const { listNodeSummaries, getNodeInfo, executeMcpNode } = require('./handlers')
+const { listNodesForMcp } = require('../utils/netsocketMcpTools')
 
 const canAccessMcp = (req, res = null) => {
     if (authSkipped()) return true
     if (bearerTokenMatches(req, getMcpApiToken())) return true
     return hasUserSession(req, res)
-}
-
-const listNodeSummaries = (categoryFilter) => {
-    let nodes = getNodeMetadataList()
-    if (categoryFilter) {
-        const normalized = String(categoryFilter).trim().toLowerCase()
-        nodes = nodes.filter((node) => node.category.toLowerCase() === normalized)
-    }
-    return nodes.map((node) => ({
-        nodeType: node.title,
-        category: node.category,
-        name: node.name,
-        description: node.description,
-    }))
-}
-
-const getNodeInfo = (nodeType) => {
-    const schema = getNodeMetadata(nodeType)
-    if (!schema) return null
-    return {
-        ...schema,
-        example: buildExampleUsage(schema),
-        chainingHint: 'Pass values from execute_node.outputs or execute_node.outputSlots into the next execute_node.inputs object.',
-    }
 }
 
 const mcpCors = (req, res, next) => {
@@ -72,9 +47,9 @@ const ensureMcpReady = () => {
             const { createNetsocketMcpServer } = await import('./server.mjs')
 
             const server = createNetsocketMcpServer({
-                listNodeSummaries,
+                listNodesForMcp,
                 getNodeInfo,
-                executeNode: executeStandaloneNode,
+                executeNode: executeMcpNode,
             })
 
             const transport = new NodeStreamableHTTPServerTransport({

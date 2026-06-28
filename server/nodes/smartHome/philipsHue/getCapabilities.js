@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Bridge/Get Capabilities"
 NodeDefinition.prototype.description = "Returns bridge capability metadata."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Capabilities: {"description":"Capabilities produced by Get Capabilities.","structure":"JSON object (may be serialized as a string in some nodes).","mcpKey":"Capabilities"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

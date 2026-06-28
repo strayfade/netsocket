@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Scenes/Get All Scenes"
 NodeDefinition.prototype.description = "Returns all scenes stored on the Hue bridge."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Scenes: {"description":"Scenes produced by Get All Scenes.","structure":"Array of Philips Hue resource objects.","mcpKey":"Scenes"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

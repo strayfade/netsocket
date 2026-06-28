@@ -10,6 +10,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Math/Add"
 NodeDefinition.prototype.description = "Adds two numbers A and B and outputs the sum."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		A: {"description":"Input \"A\" for Add.","structure":"Numeric value (integer or float).","required":true},
+		B: {"description":"Input \"B\" for Add.","structure":"Numeric value (integer or float).","required":true},
+	},
+	outputs: {
+		"": {"description":"Primary output of Add.","structure":"Numeric value (integer or float).","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "+"
 NodeDefinition.prototype.title_mode = "LiteGraph.NO_TITLE"

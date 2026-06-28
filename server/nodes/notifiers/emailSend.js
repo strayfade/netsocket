@@ -69,6 +69,19 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Notifiers/Email Send"
 NodeDefinition.prototype.description = "Sends an email via configured SMTP settings with to, subject, plain text, and optional HTML body. Routes to Success or Failed depending on delivery outcome."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		To: {"description":"Input \"To\" for Email Send.","structure":"Plain text string (UTF-8).","required":true},
+		Subject: {"description":"Message subject.","structure":"Email subject line.","required":true},
+		Text: {"description":"Input \"Text\" for Email Send.","structure":"Plain text string (UTF-8).","required":true},
+		HTML: {"description":"Input \"HTML\" for Email Send.","structure":"Plain text string (UTF-8).","required":true},
+	},
+	outputs: {
+		Success: {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Failed: {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+	},
+}
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "mail"
 

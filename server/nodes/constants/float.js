@@ -9,6 +9,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Constants/Float"
 NodeDefinition.prototype.description = "Outputs a fixed numeric value configured in the node property."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Value: {"description":"Data value for the operation.","structure":"Value to store or compare.","mcpKey":"Value"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "input"
 const NodeFunction = async (node, params, behaviors) => {

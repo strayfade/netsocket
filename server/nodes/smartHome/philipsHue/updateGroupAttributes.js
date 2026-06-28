@@ -14,6 +14,17 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Groups/Update Group Attributes"
 NodeDefinition.prototype.description = "Updates group attributes by ID using a JSON patch (name, lights, class)."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		ID: {"description":"Unique ID of the target resource.","structure":"Resource identifier string.","required":true},
+		"Attributes (JSON)": {"description":"Input \"Attributes (JSON)\" for Update Group Attributes.","structure":"Plain text string (UTF-8).","required":false},
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Success: {"description":"Success produced by Update Group Attributes.","structure":"Boolean true or false.","mcpKey":"Success"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

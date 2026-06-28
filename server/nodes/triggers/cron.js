@@ -6,6 +6,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Triggers/Cron"
 NodeDefinition.prototype.description = "Triggers on a cron schedule defined by a cron expression property (e.g. \"0 * * * *\" for hourly)."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+	},
+}
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "schedule"
 

@@ -10,6 +10,15 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Get All Lights"
 NodeDefinition.prototype.description = "Returns all lights registered on the Hue bridge as a JSON array string."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Lights: {"description":"All lights registered on the Hue bridge.","structure":"Array of Philips Hue light objects (id, name, state, type, etc.).","mcpKey":"Lights"},
+	},
+}
+NodeDefinition.prototype.mcpPreferred = "Prefer for listing all controllable Philips Hue lights on the bridge. Use before Set Light State nodes when you need light IDs or names."
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

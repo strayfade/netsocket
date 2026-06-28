@@ -8,6 +8,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Netsocket/List Devices"
 NodeDefinition.prototype.description = "Queries the Netsocket smart home integration and returns the list of discovered devices as a JSON array string."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Devices: {"description":"Devices produced by List Devices.","structure":"JSON array (may be serialized as a string in some nodes).","mcpKey":"Devices"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "devices"
 const { getDevices, discoverWirelessAdapters, sendCommand } = require('../../../utils/netsocketSmartHome')

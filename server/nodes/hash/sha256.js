@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Hash/SHA-256"
 NodeDefinition.prototype.description = "Computes a SHA-256 hash of the input text and outputs the Base64-encoded digest."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Text: {"description":"Input \"Text\" for SHA-256.","structure":"Plain text string (UTF-8).","required":true},
+	},
+	outputs: {
+		Hash: {"description":"Hash produced by SHA-256.","structure":"Plain text string (UTF-8).","mcpKey":"Hash"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "tag"
 const { createHash } = require('crypto');

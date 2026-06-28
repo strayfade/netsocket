@@ -12,6 +12,16 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Math/Interpolate"
 NodeDefinition.prototype.description = "Linearly interpolates between A and B using Alpha (0–1) as the blend factor."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		A: {"description":"Input \"A\" for Interpolate.","structure":"Numeric value (integer or float).","required":true},
+		B: {"description":"Input \"B\" for Interpolate.","structure":"Numeric value (integer or float).","required":true},
+		Alpha: {"description":"Input \"Alpha\" for Interpolate.","structure":"Numeric value (integer or float).","required":false},
+	},
+	outputs: {
+		"": {"description":"Primary output of Interpolate.","structure":"Numeric value (integer or float).","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 const lerp = (a, b, alpha) => {
     return (b - a) * alpha + a

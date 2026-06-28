@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Markdown To HTML"
 NodeDefinition.prototype.description = "Converts Markdown text into HTML markup."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Markdown: {"description":"Input \"Markdown\" for Markdown To HTML.","structure":"Plain text string (UTF-8).","required":false},
+	},
+	outputs: {
+		HTML: {"description":"HTML produced by Markdown To HTML.","structure":"Plain text string (UTF-8).","mcpKey":"HTML"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "markdown"
 

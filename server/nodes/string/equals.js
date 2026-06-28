@@ -12,6 +12,16 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/Equals"
 NodeDefinition.prototype.description = "Compares two strings for equality with optional case sensitivity and outputs \"true\" or \"false\" as a string."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		A: {"description":"Input \"A\" for Equals.","structure":"Plain text string (UTF-8).","required":true},
+		B: {"description":"Input \"B\" for Equals.","structure":"Plain text string (UTF-8).","required":true},
+		"Case-sensitive": {"description":"Input \"Case-sensitive\" for Equals.","structure":"Boolean true or false.","required":false},
+	},
+	outputs: {
+		"": {"description":"Primary output of Equals.","structure":"Boolean true or false.","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.bigText = "="
 NodeDefinition.prototype.icon = "calculate"

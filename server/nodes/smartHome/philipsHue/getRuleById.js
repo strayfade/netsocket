@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Rules/Get Rule by ID"
 NodeDefinition.prototype.description = "Returns a rule by ID."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		ID: {"description":"Unique ID of the target resource.","structure":"Resource identifier string.","required":true},
+	},
+	outputs: {
+		Rule: {"description":"Rule produced by Get Rule by ID.","structure":"JSON object (may be serialized as a string in some nodes).","mcpKey":"Rule"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

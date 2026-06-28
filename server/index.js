@@ -30,6 +30,7 @@ const {
     canAccessPrivateApi,
     canAccessWithSessionOrIntegrationSecret,
     integrationSecretMatches,
+    providedSecretMatches,
     isProtectedPagePath,
     requireUserSession,
     loginRateLimit,
@@ -47,6 +48,7 @@ const { getNodes, setNodes, populateNodes } = require('./manager/saveState')
 const settingsManager = require('./manager/settingsManager.js')
 const cronTriggerManager = require('./utils/cronTriggerManager')
 const { reloadVars, getVarsSnapshot, replaceVarsAndPersist } = require('./utils/vars.js')
+const { reloadMcpAgentMemory } = require('./utils/mcpAgentMemory.js')
 const nodePreferencesRegistry = require('./manager/nodePreferencesRegistry')
 const { SCOPES, buildOAuthClient, getStoredTokens, mergeTokenSets, persistOAuthSession, CONNECTED_EMAIL_KEY } = require('./utils/googleAuth')
 const { startGoogleTriggerPoller } = require('./utils/googleTriggerPoller')
@@ -354,6 +356,29 @@ app.get("/", (req, res) => {
     res.redirect(302, "/login");
 });
 const { onNewCommand } = require('./utils/waitForCommands.js')
+
+app.post("/v1/triggers/command-palette", async (req, res) => {
+    const expectedSecret = settingsManager.getSetting('triggersCommandPalette.secret')
+    const body = req.body || {}
+    if (!providedSecretMatches(body.secret, expectedSecret)) {
+        return res.sendStatus(403)
+    }
+
+    const commandText = typeof body.content === 'string'
+        ? body.content
+        : typeof body.command === 'string'
+            ? body.command
+            : ''
+    if (!commandText.trim()) {
+        return res.sendStatus(400)
+    }
+
+    const conversationId = body.conversationId ?? null
+    await onNewCommand(commandText, conversationId)
+    log(`Command received via HTTP: ${commandText}`, logColors.Success)
+    return res.sendStatus(200)
+})
+
 app.post("/v1/postCommand", async (req, res) => {
     const commandSecret = settingsManager.getSetting('triggersCommandPalette.secret')
     if (!canAccessWithSessionOrIntegrationSecret(req, res, commandSecret)) {
@@ -544,6 +569,7 @@ const { killProcessOnPort } = require('./utils/killProcessOnPort');
         await populateNodes()
         await populateCredentials()
         await reloadVars()
+        await reloadMcpAgentMemory()
         await settingsManager.reloadSettings()
         if (!authSkipped()) {
             const existingMcpToken = settingsManager.getSetting('mcp.apiToken')

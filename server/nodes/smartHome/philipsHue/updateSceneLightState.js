@@ -15,6 +15,18 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Scenes/Update Scene Light State"
 NodeDefinition.prototype.description = "Updates one light state inside a scene."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		"Scene ID": {"description":"Input \"Scene ID\" for Update Scene Light State.","structure":"Plain text string (UTF-8).","required":true},
+		"Light ID": {"description":"Input \"Light ID\" for Update Scene Light State.","structure":"Plain text string (UTF-8).","required":true},
+		"State (JSON)": {"description":"Input \"State (JSON)\" for Update Scene Light State.","structure":"Plain text string (UTF-8).","required":false},
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Result: {"description":"Primary result of the node.","structure":"Computed result value.","mcpKey":"Result"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

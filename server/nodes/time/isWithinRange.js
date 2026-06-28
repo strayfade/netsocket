@@ -16,6 +16,17 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Time/Is Within Range"
 NodeDefinition.prototype.description = "Checks whether a date/time value falls between a start and end date, with optional inclusive boundaries."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Value: {"description":"Data value for the operation.","structure":"Value to store or compare.","required":true},
+		Start: {"description":"Input \"Start\" for Is Within Range.","structure":"Plain text string (UTF-8).","required":true},
+		End: {"description":"Input \"End\" for Is Within Range.","structure":"Plain text string (UTF-8).","required":true},
+		Inclusive: {"description":"Input \"Inclusive\" for Is Within Range.","structure":"Boolean true or false.","required":false},
+	},
+	outputs: {
+		"In Range": {"description":"In Range produced by Is Within Range.","structure":"Boolean true or false.","mcpKey":"In Range"},
+	},
+}
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "date_range"
 

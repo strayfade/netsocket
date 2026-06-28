@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Groups/Get Zones"
 NodeDefinition.prototype.description = "Returns zones from the Hue bridge."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Groups: {"description":"Groups produced by Get Zones.","structure":"Array of Philips Hue resource objects.","mcpKey":"Groups"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

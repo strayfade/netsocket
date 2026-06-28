@@ -8,8 +8,8 @@
     "develop": "node server/index.js",
     "develop-noauth": "npm i && node server/index.js --skip-auth",
     "reset-credentials": "node server/scripts/resetCredentials.js",
-    "test": "node --test --test-force-exit tests/loginLogic.test.js tests/sessionAuth.test.js tests/saveUsers.test.js tests/saveStateRestore.test.js tests/loginPage.dom.test.js tests/indexHtml.test.js tests/webResearchTools.test.js tests/newNodes.test.js tests/mcpExecuteStandalone.test.js tests/killProcessOnPort.test.js tests/hueNodes.test.js tests/forEach.test.js",
-    "test:watch": "node --test --watch --test-force-exit tests/loginLogic.test.js tests/sessionAuth.test.js tests/saveUsers.test.js tests/saveStateRestore.test.js tests/loginPage.dom.test.js tests/indexHtml.test.js tests/webResearchTools.test.js tests/newNodes.test.js tests/mcpExecuteStandalone.test.js tests/killProcessOnPort.test.js tests/hueNodes.test.js tests/forEach.test.js"
+    "test": "node --test --test-force-exit tests/loginLogic.test.js tests/sessionAuth.test.js tests/saveUsers.test.js tests/saveStateRestore.test.js tests/loginPage.dom.test.js tests/indexHtml.test.js tests/webResearchTools.test.js tests/quickWebSearch.test.js tests/newNodes.test.js tests/mcpExecuteStandalone.test.js tests/mcpAgent.test.js tests/killProcessOnPort.test.js tests/hueNodes.test.js tests/forEach.test.js",
+    "test:watch": "node --test --watch --test-force-exit tests/loginLogic.test.js tests/sessionAuth.test.js tests/saveUsers.test.js tests/saveStateRestore.test.js tests/loginPage.dom.test.js tests/indexHtml.test.js tests/webResearchTools.test.js tests/quickWebSearch.test.js tests/newNodes.test.js tests/mcpExecuteStandalone.test.js tests/mcpAgent.test.js tests/killProcessOnPort.test.js tests/hueNodes.test.js tests/forEach.test.js"
   },
   "keywords": [],
   "author": "strayfade",

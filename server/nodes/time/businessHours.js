@@ -23,6 +23,18 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Time/Business Hours"
 NodeDefinition.prototype.description = "Checks whether a timestamp falls within configured business hours, weekdays, and time zone, outputting true if open."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Timestamp: {"description":"Point in time for the operation.","structure":"Unix timestamp in milliseconds or ISO date string.","required":true},
+		"Start Hour": {"description":"Input \"Start Hour\" for Business Hours.","structure":"Numeric value (integer or float).","required":false},
+		"End Hour": {"description":"Input \"End Hour\" for Business Hours.","structure":"Numeric value (integer or float).","required":false},
+		Weekdays: {"description":"Input \"Weekdays\" for Business Hours.","structure":"Plain text string (UTF-8).","required":false},
+		"Time Zone": {"description":"Input \"Time Zone\" for Business Hours.","structure":"Plain text string (UTF-8).","required":false},
+	},
+	outputs: {
+		Open: {"description":"Open produced by Business Hours.","structure":"Boolean true or false.","mcpKey":"Open"},
+	},
+}
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "work_history"
 

@@ -1,4 +1,4 @@
-const { askAI } = require('./languageModel')
+const { askAI, DEFAULT_MODEL } = require('./languageModel')
 const { log, logColors } = require('../log')
 const { triggerNodesByType } = require('../manager/execute')
 
@@ -18,7 +18,7 @@ const onNewNotification = async (notificationContent) => {
     ${notificationContent.textContent}
     `
     try {
-        const code = await askAI(prompt, null, 'lfm2.5')
+        const code = await askAI(prompt, null, DEFAULT_MODEL)
         if (code.trim().toLowerCase() != 'none') {
             lastOTP = code
             log(`OTP Received: ${lastOTP}`, logColors.SuccessVisible)

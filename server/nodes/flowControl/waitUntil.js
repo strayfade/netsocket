@@ -29,6 +29,23 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Flow Control/Wait Until"
 NodeDefinition.prototype.description = "Polls until a condition becomes true or a timeout is reached, checking a boolean, a named variable value, or an HTTP URL status code. Fires Success when the condition is met or Timeout when it is not."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Mode: {"description":"Input \"Mode\" for Wait Until.","structure":"Plain text string (UTF-8).","required":false},
+		Condition: {"description":"Input \"Condition\" for Wait Until.","structure":"Boolean true or false.","required":true},
+		"Variable Name": {"description":"Input \"Variable Name\" for Wait Until.","structure":"Plain text string (UTF-8).","required":true},
+		"Expected Value": {"description":"Input \"Expected Value\" for Wait Until.","structure":"Plain text string (UTF-8).","required":true},
+		URL: {"description":"Request target URL.","structure":"HTTP or HTTPS URL string.","required":true},
+		"Expected Status": {"description":"Input \"Expected Status\" for Wait Until.","structure":"Numeric value (integer or float).","required":false},
+		"Poll Interval (ms)": {"description":"Input \"Poll Interval (ms)\" for Wait Until.","structure":"Numeric value (integer or float).","required":false},
+		"Max Wait (ms)": {"description":"Input \"Max Wait (ms)\" for Wait Until.","structure":"Numeric value (integer or float).","required":false},
+	},
+	outputs: {
+		Success: {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		Timeout: {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "hourglass_top"
 

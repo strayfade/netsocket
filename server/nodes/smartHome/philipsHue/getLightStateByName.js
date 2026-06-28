@@ -11,6 +11,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Get Light State by Name"
 NodeDefinition.prototype.description = "Finds a Philips Hue light by name and returns its current state object. Requires a configured Hue bridge connection."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Name: {"description":"Resource name to look up or update.","structure":"Human-readable name string.","required":false},
+	},
+	outputs: {
+		"State Object": {"description":"State Object produced by Get Light State by Name.","structure":"JSON object (may be serialized as a string in some nodes).","mcpKey":"State Object"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 const NodeFunction = async (node, params, behaviors) => {

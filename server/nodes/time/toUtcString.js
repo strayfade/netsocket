@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Time/To UTC String"
 NodeDefinition.prototype.description = "Formats a timestamp as a UTC date and time string."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Timestamp: {"description":"Point in time for the operation.","structure":"Unix timestamp in milliseconds or ISO date string.","required":true},
+	},
+	outputs: {
+		"": {"description":"Primary output of To UTC String.","structure":"Plain text string (UTF-8).","mcpKey":"output_0"},
+	},
+}
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

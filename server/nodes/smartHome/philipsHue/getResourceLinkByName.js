@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Resource Links/Get Resource Link by Name"
 NodeDefinition.prototype.description = "Returns resource links matching the given name."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Name: {"description":"Resource name to look up or update.","structure":"Human-readable name string.","required":true},
+	},
+	outputs: {
+		"Resource Links": {"description":"Resource Links produced by Get Resource Link by Name.","structure":"Array of Philips Hue resource objects.","mcpKey":"Resource Links"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

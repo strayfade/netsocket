@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Rules/Get All Rules"
 NodeDefinition.prototype.description = "Returns all rules on the Hue bridge."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Rules: {"description":"Rules produced by Get All Rules.","structure":"Array of Philips Hue resource objects.","mcpKey":"Rules"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 

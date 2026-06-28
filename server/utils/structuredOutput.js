@@ -2,7 +2,7 @@
 
 const { generateObject, jsonSchema } = require('ai')
 const { log, logColors } = require('../log')
-const { getOllamaProvider } = require('./languageModel')
+const { DEFAULT_MODEL, getOllamaProvider } = require('./languageModel')
 
 const defaultSystemPrompt = `You are a structured data extraction assistant.
 Return data that exactly matches the requested JSON schema.
@@ -30,7 +30,7 @@ const askAIStructured = async (prompt, schemaInput, systemPrompt, model) => {
 
     try {
         const { object } = await generateObject({
-            model: provider(String(model || 'lfm2.5')),
+            model: provider(String(model || DEFAULT_MODEL)),
             schema: jsonSchema(schemaObject),
             prompt: String(prompt || ''),
             system: String(systemPrompt || defaultSystemPrompt),

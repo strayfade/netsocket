@@ -9,6 +9,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "String/To String (boolean)"
 NodeDefinition.prototype.description = "Converts a boolean input to the literal strings \"true\" or \"false\"."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+		Boolean: {"description":"Input \"Boolean\" for To String (boolean).","structure":"Boolean true or false.","required":true},
+	},
+	outputs: {
+		String: {"description":"String produced by To String (boolean).","structure":"Plain text string (UTF-8).","mcpKey":"String"},
+	},
+}
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "convert_to_text"
 const NodeFunction = async (node, params, behaviors) => {

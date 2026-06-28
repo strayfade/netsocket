@@ -18,6 +18,17 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Triggers/iOS Notification"
 NodeDefinition.prototype.description = "Triggers when an authenticated iOS notification is forwarded to the server. Outputs title/sender, content, and bundle ID."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
+		"Title/Sender": {"description":"Title/Sender produced by iOS Notification.","structure":"Plain text string (UTF-8).","mcpKey":"Title/Sender"},
+		Content: {"description":"Content produced by iOS Notification.","structure":"Plain text string (UTF-8).","mcpKey":"Content"},
+		"Bundle ID": {"description":"Bundle ID produced by iOS Notification.","structure":"Plain text string (UTF-8).","mcpKey":"Bundle ID"},
+	},
+}
 NodeDefinition.prototype.color = "black"
 NodeDefinition.prototype.icon = "notifications_unread"
 const NodeFunction = async (node, params, behaviors) => {

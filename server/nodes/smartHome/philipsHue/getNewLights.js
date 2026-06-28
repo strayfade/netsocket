@@ -10,6 +10,14 @@ class NodeDefinition {
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Get New Lights"
 NodeDefinition.prototype.description = "Returns lights discovered by the bridge that are not yet fully configured."
+NodeDefinition.prototype.portMeta = {
+	inputs: {
+
+	},
+	outputs: {
+		Lights: {"description":"All lights registered on the Hue bridge.","structure":"Array of Philips Hue light objects (id, name, state, type, etc.).","mcpKey":"Lights"},
+	},
+}
 NodeDefinition.prototype.color = "white"
 NodeDefinition.prototype.icon = "light"
 
