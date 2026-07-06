@@ -2,7 +2,8 @@
 
 const { generateText, stepCountIs } = require('ai')
 const { log, logColors } = require('../log')
-const { DEFAULT_MODEL, getOllamaProvider, sanitizeAiOutput } = require('./languageModel')
+const { getOllamaProvider, sanitizeAiOutput } = require('./languageModel')
+const { resolveMcpAgentModel, MCP_AGENT_DEFAULT_MODEL } = require('./mcpAgentSettings')
 const { createNetsocketMcpTools, LOG_PREFIX } = require('./netsocketMcpTools')
 const { stripThinkingTags } = require('./deepResearch')
 const {
@@ -29,7 +30,8 @@ const ACTION_VERB_PATTERN = /\b(give|get|send|run|use|execute|call|fetch|compute
 
 const PENDING_EXECUTE_FOLLOW_UP_MESSAGE = [
     'You looked up a node with get_node_info but have not run execute_node yet.',
-    'Call execute_node now for that node. Pass outputs from prior execute_node calls as inputs where needed.',
+    'Call execute_node now only if that node is still required for what the user asked.',
+    'If you already executed a node that fulfilled the request, summarize the results instead of executing unrelated nodes.',
 ].join(' ')
 
 const ASSISTANT_PERSONA = [
@@ -47,8 +49,17 @@ const DEFAULT_SYSTEM_PROMPT = [
     'Node types use full paths, e.g. "Smart Home/Philips Hue/Lights/Get All Lights".',
     'Action workflow: list_nodes with relevant keywords if needed, get_node_info once before each new node type, execute_node with correct inputs, chain nodes by passing prior outputs into the next inputs.',
     'When multiple nodes can fulfill a task, prefer nodes marked mcpPreferred in list_nodes or get_node_info results.',
+    'mcpPreferred is task-specific: a node preferred for setting state is not the right choice for list or read requests.',
+    'For list, show, or fetch requests: execute the read node once, then present the data. Do not look up or run control nodes unless the user asked to change something.',
+    'Never guess or invent device names, IDs, states, or readings — always use execute_node to fetch real data from Netsocket.',
     'Only claim you performed an action after execute_node succeeds. Summarize results briefly unless the user asks for more.',
     'For pure conversation with no action requested, reply directly without using tools.',
+].join(' ')
+
+const NO_TOOLS_EXECUTED_MESSAGE = [
+    'You must use MCP tools to fetch real data — do not guess or answer from memory.',
+    'Call list_nodes, then execute_node on the appropriate read/list node.',
+    'Do not reply with invented names or values.',
 ].join(' ')
 
 function agentLog(message, colors = logColors.Default) {
@@ -125,32 +136,232 @@ function countToolCalls(steps = [], toolName) {
         .length
 }
 
-function needsExecutionFollowUp(mode, steps, hints = {}) {
+function getToolCallOutput(step, call) {
+    const resultsById = new Map(
+        (step.toolResults || []).map((result) => [result.toolCallId, result])
+    )
+    const matched = resultsById.get(call.toolCallId)
+    return matched?.output ?? matched?.result ?? null
+}
+
+function collectSuccessfulExecutes(steps = []) {
+    const successful = []
+    for (const step of steps) {
+        for (const call of step.toolCalls || []) {
+            if (call.toolName !== 'execute_node') continue
+            const output = getToolCallOutput(step, call)
+            if (output?.success) {
+                successful.push({
+                    nodeType: call.input?.nodeType,
+                    output,
+                })
+            }
+        }
+    }
+    return successful
+}
+
+function getLastSuccessfulExecute(steps = []) {
+    const successful = collectSuccessfulExecutes(steps)
+    return successful.length > 0 ? successful[successful.length - 1] : null
+}
+
+function parseJsonArray(value) {
+    if (Array.isArray(value)) return value
+    if (typeof value !== 'string' || !value.trim()) return null
+    try {
+        const parsed = JSON.parse(value)
+        return Array.isArray(parsed) ? parsed : null
+    } catch {
+        return null
+    }
+}
+
+function extractLightsFromExecuteOutput(output) {
+    if (!output || typeof output !== 'object') return null
+    const fromOutputs = output.outputs?.Lights
+    if (fromOutputs != null) return parseJsonArray(fromOutputs)
+    const slot = (output.outputSlots || []).find((entry) => entry.name === 'Lights')
+    if (slot?.value != null) return parseJsonArray(slot.value)
+    return null
+}
+
+function extractRequestedFields(command) {
+    const text = String(command || '').toLowerCase()
+    const wantsIds = /\bids?\b/.test(text)
+    const wantsNames = /\bnames?\b/.test(text)
+    const fieldOnly = (wantsIds || wantsNames) && !/\b(?:and|with)\b/.test(text)
+    const valuesOnly = /\b(?:just|only)\b/.test(text) || fieldOnly
+    return { wantsIds, wantsNames, valuesOnly }
+}
+
+function formatReadonlyLightsResponse(command, lights) {
+    if (!Array.isArray(lights) || lights.length === 0) return ''
+
+    const { wantsIds, wantsNames, valuesOnly } = extractRequestedFields(command)
+
+    if (wantsIds && !wantsNames) {
+        const ids = lights.map((light) => light.id).filter((id) => id != null)
+        return valuesOnly ? ids.join(', ') : `Light IDs: ${ids.join(', ')}`
+    }
+
+    if (wantsNames && !wantsIds) {
+        const names = lights.map((light) => light.name).filter(Boolean)
+        return valuesOnly ? names.join(', ') : `Light names: ${names.join(', ')}`
+    }
+
+    if (wantsIds && wantsNames) {
+        const pairs = lights.map((light) => `${light.id}: ${light.name}`)
+        return valuesOnly ? pairs.join(', ') : pairs.join('; ')
+    }
+
+    return lights.map((light) => `${light.name} (${light.id})`).join(', ')
+}
+
+function synthesizeReadonlyResponse(command, steps = []) {
+    const last = getLastSuccessfulExecute(steps)
+    if (!last) return ''
+
+    const lights = extractLightsFromExecuteOutput(last.output)
+    if (lights) {
+        return formatReadonlyLightsResponse(command, lights)
+    }
+
+    const outputs = last.output?.outputs
+    if (outputs && typeof outputs === 'object') {
+        const firstKey = Object.keys(outputs)[0]
+        const value = firstKey ? outputs[firstKey] : null
+        if (value != null && typeof value !== 'object') {
+            return String(value)
+        }
+    }
+
+    return ''
+}
+
+function hasRedundantExecute(steps = []) {
+    const counts = new Map()
+    for (const step of steps) {
+        for (const call of step.toolCalls || []) {
+            if (call.toolName !== 'execute_node' || !call.input?.nodeType) continue
+            const nodeType = call.input.nodeType
+            counts.set(nodeType, (counts.get(nodeType) || 0) + 1)
+            if (counts.get(nodeType) >= 2) return true
+        }
+    }
+    return false
+}
+
+function buildStopWhen(hints, remainingSteps) {
+    const conditions = [stepCountIs(remainingSteps)]
+
+    if (hints.intent === 'readonly') {
+        conditions.push(({ steps }) => collectSuccessfulExecutes(steps).length > 0)
+    }
+
+    return conditions
+}
+
+function requiresToolExecution(mode, hints = {}) {
     if (mode === 'chat') {
         return false
     }
+    if (hints.intent === 'readonly' || hints.intent === 'otp' || hints.intent === 'quick_web_search') {
+        return true
+    }
+    return mode === 'tools'
+}
 
+function hasFulfilledToolExecution(steps, hints = {}) {
+    const successful = collectSuccessfulExecutes(steps)
+    if (successful.length === 0) {
+        return false
+    }
+    if (hints.intent === 'otp') {
+        return successful.some((entry) => entry.nodeType === OTP_NODE)
+    }
+    if (hints.intent === 'quick_web_search') {
+        return successful.some((entry) => entry.nodeType === QUICK_WEB_SEARCH_NODE)
+    }
+    return true
+}
+
+function pickReadonlyTargetNode(hints) {
+    const matches = hints.matches || []
+    if (matches.length === 0) {
+        return null
+    }
+    const preferred = matches.filter((match) => match.mcpPreferred != null && match.mcpPreferred !== false)
+    return preferred[0] || matches[0]
+}
+
+function canDirectExecute(nodeType) {
+    const { getNodeInfo } = require('../mcp/handlers')
+    const info = getNodeInfo(nodeType)
+    if (!info) {
+        return false
+    }
+    const guideRequired = info.callingGuide?.executeNode?.inputs?.required || []
+    if (guideRequired.length > 0) {
+        return false
+    }
+    const dataInputs = (info.inputs || []).filter((input) => !input.isEvent && !input.mcpOmit)
+    return dataInputs.length === 0
+}
+
+function createSyntheticExecuteStep(nodeType, output) {
+    return {
+        text: '',
+        toolCalls: [{
+            toolCallId: 'direct-execute',
+            toolName: 'execute_node',
+            input: { nodeType, inputs: {} },
+        }],
+        toolResults: [{
+            toolCallId: 'direct-execute',
+            output,
+        }],
+    }
+}
+
+async function tryDirectReadonlyExecute(hints, silent) {
+    if (hints.intent !== 'readonly') {
+        return null
+    }
+    const target = pickReadonlyTargetNode(hints)
+    if (!target?.nodeType || !canDirectExecute(target.nodeType)) {
+        return null
+    }
+
+    const { executeMcpNode } = require('../mcp/handlers')
+    if (!silent) {
+        agentLog(`Direct readonly execute: ${target.nodeType}`, logColors.Info)
+    }
+    const output = await executeMcpNode(target.nodeType, { inputs: {}, properties: {} })
+    if (!output?.success) {
+        return null
+    }
+    return createSyntheticExecuteStep(target.nodeType, output)
+}
+
+function needsExecutionFollowUp(mode, steps, hints = {}) {
+    if (!requiresToolExecution(mode, hints)) {
+        return false
+    }
+    if (hasFulfilledToolExecution(steps, hints)) {
+        return false
+    }
     if (hasPendingExecute(steps)) {
         return true
     }
-
-    const executedNodes = collectExecutedNodeTypes(steps)
-
-    if (hints.intent === 'otp') {
-        return !executedNodes.includes(OTP_NODE)
-    }
-
-    if (hints.intent === 'quick_web_search') {
-        return !executedNodes.includes(QUICK_WEB_SEARCH_NODE)
-    }
-
-    return false
+    return true
 }
 
 function buildPrepareStep(mode, hints, allSteps) {
     return ({ steps }) => {
         const combinedSteps = [...allSteps, ...(steps || [])]
         const executedNodes = collectExecutedNodeTypes(combinedSteps)
+        const successfulExecutes = collectSuccessfulExecutes(combinedSteps)
         const getInfoCount = countToolCalls(combinedSteps, 'get_node_info')
         const executeCount = countToolCalls(combinedSteps, 'execute_node')
 
@@ -175,7 +386,18 @@ function buildPrepareStep(mode, hints, allSteps) {
             return { activeTools: ['get_node_info', 'execute_node'], toolChoice: 'required' }
         }
 
+        if (hints.intent === 'readonly' && successfulExecutes.length > 0) {
+            return { toolChoice: 'none' }
+        }
+
+        if (hasRedundantExecute(combinedSteps)) {
+            return { toolChoice: 'none' }
+        }
+
         if (getInfoCount > executeCount) {
+            if (hints.intent === 'readonly' && executeCount > 0) {
+                return { toolChoice: 'none' }
+            }
             return { activeTools: ['execute_node'], toolChoice: 'required' }
         }
 
@@ -187,19 +409,68 @@ function buildPrepareStep(mode, hints, allSteps) {
     }
 }
 
-function summarizeSteps(steps = []) {
-    return steps.map((step, index) => ({
-        step: index + 1,
-        toolCalls: (step.toolCalls || []).map((call) => ({
-            toolName: call.toolName,
-            input: call.input,
-        })),
-        text: step.text || '',
-    }))
+function extractThinking(text) {
+    if (typeof text !== 'string' || !text) {
+        return ''
+    }
+    const tagged = text.match(/<think>([\s\S]*?)<\/redacted_thinking>/i)
+    if (tagged) {
+        return tagged[1].trim()
+    }
+    const thinkOpen = '<' + 'think>'
+    const thinkClose = '<' + '/think>'
+    const openIdx = text.indexOf(thinkOpen)
+    const closeIdx = text.indexOf(thinkClose)
+    if (openIdx !== -1 && closeIdx > openIdx) {
+        return text.slice(openIdx + thinkOpen.length, closeIdx).trim()
+    }
+    return ''
 }
 
-function buildContinuationMessage(steps = []) {
+function summarizeSteps(steps = []) {
+    return steps.map((step, index) => {
+        const rawText = step.text || ''
+        const toolResultsById = new Map(
+            (step.toolResults || []).map((result) => [result.toolCallId, result])
+        )
+
+        return {
+            step: index + 1,
+            thinking: extractThinking(rawText),
+            text: stripThinkingTags(rawText),
+            toolCalls: (step.toolCalls || []).map((call) => {
+                const matched = toolResultsById.get(call.toolCallId)
+                return {
+                    toolCallId: call.toolCallId,
+                    toolName: call.toolName,
+                    input: call.input,
+                    output: matched?.output ?? matched?.result ?? null,
+                }
+            }),
+        }
+    })
+}
+
+function buildContinuationMessage(steps = [], hints = {}) {
     const pendingNodeTypes = getPendingNodeTypes(steps)
+
+    if (hasFulfilledToolExecution(steps, hints)) {
+        return [
+            'You already fetched the requested data.',
+            'Summarize the execute_node results for the user now.',
+            'Do not execute unrelated control nodes.',
+        ].join(' ')
+    }
+
+    if (countToolCalls(steps, 'execute_node') === 0 && countToolCalls(steps, 'list_nodes') === 0) {
+        const target = pickReadonlyTargetNode(hints)
+        const parts = [NO_TOOLS_EXECUTED_MESSAGE]
+        if (target?.nodeType) {
+            parts.push(`Run execute_node on "${target.nodeType}" to fetch real data.`)
+        }
+        return parts.join(' ')
+    }
+
     if (pendingNodeTypes.length > 0) {
         return [
             PENDING_EXECUTE_FOLLOW_UP_MESSAGE,
@@ -215,7 +486,7 @@ async function runMcpAgent(options = {}) {
         return { response: '', error: 'Command is empty', steps: [] }
     }
 
-    const modelName = String(options.model || DEFAULT_MODEL).trim() || DEFAULT_MODEL
+    const modelName = resolveMcpAgentModel(options.model)
     const maxSteps = Math.max(1, Math.min(50, Number(options.maxSteps) || DEFAULT_MAX_STEPS))
     const customSystemPrompt = String(options.systemPrompt || '').trim()
     const silent = options.silent === true
@@ -249,6 +520,25 @@ async function runMcpAgent(options = {}) {
         let allSteps = []
         let text = ''
 
+        const directStep = await tryDirectReadonlyExecute(hints, silent)
+        if (directStep) {
+            allSteps = [directStep]
+            const directResponse = synthesizeReadonlyResponse(command, allSteps)
+            if (directResponse) {
+                if (!silent) {
+                    agentLog('Readonly request fulfilled via direct execute', logColors.Success)
+                }
+                await appendSessionTurn(sessionKey, command, directResponse)
+                return {
+                    response: directResponse,
+                    error: '',
+                    steps: summarizeSteps(allSteps),
+                    mode,
+                    command,
+                }
+            }
+        }
+
         while (allSteps.length < maxSteps) {
             const remainingSteps = maxSteps - allSteps.length
             const tools = mode === 'chat'
@@ -261,7 +551,7 @@ async function runMcpAgent(options = {}) {
                 messages: conversation,
                 ...(tools ? { tools } : {}),
                 prepareStep: buildPrepareStep(mode, hints, allSteps),
-                stopWhen: stepCountIs(remainingSteps),
+                stopWhen: buildStopWhen(hints, remainingSteps),
             })
 
             text = result.text || text
@@ -270,6 +560,39 @@ async function runMcpAgent(options = {}) {
                 ...conversation,
                 ...result.response.messages,
             ]
+
+            const successfulExecutes = collectSuccessfulExecutes(allSteps)
+            const responseSoFar = sanitizeAiOutput(stripThinkingTags(text || ''))
+
+            if (
+                hints.intent === 'readonly'
+                && successfulExecutes.length > 0
+                && !responseSoFar
+                && allSteps.length < maxSteps
+            ) {
+                const synthesisResult = await generateText({
+                    model: provider(modelName),
+                    system: systemPrompt,
+                    messages: [
+                        ...conversation,
+                        {
+                            role: 'user',
+                            content: [
+                                'You already ran execute_node and have the results in the conversation above.',
+                                'Reply to the user now. Do not use tools.',
+                                'If outputs contain JSON strings, parse them first.',
+                                'Match the level of detail the user asked for (e.g. IDs only vs full list).',
+                            ].join(' '),
+                        },
+                    ],
+                })
+                text = synthesisResult.text || text
+                allSteps.push(...synthesisResult.steps)
+                conversation = [
+                    ...conversation,
+                    ...synthesisResult.response.messages,
+                ]
+            }
 
             if (!needsExecutionFollowUp(mode, allSteps, hints)) {
                 break
@@ -283,13 +606,32 @@ async function runMcpAgent(options = {}) {
                 agentLog('get_node_info without execute_node; continuing', logColors.Warning)
             }
 
-            conversation.push({ role: 'user', content: buildContinuationMessage(allSteps) })
+            conversation.push({ role: 'user', content: buildContinuationMessage(allSteps, hints) })
+        }
+
+        if (requiresToolExecution(mode, hints) && !hasFulfilledToolExecution(allSteps, hints)) {
+            const fallbackStep = await tryDirectReadonlyExecute(hints, silent)
+            if (fallbackStep) {
+                allSteps.push(fallbackStep)
+            }
         }
 
         const stepSummary = summarizeSteps(allSteps)
         const toolCallCount = stepSummary.reduce((sum, step) => sum + step.toolCalls.length, 0)
         const toolNames = collectToolNames(allSteps)
-        const response = sanitizeAiOutput(stripThinkingTags(text || ''))
+        let response = sanitizeAiOutput(stripThinkingTags(text || ''))
+
+        if (requiresToolExecution(mode, hints) && !hasFulfilledToolExecution(allSteps, hints)) {
+            response = ''
+        } else if (hints.intent === 'readonly' && hasFulfilledToolExecution(allSteps, hints)) {
+            const synthesized = synthesizeReadonlyResponse(command, allSteps)
+            if (synthesized) {
+                response = synthesized
+            }
+        } else if (!response && hints.intent === 'readonly') {
+            response = synthesizeReadonlyResponse(command, allSteps)
+        }
+
         const incomplete = needsExecutionFollowUp(mode, allSteps, hints)
         const finalResponse = response || (incomplete ? 'I started working on that but did not finish.' : '')
 
@@ -303,8 +645,12 @@ async function runMcpAgent(options = {}) {
         if (!finalResponse && toolCallCount === 0) {
             return {
                 response: '',
-                error: 'Model did not produce a response. Try a tool-capable model such as llama3.2 or qwen3.',
+                error: requiresToolExecution(mode, hints)
+                    ? 'Model answered without running Netsocket nodes. Try a tool-capable model such as llama3.2 or qwen3.'
+                    : 'Model did not produce a response. Try a tool-capable model such as llama3.2 or qwen3.',
                 steps: stepSummary,
+                mode,
+                command,
             }
         }
 
@@ -319,32 +665,55 @@ async function runMcpAgent(options = {}) {
                     ? 'Looked up a node but did not execute it. Try again or use a more capable model.'
                     : 'Did not complete the requested action. Try a clearer command or a more capable model.',
                 steps: stepSummary,
+                mode,
+                command,
             }
         }
 
-        return { response: finalResponse, error: '', steps: stepSummary }
+        return {
+            response: finalResponse,
+            error: '',
+            steps: stepSummary,
+            mode,
+            command,
+        }
     } catch (e) {
         agentLog(`Agent failed: ${e.message}`, logColors.Error)
-        return { response: '', error: e.message, steps: [] }
+        return { response: '', error: e.message, steps: [], command }
     }
 }
 
 module.exports = {
     ASSISTANT_PERSONA,
-    DEFAULT_MODEL,
+    MCP_AGENT_DEFAULT_MODEL,
+    resolveMcpAgentModel,
     DEFAULT_MAX_STEPS,
     DEFAULT_SYSTEM_PROMPT,
     ACTION_VERB_PATTERN,
     PENDING_EXECUTE_FOLLOW_UP_MESSAGE,
+    NO_TOOLS_EXECUTED_MESSAGE,
     classifyInteractionMode,
+    requiresToolExecution,
+    hasFulfilledToolExecution,
     needsExecutionFollowUp,
+    pickReadonlyTargetNode,
+    canDirectExecute,
+    tryDirectReadonlyExecute,
     hasPendingExecute,
     getPendingNodeTypes,
     collectToolNames,
     collectExecutedNodeTypes,
     countToolCalls,
+    collectSuccessfulExecutes,
+    getLastSuccessfulExecute,
+    synthesizeReadonlyResponse,
+    formatReadonlyLightsResponse,
+    extractRequestedFields,
+    hasRedundantExecute,
+    buildStopWhen,
     buildPrepareStep,
     buildContinuationMessage,
+    extractThinking,
     runMcpAgent,
     summarizeSteps,
 }

@@ -1,6 +1,6 @@
 const { string, number } = require('../../utils/inputParser')
 const { runMcpAgent } = require('../../utils/mcpAgent')
-const { DEFAULT_MODEL } = require('../../utils/languageModel')
+const { MCP_AGENT_DEFAULT_MODEL } = require('../../utils/mcpAgentSettings')
 
 class NodeDefinition {
     constructor() {
@@ -12,7 +12,7 @@ class NodeDefinition {
         this.addInput('Memory Key', 'string')
         this.addProperty('Memory Key', 'default')
         this.addInput('Model', 'string')
-        this.addProperty('Model', DEFAULT_MODEL)
+        this.addProperty('Model', MCP_AGENT_DEFAULT_MODEL)
         this.addInput('Max Steps', 'number')
         this.addProperty('Max Steps', 15)
         this.addInput('System Prompt', 'string')
@@ -23,7 +23,7 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = 'Language Processing/MCP Agent'
-NodeDefinition.prototype.description = 'Friendly Netsocket assistant with persistent local memory. Chats naturally and runs nodes via MCP tools (list_nodes, get_node_info, execute_node) when you ask it to perform actions. Requires a tool-capable Ollama model such as llama3.2 or qwen3.'
+NodeDefinition.prototype.description = 'Friendly Netsocket assistant with persistent local memory. Chats naturally and runs nodes via MCP tools (list_nodes, get_node_info, execute_node) when you ask it to perform actions. Requires a tool-capable Ollama model such as qwen3.5:9b-mxfp8 or llama3.2.'
 NodeDefinition.prototype.portMeta = {
 	inputs: {
 		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},

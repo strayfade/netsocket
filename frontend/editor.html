@@ -46,33 +46,40 @@
 <body style="width: 100vw; height: 100vh; margin: 0;" class="litegraph litegraph-editor">
     <div class="editor-top-chrome">
         <header>
-            <img src="favicon.png" alt="Logo">
-            <span class="node-count"><span id="node-count">0 nodes</span> <span id="node-count-visible">(0
-                    visible)</span></span>
-            <span class="editor-history-controls" role="group" aria-label="Graph undo and redo">
-                <button type="button" id="editor-undo" class="header-toolbar-btn" disabled title="Undo (Ctrl+Z)">
-                    <span class="material-symbols-outlined" aria-hidden="true">undo</span>
-                </button>
-                <button type="button" id="editor-redo" class="header-toolbar-btn" disabled title="Redo (Ctrl+Y or Ctrl+Shift+Z)">
-                    <span class="material-symbols-outlined" aria-hidden="true">redo</span>
-                </button>
-            </span>
-            <div class="header-distance"></div>
-            <a href="#" id="open-backup" title="Move your graph and settings to another machine">
-                <span>Backup</span>
-                <span class="material-symbols-outlined"
-                    style="font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;">cloud_download</span>
-            </a>
-            <a href="#" id="open-settings">
-                <span>Integrations</span>
-                <span class="material-symbols-outlined"
-                    style="font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;">settings</span>
-            </a>
-            <a href="/logout">
-                <span>Log Out</span>
-                <span class="material-symbols-outlined"
-                    style="font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;">arrow_outward</span>
-            </a>
+            <div class="header-left">
+                <img src="favicon.png" alt="Logo">
+                <span class="node-count"><span id="node-count">0 nodes</span> <span id="node-count-visible">(0
+                        visible)</span></span>
+                <span class="editor-history-controls" role="group" aria-label="Graph undo and redo">
+                    <button type="button" id="editor-undo" class="header-toolbar-btn" disabled title="Undo (Ctrl+Z)">
+                        <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+                    </button>
+                    <button type="button" id="editor-redo" class="header-toolbar-btn" disabled title="Redo (Ctrl+Y or Ctrl+Shift+Z)">
+                        <span class="material-symbols-outlined" aria-hidden="true">redo</span>
+                    </button>
+                </span>
+            </div>
+            <form class="header-command" id="agent-command-form" autocomplete="off">
+                <input type="text" id="agent-command-input" placeholder="Ask or command…" spellcheck="false"
+                    aria-label="Agent command">
+            </form>
+            <div class="header-right">
+                <a href="#" id="open-backup" title="Move your graph and settings to another machine">
+                    <span>Backup</span>
+                    <span class="material-symbols-outlined"
+                        style="font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;">cloud_download</span>
+                </a>
+                <a href="#" id="open-settings">
+                    <span>Integrations</span>
+                    <span class="material-symbols-outlined"
+                        style="font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;">settings</span>
+                </a>
+                <a href="/logout">
+                    <span>Log Out</span>
+                    <span class="material-symbols-outlined"
+                        style="font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;">arrow_outward</span>
+                </a>
+            </div>
         </header>
         <div id="editor-keybinds-bar" class="editor-keybinds-bar" hidden aria-hidden="true">
             <div class="editor-keybinds-inner" id="editor-keybinds-inner"></div>
@@ -548,6 +555,39 @@
         }
         setInterval(ping, 3000);
     </script>
+    <div id="agent-sidebar-root" class="agent-sidebar-root" hidden aria-hidden="true">
+        <div id="agent-backdrop" class="agent-backdrop" aria-hidden="true"></div>
+        <aside id="agent-sidebar" class="agent-sidebar" role="complementary" aria-labelledby="agent-sidebar-title">
+            <header class="agent-sidebar-header">
+                <button type="button" id="agent-sidebar-close" class="agent-sidebar-close" title="Close">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+                <div class="agent-sidebar-heading">
+                    <span class="material-symbols-outlined agent-sidebar-logo" aria-hidden="true">smart_toy</span>
+                    <h2 id="agent-sidebar-title">Agent</h2>
+                </div>
+                <div class="agent-sidebar-actions">
+                    <button type="button" id="agent-sidebar-copy" class="agent-sidebar-copy" title="Copy chat"
+                        disabled aria-label="Copy chat to clipboard">
+                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+                    </button>
+                    <span id="agent-sidebar-status" class="agent-sidebar-status" role="status"></span>
+                </div>
+            </header>
+            <div class="agent-sidebar-body">
+                <div id="agent-command-display" class="agent-command-display"></div>
+                <div id="agent-timeline" class="agent-timeline"></div>
+                <div id="agent-final-response" class="agent-final-response" hidden></div>
+            </div>
+            <footer class="agent-sidebar-footer">
+                <div id="agent-queue" class="agent-queue" hidden aria-live="polite"></div>
+                <form id="agent-followup-form" class="agent-followup-form" autocomplete="off">
+                    <input type="text" id="agent-followup-input" placeholder="Follow up…" spellcheck="false"
+                        aria-label="Agent follow-up command">
+                </form>
+            </footer>
+        </aside>
+    </div>
     <!-- Settings modal (sidebar + panels built from server preference registry) -->
     <div id="backup-modal" class="backup-modal-root" hidden aria-hidden="true">
         <div id="backup-backdrop" class="settings-backdrop" aria-hidden="true"></div>
@@ -898,6 +938,455 @@
 
             if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettingsModal)
             if (settingsBackdrop) settingsBackdrop.addEventListener('click', closeSettingsModal)
+        })
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const agentForm = document.getElementById('agent-command-form')
+            const agentInput = document.getElementById('agent-command-input')
+            const agentRoot = document.getElementById('agent-sidebar-root')
+            const agentBackdrop = document.getElementById('agent-backdrop')
+            const agentCloseBtn = document.getElementById('agent-sidebar-close')
+            const agentCopyBtn = document.getElementById('agent-sidebar-copy')
+            const agentStatus = document.getElementById('agent-sidebar-status')
+            const agentCommandDisplay = document.getElementById('agent-command-display')
+            const agentTimeline = document.getElementById('agent-timeline')
+            const agentFinalResponse = document.getElementById('agent-final-response')
+            const agentFollowupForm = document.getElementById('agent-followup-form')
+            const agentFollowupInput = document.getElementById('agent-followup-input')
+            const agentQueueEl = document.getElementById('agent-queue')
+
+            if (!agentForm || !agentInput || !agentRoot) return
+
+            let agentRunId = 0
+            let lastAgentChat = null
+            let agentBusy = false
+            let agentQueue = []
+            let agentStatusBase = ''
+            let agentStatusKind = ''
+
+            const setCopyEnabled = (enabled) => {
+                if (agentCopyBtn) agentCopyBtn.disabled = !enabled
+            }
+
+            const formatAgentChatPlaintext = (command, data = {}) => {
+                const lines = [String(command || '').trim(), '']
+
+                const steps = Array.isArray(data.steps) ? data.steps : []
+                steps.forEach((step) => {
+                    if (step.thinking) {
+                        lines.push('Thinking:', step.thinking, '')
+                    }
+
+                    if (step.text) {
+                        lines.push(step.text, '')
+                    }
+
+                    ;(step.toolCalls || []).forEach((call) => {
+                        lines.push(agentRanLine(call))
+                        lines.push(`Tool: ${call.toolName || 'unknown'}`)
+                        if (call.input != null) {
+                            lines.push('Input:', formatJson(call.input), '')
+                        }
+                        if (call.output != null) {
+                            lines.push('Output:', formatJson(call.output), '')
+                        }
+                    })
+                })
+
+                if (data.response) {
+                    lines.push(data.response, '')
+                }
+
+                if (data.error) {
+                    lines.push('Error:', data.error, '')
+                }
+
+                return lines.join('\n').trimEnd()
+            }
+
+            const copyAgentChat = async () => {
+                if (!lastAgentChat) return
+                const text = formatAgentChatPlaintext(lastAgentChat.command, lastAgentChat.data)
+                if (!text) return
+
+                try {
+                    await navigator.clipboard.writeText(text)
+                    const prevStatus = agentStatus?.textContent || ''
+                    setAgentStatus('Copied', '')
+                    window.setTimeout(() => {
+                        if (agentStatus?.textContent === 'Copied') {
+                            setAgentStatus(prevStatus)
+                        }
+                    }, 1500)
+                } catch {
+                    setAgentStatus('Copy failed', 'is-error')
+                }
+            }
+
+            const TOOL_ICONS = {
+                list_nodes: 'search',
+                get_node_info: 'info',
+                execute_node: 'play_arrow',
+            }
+
+            const formatJson = (value) => {
+                if (value == null) return ''
+                try {
+                    return JSON.stringify(value, null, 2)
+                } catch {
+                    return String(value)
+                }
+            }
+
+            const truncateJson = (text, max = 4000) => {
+                if (!text || text.length <= max) return text
+                return `${text.slice(0, max)}\n… (truncated)`
+            }
+
+            const openAgentSidebar = () => {
+                agentRoot.hidden = false
+                agentRoot.setAttribute('aria-hidden', 'false')
+                requestAnimationFrame(() => agentRoot.classList.add('is-open'))
+            }
+
+            const closeAgentSidebar = () => {
+                agentRoot.classList.remove('is-open')
+                window.setTimeout(() => {
+                    if (!agentRoot.classList.contains('is-open')) {
+                        agentRoot.hidden = true
+                        agentRoot.setAttribute('aria-hidden', 'true')
+                    }
+                }, 260)
+            }
+
+            const setAgentStatus = (text, kind = '') => {
+                agentStatusBase = text || ''
+                agentStatusKind = kind || ''
+                if (!agentStatus) return
+                const suffix = agentBusy && agentQueue.length
+                    ? ` (${agentQueue.length} queued)`
+                    : ''
+                agentStatus.textContent = agentStatusBase + suffix
+                agentStatus.classList.remove('is-running', 'is-error')
+                if (agentStatusKind) agentStatus.classList.add(agentStatusKind)
+            }
+
+            const refreshAgentStatus = () => {
+                setAgentStatus(agentStatusBase, agentStatusKind)
+            }
+
+            const updateQueueUi = () => {
+                if (!agentQueueEl) return
+                if (!agentQueue.length) {
+                    agentQueueEl.hidden = true
+                    agentQueueEl.innerHTML = ''
+                    return
+                }
+                agentQueueEl.hidden = false
+                agentQueueEl.innerHTML = ''
+                const label = document.createElement('div')
+                label.className = 'agent-queue-label'
+                label.textContent = agentQueue.length === 1 ? 'Queued' : `${agentQueue.length} queued`
+                agentQueueEl.appendChild(label)
+                agentQueue.forEach((command) => {
+                    const item = document.createElement('div')
+                    item.className = 'agent-queue-item'
+                    item.textContent = command
+                    agentQueueEl.appendChild(item)
+                })
+            }
+
+            const submitAgentCommand = (command) => {
+                const trimmed = String(command || '').trim()
+                if (!trimmed) return
+
+                openAgentSidebar()
+
+                if (agentBusy) {
+                    agentQueue.push(trimmed)
+                    updateQueueUi()
+                    refreshAgentStatus()
+                    return
+                }
+
+                runAgentCommand(trimmed)
+            }
+
+            const drainAgentQueue = () => {
+                if (agentBusy || !agentQueue.length) return
+                const next = agentQueue.shift()
+                updateQueueUi()
+                runAgentCommand(next)
+            }
+
+            const renderLoading = () => {
+                lastAgentChat = null
+                setCopyEnabled(false)
+                agentTimeline.innerHTML = ''
+                const loading = document.createElement('div')
+                loading.className = 'agent-loading'
+                loading.innerHTML = '<span class="agent-loading-spinner" aria-hidden="true"></span><span>Running agent…</span>'
+                agentTimeline.appendChild(loading)
+                agentFinalResponse.hidden = true
+                agentFinalResponse.innerHTML = ''
+            }
+
+            const agentRanAction = (call) => {
+                const tool = call?.toolName || 'tool'
+                const input = call?.input || {}
+                if (tool === 'list_nodes') {
+                    if (input.query) return `list_nodes for "${input.query}"`
+                    if (input.category) return `list_nodes in ${input.category}`
+                    return 'list_nodes'
+                }
+                if (tool === 'get_node_info' && input.nodeType) {
+                    return `get_node_info for ${input.nodeType}`
+                }
+                if (tool === 'execute_node' && input.nodeType) {
+                    return `execute_node on ${input.nodeType}`
+                }
+                return tool
+            }
+
+            const agentRanLine = (call) => `Agent ran ${agentRanAction(call)}`
+
+            const renderToolCall = (call) => {
+                const card = document.createElement('article')
+                card.className = 'agent-tool-call'
+                card.dataset.tool = call.toolName || 'unknown'
+
+                const header = document.createElement('button')
+                header.type = 'button'
+                header.className = 'agent-tool-header'
+                header.setAttribute('aria-expanded', 'false')
+
+                const icon = document.createElement('span')
+                icon.className = 'material-symbols-outlined agent-tool-icon'
+                icon.textContent = TOOL_ICONS[call.toolName] || 'build'
+                icon.setAttribute('aria-hidden', 'true')
+
+                const title = document.createElement('span')
+                title.className = 'agent-tool-title'
+                const prefix = document.createElement('span')
+                prefix.className = 'agent-tool-ran-prefix'
+                prefix.textContent = 'Agent ran'
+                const action = document.createElement('span')
+                action.className = 'agent-tool-ran-action'
+                action.textContent = ` ${agentRanAction(call)}`
+                title.appendChild(prefix)
+                title.appendChild(action)
+
+                const chevron = document.createElement('span')
+                chevron.className = 'material-symbols-outlined agent-tool-chevron'
+                chevron.textContent = 'expand_more'
+                chevron.setAttribute('aria-hidden', 'true')
+
+                header.appendChild(icon)
+                header.appendChild(title)
+                header.appendChild(chevron)
+                card.appendChild(header)
+
+                const body = document.createElement('div')
+                body.className = 'agent-tool-body'
+                body.hidden = true
+
+                if (call.input != null) {
+                    const inputSection = document.createElement('div')
+                    inputSection.className = 'agent-tool-section'
+                    const inputLabel = document.createElement('span')
+                    inputLabel.className = 'agent-tool-section-label'
+                    inputLabel.textContent = 'Input'
+                    const inputPre = document.createElement('pre')
+                    inputPre.className = 'agent-tool-json'
+                    inputPre.textContent = truncateJson(formatJson(call.input))
+                    inputSection.appendChild(inputLabel)
+                    inputSection.appendChild(inputPre)
+                    body.appendChild(inputSection)
+                }
+
+                if (call.output != null) {
+                    const outputSection = document.createElement('div')
+                    outputSection.className = 'agent-tool-section'
+                    const outputLabel = document.createElement('span')
+                    outputLabel.className = 'agent-tool-section-label'
+                    outputLabel.textContent = 'Output'
+                    const outputPre = document.createElement('pre')
+                    outputPre.className = 'agent-tool-json'
+                    outputPre.textContent = truncateJson(formatJson(call.output))
+                    outputSection.appendChild(outputLabel)
+                    outputSection.appendChild(outputPre)
+                    body.appendChild(outputSection)
+                }
+
+                header.addEventListener('click', () => {
+                    const expanded = card.classList.toggle('is-expanded')
+                    body.hidden = !expanded
+                    header.setAttribute('aria-expanded', expanded ? 'true' : 'false')
+                })
+
+                card.appendChild(body)
+                return card
+            }
+
+            const renderAgentResult = (command, data) => {
+                lastAgentChat = { command, data: data || {} }
+                setCopyEnabled(true)
+                agentCommandDisplay.textContent = command
+                agentTimeline.innerHTML = ''
+
+                const steps = Array.isArray(data?.steps) ? data.steps : []
+                if (!steps.length) {
+                    const empty = document.createElement('p')
+                    empty.style.cssText = 'font-size:12px;color:#666;margin:0;'
+                    empty.textContent = data?.mode === 'chat'
+                        ? 'Direct response — no tools used.'
+                        : 'No intermediate steps recorded.'
+                    agentTimeline.appendChild(empty)
+                }
+
+                steps.forEach((step) => {
+                    const stepEl = document.createElement('section')
+                    stepEl.className = 'agent-step'
+
+                    if (step.thinking) {
+                        const thinking = document.createElement('div')
+                        thinking.className = 'agent-thinking'
+                        const thinkingLabel = document.createElement('div')
+                        thinkingLabel.className = 'agent-thinking-label'
+                        thinkingLabel.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">psychology</span> Thinking'
+                        const thinkingText = document.createElement('div')
+                        thinkingText.textContent = step.thinking
+                        thinking.appendChild(thinkingLabel)
+                        thinking.appendChild(thinkingText)
+                        stepEl.appendChild(thinking)
+                    }
+
+                    if (step.text) {
+                        const text = document.createElement('div')
+                        text.className = 'agent-step-text'
+                        text.textContent = step.text
+                        stepEl.appendChild(text)
+                    }
+
+                    ;(step.toolCalls || []).forEach((call) => {
+                        stepEl.appendChild(renderToolCall(call))
+                    })
+
+                    agentTimeline.appendChild(stepEl)
+                })
+
+                if (data?.response) {
+                    agentFinalResponse.hidden = false
+                    agentFinalResponse.innerHTML = `<div class="agent-final-response-text"></div>`
+                    agentFinalResponse.querySelector('.agent-final-response-text').textContent = data.response
+                } else {
+                    agentFinalResponse.hidden = true
+                    agentFinalResponse.innerHTML = ''
+                }
+
+                if (data?.error) {
+                    const err = document.createElement('div')
+                    err.className = 'agent-error-banner'
+                    err.textContent = data.error
+                    agentTimeline.appendChild(err)
+                }
+            }
+
+            const runAgentCommand = async (command) => {
+                const trimmed = String(command || '').trim()
+                if (!trimmed) return
+
+                agentBusy = true
+                const runId = ++agentRunId
+                agentCommandDisplay.textContent = trimmed
+                renderLoading()
+                setAgentStatus('Running…', 'is-running')
+                agentInput.value = ''
+                if (agentFollowupInput) agentFollowupInput.value = ''
+
+                try {
+                    const res = await fetch('/v1/mcp-agent', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: trimmed, memoryKey: 'dashboard' }),
+                    })
+
+                    if (runId !== agentRunId) return
+
+                    if (!res.ok) {
+                        const errText = res.status === 401
+                            ? 'Session expired — sign in again.'
+                            : `Request failed (${res.status})`
+                        lastAgentChat = { command: trimmed, data: { error: errText } }
+                        setCopyEnabled(true)
+                        setAgentStatus('Error', 'is-error')
+                        agentTimeline.innerHTML = ''
+                        const err = document.createElement('div')
+                        err.className = 'agent-error-banner'
+                        err.textContent = errText
+                        agentTimeline.appendChild(err)
+                        return
+                    }
+
+                    const data = await res.json()
+                    renderAgentResult(trimmed, data)
+                    setAgentStatus(data.error ? 'Incomplete' : 'Done', data.error ? 'is-error' : '')
+                } catch (e) {
+                    if (runId !== agentRunId) return
+                    const errText = e?.message || 'Network error'
+                    lastAgentChat = { command: trimmed, data: { error: errText } }
+                    setCopyEnabled(true)
+                    setAgentStatus('Error', 'is-error')
+                    agentTimeline.innerHTML = ''
+                    const err = document.createElement('div')
+                    err.className = 'agent-error-banner'
+                    err.textContent = errText
+                    agentTimeline.appendChild(err)
+                } finally {
+                    if (runId === agentRunId) {
+                        agentBusy = false
+                        updateQueueUi()
+                        if (agentQueue.length > 0) {
+                            drainAgentQueue()
+                        } else if (agentRoot.classList.contains('is-open') && agentFollowupInput) {
+                            agentFollowupInput.focus()
+                        } else {
+                            agentInput.focus()
+                        }
+                    }
+                }
+            }
+
+            agentForm.addEventListener('submit', (e) => {
+                e.preventDefault()
+                submitAgentCommand(agentInput.value)
+                agentInput.value = ''
+            })
+
+            if (agentFollowupForm) {
+                agentFollowupForm.addEventListener('submit', (e) => {
+                    e.preventDefault()
+                    submitAgentCommand(agentFollowupInput?.value)
+                    if (agentFollowupInput) agentFollowupInput.value = ''
+                })
+            }
+
+            if (agentCloseBtn) agentCloseBtn.addEventListener('click', closeAgentSidebar)
+            if (agentCopyBtn) agentCopyBtn.addEventListener('click', copyAgentChat)
+            if (agentBackdrop) agentBackdrop.addEventListener('click', closeAgentSidebar)
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && agentRoot.classList.contains('is-open')) {
+                    closeAgentSidebar()
+                }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault()
+                    agentInput.focus()
+                    agentInput.select()
+                }
+            })
         })
     </script>
     <script type="text/javascript" src="createNode.js"></script>

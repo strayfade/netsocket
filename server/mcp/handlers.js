@@ -85,6 +85,14 @@ const scoreNodeMatch = (node, query) => {
         score += 10
     }
 
+    const wantsReadOnly = tokens.includes('list') || tokens.includes('show') || tokens.includes('display')
+    if (wantsReadOnly && (leafName.includes('get all') || /^get /.test(leafName))) {
+        score += 25
+    }
+    if (wantsReadOnly && !tokens.includes('set') && !tokens.includes('turn') && /set|state|activate/.test(leafName)) {
+        score -= 20
+    }
+
     return score
 }
 

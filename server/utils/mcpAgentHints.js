@@ -27,6 +27,23 @@ function extractEmail(command) {
     return match ? match[0] : null
 }
 
+const READONLY_VERB_PATTERN = /\b(list|show|display|enumerate|tell me (?:about |all )?|what are|what is on|what's on|get all|fetch all|read)\b/i
+const MUTATION_VERB_PATTERN = /\b(set|turn|switch|toggle|enable|disable|dim|brighten|change|update|activate|deactivate|color|off|on)\b/i
+
+function isReadOnlyCommand(command) {
+    const text = String(command || '').trim()
+    if (!text) return false
+    return READONLY_VERB_PATTERN.test(text) && !MUTATION_VERB_PATTERN.test(text)
+}
+
+function extractReadonlyFields(command) {
+    const text = String(command || '').toLowerCase()
+    return {
+        wantsIds: /\bids?\b/.test(text),
+        wantsNames: /\bnames?\b/.test(text),
+    }
+}
+
 function resolveCommandIntent(command) {
     const text = String(command || '').trim()
     if (!text) return null
@@ -51,6 +68,19 @@ function resolveCommandIntent(command) {
             skipListNodes: true,
             email: extractEmail(text),
             wantsCodeOnly: /\b(just the code|only the code|code only|just the otp)\b/i.test(text),
+        }
+    }
+
+    if (isReadOnlyCommand(text)) {
+        const listQuery = buildListNodesQuery(text)
+        const preview = listQuery ? searchNodeSummaries(listQuery, 5) : []
+        const fields = extractReadonlyFields(text)
+        return {
+            intent: 'readonly',
+            matches: preview,
+            skipListNodes: false,
+            listQuery,
+            ...fields,
         }
     }
 
@@ -104,6 +134,30 @@ function buildHintPrompt(hints, mode = 'auto') {
             `Run execute_node on "${QUICK_WEB_SEARCH_NODE}" with Query set to the user question.`,
             'You may skip list_nodes. Reply with the search result.',
         ].join(' ')
+    }
+
+    if (hints.intent === 'readonly') {
+        const parts = [
+            'The user wants information only — not to change or control anything.',
+            'Find and execute the appropriate read/fetch/list node, then present the results clearly (names, IDs, and key fields).',
+            'After execute_node succeeds, summarize the returned data for the user.',
+            'Do not call get_node_info or execute_node on control/action nodes (e.g. set state, turn on/off) unless the user explicitly asked to modify something.',
+            'Do not call list_nodes again after you already have the data.',
+        ]
+        if (hints.listQuery) {
+            parts.push(`Start with list_nodes using query: "${hints.listQuery}".`)
+        }
+        const preferred = (hints.matches || []).filter((match) => match.mcpPreferred != null && match.mcpPreferred !== false)
+        if (preferred.length === 1) {
+            parts.push(`Prefer "${preferred[0].nodeType}" for this read-only request.`)
+        }
+        if (hints.wantsIds && !hints.wantsNames) {
+            parts.push('User asked for IDs only. After fetch, reply with comma-separated light IDs (e.g. 1, 2, 3).')
+        } else if (hints.wantsNames && !hints.wantsIds) {
+            parts.push('User asked for names only. After fetch, reply with comma-separated light names.')
+        }
+        parts.push('Stop after one successful execute_node — do not call list_nodes or execute_node again.')
+        return parts.join(' ')
     }
 
     if (hints.intent === 'otp') {
@@ -178,6 +232,10 @@ module.exports = {
     OTP_NODE,
     GET_OTP_ACCOUNTS_NODE,
     QUICK_WEB_SEARCH_NODE,
+    READONLY_VERB_PATTERN,
+    MUTATION_VERB_PATTERN,
+    isReadOnlyCommand,
+    extractReadonlyFields,
     extractNodeQuery,
     extractEmail,
     buildListNodesQuery,

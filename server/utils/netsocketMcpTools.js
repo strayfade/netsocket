@@ -40,7 +40,7 @@ function compactNodeList(nodes, options = {}) {
 
     if (options.queried) {
         payload.queried = true
-        payload.hint = 'Results are ranked by relevance to your query. Nodes with mcpPreferred are recommended when multiple nodes can fulfill the task. Use the exact nodeType string when calling get_node_info or execute_node.'
+        payload.hint = 'Results are ranked by relevance to your query. Nodes with mcpPreferred are recommended when multiple nodes can fulfill the task — match mcpPreferred to the user intent (list/read vs set/control). Use the exact nodeType string when calling get_node_info or execute_node.'
     } else if (nodes.length > limit) {
         payload.hint = `Showing first ${limit} of ${nodes.length}. Pass a query to search by keywords, or category to filter (e.g. "Math", "Smart Home").`
     } else {

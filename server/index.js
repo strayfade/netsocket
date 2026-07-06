@@ -50,6 +50,7 @@ const cronTriggerManager = require('./utils/cronTriggerManager')
 const { reloadVars, getVarsSnapshot, replaceVarsAndPersist } = require('./utils/vars.js')
 const { reloadMcpAgentMemory } = require('./utils/mcpAgentMemory.js')
 const nodePreferencesRegistry = require('./manager/nodePreferencesRegistry')
+require('./utils/mcpAgentSettings')
 const { SCOPES, buildOAuthClient, getStoredTokens, mergeTokenSets, persistOAuthSession, CONNECTED_EMAIL_KEY } = require('./utils/googleAuth')
 const { startGoogleTriggerPoller } = require('./utils/googleTriggerPoller')
 
@@ -356,6 +357,31 @@ app.get("/", (req, res) => {
     res.redirect(302, "/login");
 });
 const { onNewCommand } = require('./utils/waitForCommands.js')
+const { runMcpAgent } = require('./utils/mcpAgent.js')
+
+app.post('/v1/mcp-agent', async (req, res) => {
+    if (!canAccessPrivateApi(req, res)) {
+        return res.sendStatus(401)
+    }
+    const command = typeof req.body?.command === 'string' ? req.body.command.trim() : ''
+    if (!command) {
+        return res.status(400).json({ error: 'command_required' })
+    }
+    const memoryKey = typeof req.body?.memoryKey === 'string' && req.body.memoryKey.trim()
+        ? req.body.memoryKey.trim()
+        : 'dashboard'
+    try {
+        const result = await runMcpAgent({
+            command,
+            memoryKey,
+            silent: true,
+        })
+        return res.status(200).json(result)
+    } catch (e) {
+        log(`mcp-agent: ${e}`, logColors.Error)
+        return res.status(500).json({ error: 'agent_failed', message: e?.message || String(e) })
+    }
+})
 
 app.post("/v1/triggers/command-palette", async (req, res) => {
     const expectedSecret = settingsManager.getSetting('triggersCommandPalette.secret')

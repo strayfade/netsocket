@@ -64,6 +64,17 @@ describe('mcp handlers', () => {
         )
     })
 
+    it('searchNodeSummaries prefers get-all nodes for list queries', () => {
+        const { searchNodeSummaries } = require('../server/mcp/handlers')
+        const matches = searchNodeSummaries('list all philips hue lights')
+
+        assert.ok(matches.length > 0)
+        assert.equal(
+            matches[0].nodeType,
+            'Smart Home/Philips Hue/Lights/Get All Lights'
+        )
+    })
+
     it('listNodeSummaries supports query objects', () => {
         const { listNodeSummaries } = require('../server/mcp/handlers')
         const nodes = listNodeSummaries({ query: 'philips hue get all lights' })
@@ -291,6 +302,26 @@ describe('runMcpAgent', () => {
         assert.equal(classifyInteractionMode('Turn on the lights', {}), 'tools')
     })
 
+    it('extractThinking pulls content from model thinking tags', () => {
+        const { extractThinking, summarizeSteps } = require('../server/utils/mcpAgent')
+        const raw = '<think>plan the steps</think>Visible output'
+        assert.equal(extractThinking(raw), 'plan the steps')
+        assert.equal(
+            summarizeSteps([{
+                text: raw,
+                toolCalls: [{ toolCallId: 'a', toolName: 'list_nodes', input: { query: 'math' } }],
+                toolResults: [{ toolCallId: 'a', toolName: 'list_nodes', output: { count: 1 } }],
+            }])[0].thinking,
+            'plan the steps'
+        )
+        assert.equal(summarizeSteps([{ text: raw }])[0].text, 'Visible output')
+        assert.equal(summarizeSteps([{
+            text: '',
+            toolCalls: [{ toolCallId: 'b', toolName: 'execute_node', input: { nodeType: 'Math/Add' } }],
+            toolResults: [{ toolCallId: 'b', toolName: 'execute_node', output: { success: true } }],
+        }])[0].toolCalls[0].output.success, true)
+    })
+
     it('detects when execution follow-up is needed', () => {
         const {
             needsExecutionFollowUp,
@@ -311,11 +342,19 @@ describe('runMcpAgent', () => {
             needsExecutionFollowUp('tools', [{
                 toolCalls: [{ toolName: 'list_nodes', input: {} }],
             }], {}),
-            false
+            true
         )
         assert.equal(
             needsExecutionFollowUp('tools', [{
-                toolCalls: [{ toolName: 'execute_node', input: { nodeType: 'Math/Add' } }],
+                toolCalls: [{
+                    toolCallId: 'a',
+                    toolName: 'execute_node',
+                    input: { nodeType: 'Math/Add' },
+                }],
+                toolResults: [{
+                    toolCallId: 'a',
+                    output: { success: true, outputs: { output_0: 5 } },
+                }],
             }], {}),
             false
         )
@@ -347,8 +386,32 @@ describe('runMcpAgent', () => {
             needsExecutionFollowUp('tools', chainedSteps, {}),
             true
         )
+        assert.equal(
+            needsExecutionFollowUp('tools', chainedSteps, { intent: 'readonly' }),
+            true
+        )
+        assert.equal(
+            needsExecutionFollowUp('tools', [], { intent: 'readonly' }),
+            true
+        )
 
-        const prepareStep = buildPrepareStep('tools', {}, 'turn on lights')
+        const successfulReadStep = [{
+            toolCalls: [{
+                toolCallId: 'a',
+                toolName: 'execute_node',
+                input: { nodeType: 'Smart Home/Philips Hue/Lights/Get All Lights' },
+            }],
+            toolResults: [{
+                toolCallId: 'a',
+                output: { success: true, outputs: { Lights: '[]' } },
+            }],
+        }]
+        assert.equal(
+            needsExecutionFollowUp('tools', successfulReadStep, { intent: 'readonly' }),
+            false
+        )
+
+        const prepareStep = buildPrepareStep('tools', {}, [])
         assert.deepEqual(
             prepareStep({ steps: [{ toolCalls: [{ toolName: 'get_node_info', input: {} }] }] }),
             { activeTools: ['execute_node'], toolChoice: 'required' }
@@ -358,12 +421,100 @@ describe('runMcpAgent', () => {
             { activeTools: ['execute_node'], toolChoice: 'required' }
         )
 
+        const readonlyPrepare = buildPrepareStep('tools', { intent: 'readonly' }, chainedSteps)
+        assert.deepEqual(
+            readonlyPrepare({ steps: chainedSteps }),
+            { toolChoice: 'none' }
+        )
+        assert.match(
+            buildContinuationMessage(successfulReadStep, { intent: 'readonly' }),
+            /Summarize the execute_node results/
+        )
+
         const chatPrepare = buildPrepareStep('chat', {}, 'hello')
         assert.deepEqual(chatPrepare({ steps: [] }), { toolChoice: 'none' })
 
         assert.equal(countToolCalls([
             { toolCalls: [{ toolName: 'get_node_info' }, { toolName: 'get_node_info' }] },
         ], 'get_node_info'), 2)
+    })
+
+    it('synthesizes readonly light ID responses from execute_node output', () => {
+        const {
+            synthesizeReadonlyResponse,
+            formatReadonlyLightsResponse,
+            extractRequestedFields,
+            buildStopWhen,
+            hasRedundantExecute,
+        } = require('../server/utils/mcpAgent')
+
+        const lightsJson = JSON.stringify([
+            { id: 1, name: 'Hue color lamp 1' },
+            { id: 2, name: 'Hue lightstrip plus 1' },
+        ])
+        const steps = [{
+            toolCalls: [{
+                toolCallId: 'a',
+                toolName: 'execute_node',
+                input: { nodeType: 'Smart Home/Philips Hue/Lights/Get All Lights' },
+            }],
+            toolResults: [{
+                toolCallId: 'a',
+                output: {
+                    success: true,
+                    outputs: { Lights: lightsJson },
+                },
+            }],
+        }]
+
+        assert.equal(
+            synthesizeReadonlyResponse('List all of the IDs of the philips hue lights', steps),
+            '1, 2'
+        )
+        assert.equal(
+            formatReadonlyLightsResponse('List all the philips hue lights', JSON.parse(lightsJson)),
+            'Hue color lamp 1 (1), Hue lightstrip plus 1 (2)'
+        )
+        assert.deepEqual(
+            extractRequestedFields('List all of the IDs of the philips hue lights'),
+            { wantsIds: true, wantsNames: false, valuesOnly: true }
+        )
+        assert.deepEqual(
+            extractRequestedFields('List all of the names of the philips hue lights'),
+            { wantsIds: false, wantsNames: true, valuesOnly: true }
+        )
+        assert.equal(
+            buildStopWhen({ intent: 'readonly' }, 15).some((condition) => condition({ steps })),
+            true
+        )
+        assert.equal(hasRedundantExecute([
+            { toolCalls: [{ toolName: 'execute_node', input: { nodeType: 'Math/Add' } }] },
+            { toolCalls: [{ toolName: 'execute_node', input: { nodeType: 'Math/Add' } }] },
+        ]), true)
+    })
+
+    it('supports direct readonly execute for zero-input list nodes', async () => {
+        const {
+            canDirectExecute,
+            pickReadonlyTargetNode,
+            requiresToolExecution,
+        } = require('../server/utils/mcpAgent')
+        const { resolveCommandNodeHints } = require('../server/utils/mcpAgentHints')
+        const hints = resolveCommandNodeHints('List all of the names of the philips hue lights')
+
+        assert.equal(requiresToolExecution('tools', hints), true)
+        assert.equal(
+            pickReadonlyTargetNode(hints).nodeType,
+            'Smart Home/Philips Hue/Lights/Get All Lights'
+        )
+        assert.equal(
+            canDirectExecute('Smart Home/Philips Hue/Lights/Get All Lights'),
+            true
+        )
+        assert.equal(
+            canDirectExecute('Smart Home/Philips Hue/Lights/Get Light by Name'),
+            false
+        )
     })
 })
 
@@ -430,6 +581,40 @@ describe('mcpAgentHints', () => {
         assert.match(buildHintPrompt(hints, 'tools'), /list_nodes using query/)
         assert.ok(hints.matches.some((node) => node.nodeType === 'Smart Home/Philips Hue/Lights/Get All Lights'))
     })
+
+    it('resolves readonly intent for list commands', () => {
+        const {
+            resolveCommandNodeHints,
+            buildHintPrompt,
+            isReadOnlyCommand,
+            extractReadonlyFields,
+        } = require('../server/utils/mcpAgentHints')
+        const command = 'List all the philips hue lights'
+
+        assert.equal(isReadOnlyCommand(command), true)
+        assert.equal(isReadOnlyCommand('Turn on all philips hue lights'), false)
+
+        const hints = resolveCommandNodeHints(command)
+        assert.equal(hints.intent, 'readonly')
+        assert.match(buildHintPrompt(hints, 'tools'), /information only/)
+        assert.match(buildHintPrompt(hints, 'tools'), /Do not call get_node_info or execute_node on control/)
+        assert.ok(hints.matches.some((node) => node.nodeType === 'Smart Home/Philips Hue/Lights/Get All Lights'))
+    })
+
+    it('resolves readonly ID-only hints for hue light commands', () => {
+        const { resolveCommandNodeHints, buildHintPrompt, extractReadonlyFields } = require('../server/utils/mcpAgentHints')
+        const command = 'List all of the IDs of the philips hue lights'
+        const fields = extractReadonlyFields(command)
+
+        assert.equal(fields.wantsIds, true)
+        assert.equal(fields.wantsNames, false)
+
+        const hints = resolveCommandNodeHints(command)
+        assert.equal(hints.intent, 'readonly')
+        assert.equal(hints.wantsIds, true)
+        assert.match(buildHintPrompt(hints, 'tools'), /IDs only/)
+        assert.match(buildHintPrompt(hints, 'tools'), /Stop after one successful execute_node/)
+    })
 })
 
 describe('MCP Agent node', () => {
@@ -459,5 +644,25 @@ describe('MCP Agent node', () => {
         assert.equal(schema.name, 'Quick Web Search LLM')
         assert.ok(schema.outputs.some((output) => output.name === 'Response'))
         assert.ok(schema.inputs.some((input) => input.name === 'Query'))
+    })
+})
+
+describe('mcpAgentSettings', () => {
+    it('defaults MCP Agent model to qwen3.5:9b-mxfp8 and resolves overrides', () => {
+        const {
+            MCP_AGENT_DEFAULT_MODEL,
+            MCP_AGENT_MODEL_SETTING,
+            resolveMcpAgentModel,
+        } = require('../server/utils/mcpAgentSettings')
+        const { getPrefs } = require('../server/manager/nodePreferencesRegistry')
+
+        assert.equal(MCP_AGENT_DEFAULT_MODEL, 'qwen3.5:9b-mxfp8')
+        assert.equal(resolveMcpAgentModel(), MCP_AGENT_DEFAULT_MODEL)
+        assert.equal(resolveMcpAgentModel('custom:7b'), 'custom:7b')
+
+        const pref = getPrefs().find((entry) => entry.id === MCP_AGENT_MODEL_SETTING)
+        assert.ok(pref)
+        assert.equal(pref.category, 'MCP')
+        assert.equal(pref.defaultVal, MCP_AGENT_DEFAULT_MODEL)
     })
 })
