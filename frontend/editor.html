@@ -151,7 +151,7 @@
             const n = Object.keys(sel).length;
             if (!keybindsBar || !keybindsInner) return;
             keybindsInner.innerHTML = "";
-            if (n < 0) {
+            if (n === 0) {
                 keybindsBar.hidden = true;
                 keybindsBar.setAttribute("aria-hidden", "true");
                 return;
@@ -163,9 +163,6 @@
             selectionSummary.textContent =
                 n === 1 ? "1 node selected" : `${n} nodes selected`;
             keybindsInner.appendChild(selectionSummary);
-            if (n === 0) {
-                appendKeybindItem(["Right-click"], "Add Nodes");
-            }
             if (n > 0) {
                 appendKeybindItem(["Double-click"], "Set Inputs");
                 appendKeybindItem(["Alt", "Drag"], "Clone");
