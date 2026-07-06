@@ -946,6 +946,7 @@
             if (settingsBackdrop) settingsBackdrop.addEventListener('click', closeSettingsModal)
         })
     </script>
+    <script src="/js/agentMarkdown.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const agentForm = document.getElementById('agent-command-form')
@@ -1048,6 +1049,18 @@
             const truncateJson = (text, max = 4000) => {
                 if (!text || text.length <= max) return text
                 return `${text.slice(0, max)}\n… (truncated)`
+            }
+
+            const setAgentMarkdownContent = (el, text) => {
+                if (!el) return
+                const value = String(text || '')
+                if (typeof window.renderAgentMarkdown === 'function') {
+                    el.classList.add('agent-markdown')
+                    el.innerHTML = window.renderAgentMarkdown(value)
+                } else {
+                    el.classList.remove('agent-markdown')
+                    el.textContent = value
+                }
             }
 
             const openAgentSidebar = () => {
@@ -1271,7 +1284,7 @@
                     if (step.text) {
                         const text = document.createElement('div')
                         text.className = 'agent-step-text'
-                        text.textContent = step.text
+                        setAgentMarkdownContent(text, step.text)
                         stepEl.appendChild(text)
                     }
 
@@ -1285,7 +1298,10 @@
                 if (data?.response) {
                     agentFinalResponse.hidden = false
                     agentFinalResponse.innerHTML = `<div class="agent-final-response-text"></div>`
-                    agentFinalResponse.querySelector('.agent-final-response-text').textContent = data.response
+                    setAgentMarkdownContent(
+                        agentFinalResponse.querySelector('.agent-final-response-text'),
+                        data.response
+                    )
                 } else {
                     agentFinalResponse.hidden = true
                     agentFinalResponse.innerHTML = ''

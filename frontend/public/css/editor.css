@@ -493,7 +493,83 @@ body:has(.agent-sidebar-root.is-open) .editor-top-chrome {
     font-size: 12px;
     line-height: 1.5;
     color: #ccc;
+    word-break: break-word;
+}
+
+.agent-markdown :first-child {
+    margin-top: 0;
+}
+
+.agent-markdown :last-child {
+    margin-bottom: 0;
+}
+
+.agent-markdown p,
+.agent-markdown ul,
+.agent-markdown ol,
+.agent-markdown pre,
+.agent-markdown blockquote {
+    margin: 0 0 0.65em;
+}
+
+.agent-markdown ul,
+.agent-markdown ol {
+    padding-left: 1.25em;
+}
+
+.agent-markdown h1,
+.agent-markdown h2,
+.agent-markdown h3,
+.agent-markdown h4,
+.agent-markdown h5,
+.agent-markdown h6 {
+    margin: 0 0 0.5em;
+    font-size: inherit;
+    font-weight: 600;
+    color: #e8e8e8;
+}
+
+.agent-markdown h1 { font-size: 1.15em; }
+.agent-markdown h2 { font-size: 1.1em; }
+.agent-markdown h3 { font-size: 1.05em; }
+
+.agent-markdown code {
+    font-family: 'Google Sans Code', 'Courier New', Courier, monospace;
+    font-size: 0.92em;
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.agent-markdown pre {
+    margin: 0 0 0.65em;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.35);
+    overflow-x: auto;
+}
+
+.agent-markdown pre code {
+    padding: 0;
+    background: transparent;
     white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.agent-markdown a {
+    color: #8ab4ff;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.agent-markdown a:hover {
+    color: #aecbfa;
+}
+
+.agent-final-response-text {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #f0f0f0;
     word-break: break-word;
 }
 
@@ -650,14 +726,6 @@ body:has(.agent-sidebar-root.is-open) .editor-top-chrome {
     border-radius: 10px;
     background: linear-gradient(135deg, rgba(74, 222, 128, 0.1) 0%, rgba(138, 180, 255, 0.08) 100%);
     border: 1px solid rgba(74, 222, 128, 0.25);
-}
-
-.agent-final-response-text {
-    font-size: 14px;
-    line-height: 1.5;
-    color: #f0f0f0;
-    white-space: pre-wrap;
-    word-break: break-word;
 }
 
 .agent-error-banner {
