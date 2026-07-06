@@ -64,18 +64,19 @@
                     aria-label="Agent command">
             </form>
             <div class="header-right">
-                <a href="#" id="open-backup" title="Move your graph and settings to another machine">
-                    <span>Backup</span>
+                <a href="#" id="open-backup" title="Move your graph and settings to another machine"
+                    aria-label="Backup">
+                    <span class="header-link-label">Backup</span>
                     <span class="material-symbols-outlined"
                         style="font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;">cloud_download</span>
                 </a>
-                <a href="#" id="open-settings">
-                    <span>Integrations</span>
+                <a href="#" id="open-settings" aria-label="Integrations">
+                    <span class="header-link-label">Integrations</span>
                     <span class="material-symbols-outlined"
                         style="font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;">settings</span>
                 </a>
-                <a href="/logout">
-                    <span>Log Out</span>
+                <a href="/logout" aria-label="Log out">
+                    <span class="header-link-label">Log Out</span>
                     <span class="material-symbols-outlined"
                         style="font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;">arrow_outward</span>
                 </a>
@@ -164,13 +165,22 @@
                 n === 1 ? "1 node selected" : `${n} nodes selected`;
             keybindsInner.appendChild(selectionSummary);
             if (n > 0) {
-                appendKeybindItem(["Double-click"], "Set Inputs");
-                appendKeybindItem(["Alt", "Drag"], "Clone");
-                appendKeybindItem(["Shift"], "Multiselect");
-                appendKeybindItem(["CTRL", "C"], "Copy");
-                appendKeybindItem(["CTRL", "V"], "Paste");
+                const isTouch = (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) ||
+                    ("ontouchstart" in window);
+                if (isTouch) {
+                    appendKeybindItem(["Long-press"], "Context menu");
+                    appendKeybindItem(["Double-tap"], "Set Inputs");
+                    appendKeybindItem(["Pinch"], "Zoom");
+                    appendKeybindItem(["Drag"], "Pan canvas / move nodes");
+                } else {
+                    appendKeybindItem(["Double-click"], "Set Inputs");
+                    appendKeybindItem(["Alt", "Drag"], "Clone");
+                    appendKeybindItem(["Shift"], "Multiselect");
+                    appendKeybindItem(["CTRL", "C"], "Copy");
+                    appendKeybindItem(["CTRL", "V"], "Paste");
+                }
             }
-            if (n > 1) {
+            if (n > 1 && !((navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || ("ontouchstart" in window))) {
                 appendKeybindItem(["Shift", "Drag"], "Move Nodes");
             }
         };
@@ -556,7 +566,8 @@
         <div id="agent-backdrop" class="agent-backdrop" aria-hidden="true"></div>
         <aside id="agent-sidebar" class="agent-sidebar" role="complementary" aria-labelledby="agent-sidebar-title">
             <header class="agent-sidebar-header">
-                <button type="button" id="agent-sidebar-close" class="agent-sidebar-close" title="Close">
+                <button type="button" id="agent-sidebar-close" class="agent-sidebar-close" title="Close"
+                    aria-label="Close agent panel">
                     <span class="material-symbols-outlined" aria-hidden="true">close</span>
                 </button>
                 <div class="agent-sidebar-heading">
@@ -607,11 +618,9 @@
         <div class="settings-shell" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
             <div id="settings-sidebar">
                 <div class="settings-sidebar-top">
-                    <span type="button" id="close-settings" class="settings-close-btn">
-                        <span class="material-symbols-outlined">
-                            close
-                        </span>
-                    </span>
+                    <button type="button" id="close-settings" class="settings-close-btn" aria-label="Close settings">
+                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                    </button>
                 </div>
                 <span class="settings-tabs-container-header">Integrations</span>
                 <div id="settings-tabs-container">
