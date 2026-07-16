@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <rootless.h>
+#import <Security/Security.h>
 
 @interface NCNotificationRequest : NSObject
 @property (nonatomic, retain) NSString *sectionIdentifier;
@@ -8,6 +9,8 @@
 
 NSURLSession *session;
 static NSString *const kNetsocketLogPath = @"/var/mobile/Library/Preferences/com.strayfade.netsocket.log";
+static NSString *const kNetsocketDeviceIdService = @"com.strayfade.netsocket.deviceid";
+static NSString *const kNetsocketDeviceIdAccount = @"deviceId";
 
 static void netsocketAppendLogLine(NSString *line) {
     if (!line) {
@@ -129,6 +132,64 @@ static NSURL *netsocketURLByAppendingPassword(NSURL *baseURL, NSString *password
     return components.URL ?: baseURL;
 }
 
+static NSString *netsocketReadKeychainDeviceId(void) {
+    NSDictionary *query = @{
+        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+        (__bridge id)kSecAttrService: kNetsocketDeviceIdService,
+        (__bridge id)kSecAttrAccount: kNetsocketDeviceIdAccount,
+        (__bridge id)kSecReturnData: @YES,
+        (__bridge id)kSecMatchLimit: (__bridge id)kSecMatchLimitOne,
+    };
+
+    CFTypeRef result = NULL;
+    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
+    if (status != errSecSuccess || !result) {
+        return nil;
+    }
+
+    NSData *data = (__bridge_transfer NSData *)result;
+    if (!data.length) {
+        return nil;
+    }
+    return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+}
+
+static void netsocketStoreKeychainDeviceId(NSString *deviceId) {
+    if (!deviceId.length) {
+        return;
+    }
+
+    NSData *data = [deviceId dataUsingEncoding:NSUTF8StringEncoding];
+    NSDictionary *query = @{
+        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+        (__bridge id)kSecAttrService: kNetsocketDeviceIdService,
+        (__bridge id)kSecAttrAccount: kNetsocketDeviceIdAccount,
+    };
+    SecItemDelete((__bridge CFDictionaryRef)query);
+
+    NSDictionary *attributes = @{
+        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+        (__bridge id)kSecAttrService: kNetsocketDeviceIdService,
+        (__bridge id)kSecAttrAccount: kNetsocketDeviceIdAccount,
+        (__bridge id)kSecAttrAccessible: (__bridge id)kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        (__bridge id)kSecValueData: data,
+    };
+    SecItemAdd((__bridge CFDictionaryRef)attributes, NULL);
+}
+
+// UUID stored in the Keychain so it survives tweak/app reinstalls on the same device.
+static NSString *netsocketDeviceId(void) {
+    NSString *existing = netsocketReadKeychainDeviceId();
+    if (existing.length > 0) {
+        return existing;
+    }
+
+    NSString *generated = [[NSUUID UUID] UUIDString].lowercaseString;
+    netsocketStoreKeychainDeviceId(generated);
+    netsocketLog(@"Generated persistent device ID.");
+    return generated;
+}
+
 %hook NCNotificationDispatcher
 -(void)postNotificationWithRequest:(NCNotificationRequest*)req {
     @try {
@@ -144,6 +205,7 @@ static NSURL *netsocketURLByAppendingPassword(NSURL *baseURL, NSString *password
             @"textContent": message,
             @"title": title,
             @"bundleIdentifier": bundleIdentifier,
+            @"deviceId": netsocketDeviceId(),
         };
         NSString *password = netsocketReadStringPreference(CFSTR("Password"), @"");
         serverUrl = netsocketURLByAppendingPassword(serverUrl, password);

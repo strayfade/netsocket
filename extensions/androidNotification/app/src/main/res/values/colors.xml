@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="netsocket_primary">#FFFFFF</color>
+    <color name="netsocket_on_primary">#000000</color>
+    <color name="netsocket_background">#000000</color>
+    <color name="netsocket_surface">#000000</color>
+    <color name="netsocket_surface_variant">#111111</color>
+    <color name="netsocket_outline">#333333</color>
+    <color name="netsocket_on_background">#FFFFFF</color>
+    <color name="netsocket_on_surface_muted">#AAAAAA</color>
+    <color name="ic_launcher_background">#000000</color>
+</resources>

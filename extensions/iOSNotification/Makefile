@@ -8,7 +8,7 @@ TWEAK_NAME = netsocket
 
 netsocket_FILES = Tweak.xm
 netsocket_CFLAGS = -fobjc-arc -w
-netsocket_FRAMEWORKS = CydiaSubstrate SpringBoard
+netsocket_FRAMEWORKS = CydiaSubstrate SpringBoard Security
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 SUBPROJECTS += prefs

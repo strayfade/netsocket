@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">netsocket</string>
+    <string name="app_subtitle">Forwards every device notification to your netsocket server, including while the screen is locked.</string>
+    <string name="listener_service_label">netsocket notification listener</string>
+    <string name="host_hint">Host</string>
+    <string name="port_hint">Port (optional)</string>
+    <string name="port_helper">Leave blank to use the HTTPS/HTTP default (443/80).</string>
+    <string name="secret_hint">Secret key</string>
+    <string name="secret_helper">Appended to /v1/postNotification/ — must match Notification Secret Key in netsocket settings</string>
+    <string name="use_https">Use HTTPS</string>
+    <string name="forwarding_enabled">Forward notifications</string>
+    <string name="endpoint_label">Endpoint</string>
+    <string name="device_id_label">Device ID</string>
+    <string name="save_settings">Save settings</string>
+    <string name="settings_saved">Settings saved</string>
+    <string name="permissions_heading">Required permissions</string>
+    <string name="status_listener_enabled">Notification access: enabled</string>
+    <string name="status_listener_disabled">Notification access: disabled — tap below and enable netsocket</string>
+    <string name="open_listener_settings">Open notification access</string>
+    <string name="status_battery_ok">Battery optimization: unrestricted</string>
+    <string name="status_battery_restricted">Battery optimization: restricted — allow unrestricted for reliable capture</string>
+    <string name="open_battery_settings">Allow unrestricted battery</string>
+    <string name="start_keepalive">Start keep-alive service</string>
+    <string name="keepalive_started">Keep-alive service started</string>
+    <string name="keepalive_channel_name">netsocket keep-alive</string>
+    <string name="keepalive_channel_description">Persistent service so notifications are forwarded while locked</string>
+    <string name="keepalive_title">netsocket is forwarding notifications</string>
+    <string name="keepalive_text">Running in the background</string>
+</resources>

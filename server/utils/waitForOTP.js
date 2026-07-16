@@ -6,14 +6,15 @@ let newOTP = false
 let lastOTP = 0
 
 const onNewNotification = async (notificationContent) => {
-    await triggerNodesByType('Triggers/iOS Notification', {
+    await triggerNodesByType('Triggers/Notification Received', {
         'Title': notificationContent.title,
         'Content': notificationContent.textContent,
         'Bundle ID': notificationContent.bundleIdentifier,
+        'Device ID': notificationContent.deviceId,
     })
 
     const prompt = `
-    The following is the content of an iOS notification. If the notification contains a two-factor/OTP authentication code, respond with ONLY the code, isolating it from the rest of the text. If it does NOT contain a two-factor/OTP code, simply respond with "None". Codes will usually be six-digit numerical values, so prioritize those if they exist in the notification.
+    The following is the content of a mobile notification. If the notification contains a two-factor/OTP authentication code, respond with ONLY the code, isolating it from the rest of the text. If it does NOT contain a two-factor/OTP code, simply respond with "None". Codes will usually be six-digit numerical values, so prioritize those if they exist in the notification.
     
     ${notificationContent.textContent}
     `

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.NetsocketNotification" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/netsocket_primary</item>
+        <item name="colorOnPrimary">@color/netsocket_on_primary</item>
+        <item name="colorSecondary">@color/netsocket_primary</item>
+        <item name="colorOnSecondary">@color/netsocket_on_primary</item>
+        <item name="colorSurface">@color/netsocket_surface</item>
+        <item name="colorOnSurface">@color/netsocket_on_background</item>
+        <item name="colorSurfaceVariant">@color/netsocket_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/netsocket_on_surface_muted</item>
+        <item name="colorOutline">@color/netsocket_outline</item>
+        <item name="android:statusBarColor">@color/netsocket_background</item>
+        <item name="android:navigationBarColor">@color/netsocket_background</item>
+        <item name="android:windowBackground">@color/netsocket_background</item>
+        <item name="android:colorBackground">@color/netsocket_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

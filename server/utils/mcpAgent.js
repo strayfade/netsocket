@@ -520,7 +520,7 @@ async function runMcpAgent(options = {}) {
         let allSteps = []
         let text = ''
 
-        const directStep = await tryDirectReadonlyExecute(hints, silent)
+        /*const directStep = await tryDirectReadonlyExecute(hints, silent)
         if (directStep) {
             allSteps = [directStep]
             const directResponse = synthesizeReadonlyResponse(command, allSteps)
@@ -537,7 +537,7 @@ async function runMcpAgent(options = {}) {
                     command,
                 }
             }
-        }
+        }*/
 
         while (allSteps.length < maxSteps) {
             const remainingSteps = maxSteps - allSteps.length
