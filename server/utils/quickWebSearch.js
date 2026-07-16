@@ -2,7 +2,7 @@
 
 const { generateText, stepCountIs, tool, jsonSchema } = require('ai')
 const { log, logColors } = require('../log')
-const { DEFAULT_MODEL, getOllamaProvider, sanitizeAiOutput } = require('./languageModel')
+const { resolveDefaultModel, getOllamaProvider, sanitizeAiOutput } = require('./languageModel')
 const {
     webSearch,
     readWebPage,
@@ -107,7 +107,7 @@ async function quickWebSearch(query, options = {}) {
         return { response: '', error: 'Query is empty' }
     }
 
-    const modelName = String(options.model || DEFAULT_MODEL).trim() || DEFAULT_MODEL
+    const modelName = resolveDefaultModel(options.model)
     const silent = options.silent === true
     const maxResults = Number(options.maxResults) > 0
         ? Math.min(Number(options.maxResults), 5)

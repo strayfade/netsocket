@@ -1,5 +1,5 @@
 const { log, logColors } = require('../log')
-const NodeRegistry = require('./nodeImporter').getAvailableNodes()
+const { getAvailableNodes } = require('./nodeImporter')
 const { getNodes, setNodes } = require('./saveState')
 const {
     LINK,
@@ -14,12 +14,35 @@ const {
     resolvePropertyInput,
 } = require('./graphUtils')
 
-async function resolveInputs(node, customInputs, runNode) {
+const MAX_SUBGRAPH_DEPTH = 16
+
+function resolveGraphContext(options = {}) {
+    if (options.graphRoot) {
+        return {
+            getRoot: () => options.graphRoot,
+            persistRoot: (root) => {
+                options.graphRoot = root
+                if (typeof options.setGraphRoot === 'function') {
+                    options.setGraphRoot(root)
+                }
+            },
+            isScoped: true,
+        }
+    }
+    return {
+        getRoot: () => getNodes(),
+        persistRoot: (root) => setNodes(root),
+        isScoped: false,
+    }
+}
+
+async function resolveInputs(node, customInputs, runNode, options = {}) {
     if (customInputs) {
         return customInputs
     }
 
-    let graphRoot = getNodes()
+    const ctx = resolveGraphContext(options)
+    let graphRoot = ctx.getRoot()
     const inputs = {}
 
     if (!node.inputs) {
@@ -38,8 +61,8 @@ async function resolveInputs(node, customInputs, runNode) {
 
             const connectedNode = findNodeById(graphRoot, link[LINK.ORIGIN_ID])
             if (isPureNode(connectedNode)) {
-                await runNode(connectedNode)
-                graphRoot = getNodes()
+                await runNode(connectedNode, undefined, options)
+                graphRoot = ctx.getRoot()
             }
             inputs[input.name] = getLinkValue(graphRoot, link[LINK.ID])
         } else {
@@ -50,8 +73,9 @@ async function resolveInputs(node, customInputs, runNode) {
     return inputs
 }
 
-function populateOutputLinkValues(node, outputValues) {
-    let graphRoot = getNodes()
+function populateOutputLinkValues(node, outputValues, options = {}) {
+    const ctx = resolveGraphContext(options)
+    let graphRoot = ctx.getRoot()
     if (!node.outputs) {
         return
     }
@@ -70,11 +94,12 @@ function populateOutputLinkValues(node, outputValues) {
         }
     }
 
-    setNodes(graphRoot)
+    ctx.persistRoot(graphRoot)
 }
 
-function getEventOutputGroups(node) {
-    const graphRoot = getNodes()
+function getEventOutputGroups(node, options = {}) {
+    const ctx = resolveGraphContext(options)
+    const graphRoot = ctx.getRoot()
     const groups = []
     if (!node.outputs) {
         return groups
@@ -101,11 +126,18 @@ function getEventOutputGroups(node) {
     return groups
 }
 
-async function executeGraph(nodeToTrigger, customInputs) {
+async function executeGraph(nodeToTrigger, customInputs, options = {}) {
     if (!nodeToTrigger) {
         return
     }
 
+    const depth = options.depth || 0
+    if (depth > MAX_SUBGRAPH_DEPTH) {
+        log(`Subgraph nesting exceeded max depth (${MAX_SUBGRAPH_DEPTH})`, logColors.Error)
+        return
+    }
+
+    const NodeRegistry = getAvailableNodes()
     const impl = NodeRegistry[nodeToTrigger.type]
     if (!impl) {
         log(`No implementation found for ${nodeToTrigger.type}`, logColors.Error)
@@ -115,17 +147,23 @@ async function executeGraph(nodeToTrigger, customInputs) {
     try {
         const behaviors = {
             populateNextNodeLinks: async (outputValues = []) => {
-                populateOutputLinkValues(nodeToTrigger, outputValues)
+                populateOutputLinkValues(nodeToTrigger, outputValues, options)
             },
-            getOutputNodeGroups: () => getEventOutputGroups(nodeToTrigger),
+            getOutputNodeGroups: () => getEventOutputGroups(nodeToTrigger, options),
             triggerNodeGroup: async (nodes = []) => {
                 for (const node of nodes) {
-                    await executeGraph(node)
+                    await executeGraph(node, undefined, options)
                 }
             },
+            __executeOptions: options,
         }
 
-        const inputs = await resolveInputs(nodeToTrigger, customInputs, executeGraph)
+        const inputs = await resolveInputs(
+            nodeToTrigger,
+            customInputs,
+            executeGraph,
+            options
+        )
         await impl(nodeToTrigger.properties, inputs, behaviors)
     } catch (exception) {
         log(exception, logColors.Error)
@@ -133,13 +171,14 @@ async function executeGraph(nodeToTrigger, customInputs) {
 }
 
 async function triggerNodesByType(nodeType, inputsOrBuilder, options = {}) {
-    const graphRoot = getNodes()
+    const graphRoot = options.graphRoot || getNodes()
     if (!getLiteGraph(graphRoot)) {
         return
     }
 
     const filter = options.filter
     const nodes = findNodesByType(graphRoot, nodeType)
+    const execOptions = options.graphRoot ? options : {}
 
     for (const node of nodes) {
         if (filter && !filter(node)) {
@@ -148,8 +187,59 @@ async function triggerNodesByType(nodeType, inputsOrBuilder, options = {}) {
         const inputs = typeof inputsOrBuilder === 'function'
             ? inputsOrBuilder(node)
             : inputsOrBuilder
-        await executeGraph(node, inputs)
+        await executeGraph(node, inputs, execOptions)
     }
 }
 
-module.exports = { executeGraph, triggerNodesByType }
+function seedNodeOutputValue(graphRoot, node, value) {
+    if (!node || !node.outputs || !node.outputs[0]) {
+        return graphRoot
+    }
+    if (!node.properties) {
+        node.properties = {}
+    }
+    node.properties._value = value
+
+    const links = node.outputs[0].links || []
+    for (const linkId of links) {
+        graphRoot = ensureLinkValueSlot(graphRoot, linkId)
+        graphRoot.currentValues[linkId] = value
+    }
+    return graphRoot
+}
+
+async function resolveNodeInputValue(node, inputName, options = {}) {
+    const ctx = resolveGraphContext(options)
+    let graphRoot = ctx.getRoot()
+    if (!node.inputs) {
+        return resolvePropertyInput(node.properties, inputName)
+    }
+    const input = node.inputs.find((port) => port.name === inputName) || node.inputs[0]
+    if (!input) {
+        return resolvePropertyInput(node.properties, inputName)
+    }
+    if (input.link != null) {
+        const link = findLink(graphRoot, input.link)
+        if (!link || isEventLink(link)) {
+            return resolvePropertyInput(node.properties, input.name)
+        }
+        const connectedNode = findNodeById(graphRoot, link[LINK.ORIGIN_ID])
+        if (isPureNode(connectedNode)) {
+            await executeGraph(connectedNode, undefined, options)
+            graphRoot = ctx.getRoot()
+        }
+        return getLinkValue(graphRoot, link[LINK.ID])
+    }
+    return resolvePropertyInput(node.properties, input.name)
+}
+
+module.exports = {
+    executeGraph,
+    triggerNodesByType,
+    resolveInputs,
+    populateOutputLinkValues,
+    getEventOutputGroups,
+    seedNodeOutputValue,
+    resolveNodeInputValue,
+    MAX_SUBGRAPH_DEPTH,
+}

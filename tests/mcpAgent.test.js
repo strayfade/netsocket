@@ -648,21 +648,30 @@ describe('MCP Agent node', () => {
 })
 
 describe('mcpAgentSettings', () => {
-    it('defaults MCP Agent model to qwen3.5:9b-mxfp8 and resolves overrides', () => {
+    it('falls back to the Ollama default model and resolves overrides', () => {
         const {
-            MCP_AGENT_DEFAULT_MODEL,
             MCP_AGENT_MODEL_SETTING,
             resolveMcpAgentModel,
         } = require('../server/utils/mcpAgentSettings')
+        const {
+            DEFAULT_MODEL,
+            OLLAMA_DEFAULT_MODEL_SETTING,
+            resolveDefaultModel,
+        } = require('../server/utils/languageModel')
         const { getPrefs } = require('../server/manager/nodePreferencesRegistry')
 
-        assert.equal(MCP_AGENT_DEFAULT_MODEL, 'qwen3.5:9b-mxfp8')
-        assert.equal(resolveMcpAgentModel(), MCP_AGENT_DEFAULT_MODEL)
+        assert.equal(resolveDefaultModel(), DEFAULT_MODEL)
+        assert.equal(resolveMcpAgentModel(), DEFAULT_MODEL)
         assert.equal(resolveMcpAgentModel('custom:7b'), 'custom:7b')
 
-        const pref = getPrefs().find((entry) => entry.id === MCP_AGENT_MODEL_SETTING)
-        assert.ok(pref)
-        assert.equal(pref.category, 'MCP')
-        assert.equal(pref.defaultVal, MCP_AGENT_DEFAULT_MODEL)
+        const mcpPref = getPrefs().find((entry) => entry.id === MCP_AGENT_MODEL_SETTING)
+        assert.ok(mcpPref)
+        assert.equal(mcpPref.category, 'MCP')
+        assert.equal(mcpPref.defaultVal, '')
+
+        const ollamaPref = getPrefs().find((entry) => entry.id === OLLAMA_DEFAULT_MODEL_SETTING)
+        assert.ok(ollamaPref)
+        assert.equal(ollamaPref.category, 'Ollama')
+        assert.equal(ollamaPref.defaultVal, DEFAULT_MODEL)
     })
 })

@@ -1,6 +1,9 @@
 const { config } = require('../config')
 const { log, logColors } = require('../log')
 const settingsManager = require('../manager/settingsManager')
+const OLLAMA_DEFAULT_MODEL_SETTING = 'ollama.defaultModel'
+const DEFAULT_MODEL = 'gemma4:e2b'
+
 require('../manager/nodePreferencesRegistry').addPref(
     'Ollama',
     'ollama.ip',
@@ -9,10 +12,31 @@ require('../manager/nodePreferencesRegistry').addPref(
     '127.0.0.1',
     '<p>Hostname or IP where <strong>Ollama</strong> is listening (port <code>11434</code> is assumed). Examples: <code>127.0.0.1</code> or <code>my-server.local</code>.</p>'
 )
+require('../manager/nodePreferencesRegistry').addPref(
+    'Ollama',
+    OLLAMA_DEFAULT_MODEL_SETTING,
+    'Default model',
+    'text',
+    DEFAULT_MODEL,
+    '<p>Ollama model used by default for language-model nodes, <code>askAI</code>, and MCP agents (unless overridden). Example: <code>gemma4:e2b</code> or <code>qwen3.5:9b-mxfp8</code>.</p>'
+)
 
 const { createOllama } = require('ollama-ai-provider-v2');
 
-const DEFAULT_MODEL = 'gemma4:e2b'
+function resolveDefaultModel(override) {
+    const explicit = String(override || '').trim()
+    if (explicit) {
+        return explicit
+    }
+    const stored = settingsManager.getStoredValue(OLLAMA_DEFAULT_MODEL_SETTING)
+    if (stored !== undefined) {
+        const trimmed = String(stored).trim()
+        if (trimmed) {
+            return trimmed
+        }
+    }
+    return DEFAULT_MODEL
+}
 
 // Keep models resident in Ollama memory; omitting keep_alive resets the timer to ~5m per request.
 const OLLAMA_KEEP_ALIVE = -1
@@ -125,8 +149,7 @@ const askAI = async (userText, systemPrompt, model) => {
             userText = ""
         if (!systemPrompt)
             systemPrompt = defaultSystemPrompt
-        if (!model)
-            model = DEFAULT_MODEL
+        model = resolveDefaultModel(model)
         currentConversation = [{
             role: "system",
             content: systemPrompt
@@ -161,4 +184,12 @@ const getOllamaProvider = () => {
     return ollama
 }
 
-module.exports = { DEFAULT_MODEL, askAI, reinitOllama, getOllamaProvider, sanitizeAiOutput }
+module.exports = {
+    DEFAULT_MODEL,
+    OLLAMA_DEFAULT_MODEL_SETTING,
+    resolveDefaultModel,
+    askAI,
+    reinitOllama,
+    getOllamaProvider,
+    sanitizeAiOutput,
+}

@@ -1,6 +1,5 @@
 const { string } = require('../../utils/inputParser')
 const { quickWebSearch } = require('../../utils/quickWebSearch')
-const { DEFAULT_MODEL } = require('../../utils/languageModel')
 
 class NodeDefinition {
     constructor() {
@@ -8,7 +7,7 @@ class NodeDefinition {
         this.addInput('Query', 'string')
         this.addInput('Model', 'string')
         this.addProperty('Query', '')
-        this.addProperty('Model', DEFAULT_MODEL)
+        this.addProperty('Model', '')
         this.addOutput('', LiteGraph.EVENT)
         this.addOutput('Response', 'string')
         this.desc = 'Runs a fast web search on a natural language query and returns a concise LLM summary. The LLM may read individual pages when snippets are not enough.'
@@ -20,7 +19,7 @@ NodeDefinition.prototype.portMeta = {
 	inputs: {
 		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
 		Query: {"description":"Web search query text.","structure":"Search query string.","required":true},
-		Model: {"description":"Language model name or ID.","structure":"Model identifier string (provider-specific).","required":false},
+		Model: {"description":"Language model name or ID. Leave empty to use the Ollama default model setting.","structure":"Model identifier string (provider-specific).","required":false},
 	},
 	outputs: {
 		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},

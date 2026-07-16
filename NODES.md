@@ -305,6 +305,23 @@ const NodeFunction = async (node, params, behaviors) => {
 module.exports = { NodeDefinition, NodeFunction };
 ```
 
+## Subgraph (function) nodes
+
+Named subgraphs are user-defined composite nodes stored in `data/subgraphs.json`.
+
+- Create a blank definition: right-click canvas → **Create Subgraph…**
+- Wrap a selection: select nodes → right-click → **Create Subgraph**
+- Edit: double-click a `Subgraphs/<Name>` Call node (or use **Edit Subgraph**)
+- Inside a definition, use interface nodes:
+  - `Subgraph/On Trigger` — event entry when the Call runs
+  - `Subgraph/Input` — named data input (Name / Type properties)
+  - `Subgraph/Output` — named data output (Name / Type properties)
+  - `Subgraph/Output Trigger` — named event exit (Name property); fires the matching Call event output when triggered
+- Right-click a Call node → **Rename** to rename the shared definition (updates Add Node and all instances).
+- Definitions are shared (function-style): editing one updates every Call instance and the Add Node entry under **Subgraphs**.
+
+Server execution runs the inner graph in an isolated `currentValues` scope (`server/manager/subgraphExecute.js`).
+
 ## Authoring workflow
 
 1. Pick category and file path in `server/nodes`.

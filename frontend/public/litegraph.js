@@ -11628,7 +11628,7 @@ LGraphNode.prototype.executeAction = function(action)
             //console.log("Process showConnectionMenu selection");
             switch (v) {
                 case "Add Node":
-                    LGraphCanvas.onMenuAdd(null, null, e, menu, function (node) {
+                    that.showAddNodeMenu(e, menu, function (node) {
                         if (isFrom) {
                             opts.nodeFrom.connectByType(iSlotConn, node, fromSlotType);
                         } else {
@@ -13804,6 +13804,124 @@ LGraphNode.prototype.executeAction = function(action)
         white: { color: "#dbdbdb", bgcolor: "#000", groupcolor: "#444" }
     };
 
+    //Builds the "Add Node" category entries so they can be inlined directly into a
+    //context menu (instead of living behind an "Add Node" submenu). Each top-level
+    //category opens its own submenu; leaf entries create the node at the click position.
+    LGraphCanvas.getAddNodeMenuEntries = function (canvas, base_category, afterCreate) {
+        base_category = base_category || "";
+        var graph = canvas.graph;
+        if (!graph) return [];
+        var ref_window = canvas.getCanvasWindow();
+        var entries = [];
+
+        var categories = LiteGraph.getNodeTypesCategories(canvas.filter || graph.filter).filter(function (category) { return category.startsWith(base_category) });
+        categories.forEach(function (category) {
+            if (!category)
+                return;
+
+            var base_category_regex = new RegExp('^(' + base_category + ')');
+            var category_name = category.replace(base_category_regex, "").split('/')[0];
+            var category_path = base_category === '' ? category_name + '/' : base_category + category_name + '/';
+
+            var name = category_name;
+            if (name.indexOf("::") != -1) //in case it has a namespace like "shader::math/rand" it hides the namespace
+                name = name.split("::")[1];
+
+            var index = entries.findIndex(function (entry) { return entry.value === category_path });
+            if (index === -1) {
+                entries.push({
+                    value: category_path, content: name, has_submenu: true, callback: function (value, event, mouseEvent, contextMenu) {
+                        var subEntries = LGraphCanvas.getAddNodeMenuEntries(canvas, value.value, afterCreate);
+                        new LiteGraph.ContextMenu(subEntries, { event: mouseEvent, parentMenu: contextMenu }, ref_window);
+                    }
+                });
+            }
+        });
+
+        var nodes = LiteGraph.getNodeTypesInCategory(base_category.slice(0, -1), canvas.filter || graph.filter);
+        nodes.forEach(function (node) {
+            if (node.skip_list)
+                return;
+
+            entries.push({
+                value: node.type, content: node.title, has_submenu: false, callback: function (value, event, mouseEvent, contextMenu) {
+                    var first_event = contextMenu.getFirstEvent();
+                    canvas.graph.beforeChange();
+                    var newNode = LiteGraph.createNode(value.value);
+                    if (newNode) {
+                        newNode.pos = canvas.convertEventToCanvasOffset(first_event);
+                        canvas.graph.add(newNode);
+                        if (afterCreate) afterCreate(newNode);
+                    }
+                    canvas.graph.afterChange();
+                }
+            });
+        });
+
+        return entries;
+    };
+
+    //Returns a flat, sorted list of node entries whose title/type matches `query`.
+    //Used by the context-menu search box; each entry places the node at `event`.
+    LGraphCanvas.getFilteredAddNodeEntries = function (canvas, query, event, afterCreate) {
+        var graph = canvas.graph;
+        if (!graph) return [];
+        var q = (query || "").trim().toLowerCase();
+        var filter = canvas.filter || graph.filter;
+        var seen = {};
+        var results = [];
+
+        for (var key in LiteGraph.registered_node_types) {
+            var ctor = LiteGraph.registered_node_types[key];
+            if (!ctor || ctor.filter != filter || ctor.skip_list)
+                continue;
+            var type = ctor.type || key;
+            if (seen[type])
+                continue;
+            var title = ctor.title || type;
+            if (q && (title + " " + type).toLowerCase().indexOf(q) === -1)
+                continue;
+            seen[type] = true;
+            results.push({ type: type, title: title });
+        }
+
+        results.sort(function (a, b) { return a.title.localeCompare(b.title) });
+
+        return results.map(function (r) {
+            return {
+                value: r.type,
+                content: r.title,
+                callback: function () {
+                    canvas.graph.beforeChange();
+                    var newNode = LiteGraph.createNode(r.type);
+                    if (newNode) {
+                        newNode.pos = canvas.convertEventToCanvasOffset(event);
+                        canvas.graph.add(newNode);
+                        if (afterCreate) afterCreate(newNode);
+                    }
+                    canvas.graph.afterChange();
+                }
+            };
+        });
+    };
+
+    //Opens the new-style Add Node menu (search box + inline categories) anchored to `e`.
+    //`afterCreate(node)` runs after a node is placed, e.g. to auto-connect it to a link.
+    LGraphCanvas.prototype.showAddNodeMenu = function (e, parentMenu, afterCreate) {
+        var canvas = this;
+        var ref_window = canvas.getCanvasWindow();
+        var entries = LGraphCanvas.getAddNodeMenuEntries(canvas, "", afterCreate);
+        return new LiteGraph.ContextMenu(entries, {
+            event: e,
+            parentMenu: parentMenu || null,
+            searchable: true,
+            searchPlaceholder: "Search nodes…",
+            searchEntries: function (query) {
+                return LGraphCanvas.getFilteredAddNodeEntries(canvas, query, e, afterCreate);
+            }
+        }, ref_window);
+    };
+
     LGraphCanvas.prototype.getCanvasMenuOptions = function () {
         var options = null;
         var that = this;
@@ -13811,11 +13929,6 @@ LGraphNode.prototype.executeAction = function(action)
             options = this.getMenuOptions();
         } else {
             options = [
-                {
-                    content: "Add Node",
-                    has_submenu: true,
-                    callback: LGraphCanvas.onMenuAdd
-                },
                 { content: "Add Group", callback: LGraphCanvas.onGroupAdd },
                 //{ content: "Arrange", callback: that.graph.arrange },
                 //{content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
@@ -13845,6 +13958,14 @@ LGraphNode.prototype.executeAction = function(action)
             if (extra) {
                 options = options.concat(extra);
             }
+        }
+
+        //Inline the "Add Node" category entries at the bottom of the menu, separated
+        //from the actions above, rather than nesting them behind an "Add Node" submenu.
+        var addNodeEntries = LGraphCanvas.getAddNodeMenuEntries(this);
+        if (addNodeEntries && addNodeEntries.length) {
+            options.push(null);
+            options = options.concat(addNodeEntries);
         }
 
         return options;
@@ -14059,6 +14180,13 @@ LGraphNode.prototype.executeAction = function(action)
                 menu_info = this.getNodeMenuOptions(node);
             } else {
                 menu_info = this.getCanvasMenuOptions();
+                //Top-layer canvas menu gets an auto-focused search box that filters the
+                //complete node list; Enter places the highlighted match.
+                options.searchable = true;
+                options.searchPlaceholder = "Search nodes…";
+                options.searchEntries = function (query) {
+                    return LGraphCanvas.getFilteredAddNodeEntries(canvas, query, event);
+                };
                 var group = this.graph.getGroupOnPos(
                     event.canvasX,
                     event.canvasY
@@ -14456,6 +14584,11 @@ LGraphNode.prototype.executeAction = function(action)
             num++;
         }
 
+        //optional search box (used by the top-layer canvas menu)
+        if (options.searchable) {
+            this.setupSearch(options);
+        }
+
         //close on leave? touch enabled devices won't work TODO use a global device detector and condition on that
         /*LiteGraph.pointerListenerAdd(root,"leave", function(e) {
                 console.log("pointerevents: ContextMenu leave");
@@ -14527,6 +14660,131 @@ LGraphNode.prototype.executeAction = function(action)
             root.style.transform = "scale(" + options.scale + ")";
         }
     }
+
+    //Adds a search field to the top of the menu. While the field is empty the normal
+    //entries are shown; as soon as text is entered they are replaced with a flat, filtered
+    //node list (from options.searchEntries). Up/Down move the highlight, Enter places the
+    //highlighted node, Escape closes the menu.
+    ContextMenu.prototype.setupSearch = function (options) {
+        var that = this;
+        var root = this.root;
+
+        //entries that exist before the search results (toggled while filtering)
+        var normalEntries = Array.prototype.slice.call(root.querySelectorAll(".litemenu-entry"));
+
+        var search = document.createElement("input");
+        search.className = "litecontextmenu-search";
+        search.type = "text";
+        search.placeholder = options.searchPlaceholder || "Search…";
+        search.setAttribute("autocomplete", "off");
+        search.setAttribute("autocapitalize", "off");
+        search.setAttribute("spellcheck", "false");
+        root.insertBefore(search, root.firstChild);
+
+        var resultsWrap = document.createElement("div");
+        resultsWrap.className = "litecontextmenu-search-results";
+        resultsWrap.style.display = "none";
+        root.appendChild(resultsWrap);
+
+        var resultEntries = [];
+        var selectedIndex = -1;
+
+        function clearResults() {
+            resultsWrap.innerHTML = "";
+            resultEntries = [];
+            selectedIndex = -1;
+        }
+
+        function setSelected(idx) {
+            if (!resultEntries.length) {
+                selectedIndex = -1;
+                return;
+            }
+            if (idx < 0) idx = 0;
+            if (idx > resultEntries.length - 1) idx = resultEntries.length - 1;
+            if (selectedIndex >= 0 && resultEntries[selectedIndex]) {
+                resultEntries[selectedIndex].el.classList.remove("selected");
+            }
+            selectedIndex = idx;
+            var cur = resultEntries[selectedIndex];
+            if (cur) {
+                cur.el.classList.add("selected");
+                cur.el.scrollIntoView({ block: "nearest" });
+            }
+        }
+
+        function placeEntry(entry) {
+            if (!entry) return;
+            if (entry.callback) {
+                entry.callback(entry, options, options.event, that, options.extra);
+            }
+            that.close();
+        }
+
+        function renderResults(query) {
+            clearResults();
+            var entries = options.searchEntries ? options.searchEntries(query) : [];
+            entries.forEach(function (entry) {
+                var el = document.createElement("div");
+                el.className = "litemenu-entry litecontextmenu-search-result";
+                el.innerHTML = entry.content;
+                resultsWrap.appendChild(el);
+                var rec = { el: el, value: entry };
+                el.addEventListener("click", function () { placeEntry(entry) });
+                LiteGraph.pointerListenerAdd(el, "enter", function () { setSelected(resultEntries.indexOf(rec)) });
+                resultEntries.push(rec);
+            });
+            if (resultEntries.length) setSelected(0);
+        }
+
+        function updateFilter() {
+            var query = search.value.trim();
+            if (that.current_submenu) {
+                that.current_submenu.close();
+                that.current_submenu = null;
+            }
+            if (!query) {
+                resultsWrap.style.display = "none";
+                clearResults();
+                normalEntries.forEach(function (el) { el.style.display = "" });
+                return;
+            }
+            normalEntries.forEach(function (el) { el.style.display = "none" });
+            resultsWrap.style.display = "";
+            renderResults(query);
+        }
+
+        search.addEventListener("input", updateFilter);
+        search.addEventListener("keydown", function (e) {
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                e.stopPropagation();
+                if (resultEntries.length) setSelected(selectedIndex + 1);
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                e.stopPropagation();
+                if (resultEntries.length) setSelected(selectedIndex - 1);
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                if (search.value.trim() && resultEntries.length) {
+                    var idx = selectedIndex >= 0 ? selectedIndex : 0;
+                    placeEntry(resultEntries[idx].value);
+                }
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                e.stopPropagation();
+                that.close();
+            } else {
+                //keep editor keybindings from firing while typing in the box
+                e.stopPropagation();
+            }
+        });
+
+        this.searchInput = search;
+        //auto-focus once the menu is in the DOM
+        setTimeout(function () { search.focus() }, 0);
+    };
 
     ContextMenu.prototype.addItem = function (name, value, options) {
         var that = this;

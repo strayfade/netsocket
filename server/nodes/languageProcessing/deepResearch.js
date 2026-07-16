@@ -1,6 +1,5 @@
 const { string } = require('../../utils/inputParser')
 const { deepResearch } = require('../../utils/deepResearch')
-const { DEFAULT_MODEL } = require('../../utils/languageModel')
 
 class NodeDefinition {
     constructor() {
@@ -8,7 +7,7 @@ class NodeDefinition {
         this.addInput('Question', 'string')
         this.addInput('Model', 'string')
         this.addProperty('Question', '')
-        this.addProperty('Model', DEFAULT_MODEL)
+        this.addProperty('Model', '')
         this.addOutput('', LiteGraph.EVENT)
         this.addOutput('Answer', 'string')
         this.desc = 'Searches the web, reads each result as plain text, and uses an LLM to form a consensus answer with cited sources.'
@@ -20,7 +19,7 @@ NodeDefinition.prototype.portMeta = {
 	inputs: {
 		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
 		Question: {"description":"Input \"Question\" for Deep Research LLM.","structure":"Plain text string (UTF-8).","required":true},
-		Model: {"description":"Language model name or ID.","structure":"Model identifier string (provider-specific).","required":false},
+		Model: {"description":"Language model name or ID. Leave empty to use the Ollama default model setting.","structure":"Model identifier string (provider-specific).","required":false},
 	},
 	outputs: {
 		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},

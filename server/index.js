@@ -217,6 +217,72 @@ wss.on('connection', (socket, request) => {
                         }))
                         break
                     }
+                    case "getSubgraphs": {
+                        const subgraphStore = require('./manager/subgraphStore')
+                        socket.send(JSON.stringify({
+                            broadcastPurpose: "getSubgraphs",
+                            requestId: message.requestId,
+                            broadcastData: subgraphStore.listDefinitions(),
+                        }))
+                        break
+                    }
+                    case "saveSubgraph": {
+                        const subgraphStore = require('./manager/subgraphStore')
+                        try {
+                            const saved = await subgraphStore.saveDefinition(message.broadcastData || {})
+                            const payload = JSON.stringify({
+                                broadcastPurpose: "subgraphsChanged",
+                                broadcastData: subgraphStore.listDefinitions(),
+                            })
+                            connectedClients.forEach((client) => {
+                                if (client.readyState === WebSocket.OPEN) {
+                                    client.send(payload)
+                                }
+                            })
+                            socket.send(JSON.stringify({
+                                broadcastPurpose: "saveSubgraph",
+                                requestId: message.requestId,
+                                broadcastData: saved,
+                            }))
+                        } catch (e) {
+                            log(`saveSubgraph: ${e}`, logColors.Error)
+                            socket.send(JSON.stringify({
+                                broadcastPurpose: "saveSubgraph",
+                                requestId: message.requestId,
+                                broadcastData: { error: String(e?.message || e) },
+                            }))
+                        }
+                        break
+                    }
+                    case "deleteSubgraph": {
+                        const subgraphStore = require('./manager/subgraphStore')
+                        const id = message.broadcastData?.id
+                        try {
+                            const ok = await subgraphStore.deleteDefinition(id)
+                            const payload = JSON.stringify({
+                                broadcastPurpose: "subgraphsChanged",
+                                broadcastData: subgraphStore.listDefinitions(),
+                            })
+                            connectedClients.forEach((client) => {
+                                if (client.readyState === WebSocket.OPEN) {
+                                    client.send(payload)
+                                }
+                            })
+                            socket.send(JSON.stringify({
+                                broadcastPurpose: "deleteSubgraph",
+                                requestId: message.requestId,
+                                broadcastData: { ok },
+                            }))
+                        } catch (e) {
+                            log(`deleteSubgraph: ${e}`, logColors.Error)
+                            socket.send(JSON.stringify({
+                                broadcastPurpose: "deleteSubgraph",
+                                requestId: message.requestId,
+                                broadcastData: { error: String(e?.message || e) },
+                            }))
+                        }
+                        break
+                    }
                 }
             }
         }
@@ -240,7 +306,7 @@ setOnPushLog(((line) => {
 }))
 
 // MARK: PostNotification
-const { onNewNotification } = require('./utils/waitForOTP')
+const { onNewNotification } = require('./utils/receiveNotification')
 const { onGenericWebhook, onGitHubWebhook } = require('./utils/waitForWebhookEvents')
 app.post("/v1/postNotification/:secret", async (req, res) => {
     const expectedSecret = settingsManager.getSetting('triggersNotification.secret')
@@ -505,7 +571,8 @@ app.get('/v1/export-full-state', async (req, res) => {
             exportedAt: new Date().toISOString(),
             graph: JSON.parse(JSON.stringify(graph)),
             settings: settingsManager.getAllSettings(),
-            vars: getVarsSnapshot()
+            vars: getVarsSnapshot(),
+            subgraphs: require('./manager/subgraphStore').listDefinitions(),
         }
         const stamp = new Date().toISOString().replace(/[:.]/g, '-')
         const filename = `netsocket-backup-${stamp}.json`
@@ -541,6 +608,24 @@ app.post('/v1/import-full-state', async (req, res) => {
         setNodes(nextGraph, { fromImport: true })
         await settingsManager.replaceAllSettings(payload.settings)
         await replaceVarsAndPersist(payload.vars != null ? payload.vars : [])
+        if (Array.isArray(payload.subgraphs)) {
+            const subgraphStore = require('./manager/subgraphStore')
+            for (const existing of subgraphStore.listDefinitions()) {
+                await subgraphStore.deleteDefinition(existing.id)
+            }
+            for (const def of payload.subgraphs) {
+                await subgraphStore.saveDefinition(def)
+            }
+            const subgraphPayload = JSON.stringify({
+                broadcastPurpose: "subgraphsChanged",
+                broadcastData: subgraphStore.listDefinitions(),
+            })
+            connectedClients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(subgraphPayload)
+                }
+            })
+        }
         cronTriggerManager.syncFromGraphIfNeeded()
         try {
             await require('./utils/hueApi').setupHueApi()
@@ -606,6 +691,7 @@ const { killProcessOnPort } = require('./utils/killProcessOnPort');
             }
         }
         constructedNodes = await require('./manager/nodeImporter').setupNodes()
+        await require('./manager/subgraphStore').loadSubgraphs()
         cronTriggerManager.syncFromGraphIfNeeded()
     } catch (e) {
         log(`Startup init error: ${e}`, logColors.Error)

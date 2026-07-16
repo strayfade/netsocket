@@ -57,6 +57,9 @@
                     <button type="button" id="editor-redo" class="header-toolbar-btn" disabled title="Redo (Ctrl+Y or Ctrl+Shift+Z)">
                         <span class="material-symbols-outlined" aria-hidden="true">redo</span>
                     </button>
+                    <button type="button" id="editor-fit-view" class="header-toolbar-btn" title="Fit all nodes to view">
+                        <span class="material-symbols-outlined" aria-hidden="true">fit_screen</span>
+                    </button>
                 </span>
             </div>
             <form class="header-command" id="agent-command-form" autocomplete="off">
@@ -104,6 +107,184 @@
         let canvas = new LGraphCanvas("#nodegraph", graph);
         canvas.allow_searchbox = false;
 
+        // Persist the viewport pan/zoom (canvas.ds.offset + canvas.ds.scale) per view so
+        // reloading the page restores where the user was looking instead of resetting.
+        // The active view is keyed: "main" for the top-level graph, "subgraph:<id>" for each
+        // subgraph editor (driven by subgraphEditor.js through the exposed viewport API).
+        const VIEWPORT_STORAGE_PREFIX = "netsocket:viewport:";
+        let currentViewportKey = "main";
+        // Suppress autosave until we've restored the saved view once, so an early render of the
+        // default (empty) canvas can't clobber the stored value before it's applied.
+        let viewportRestorePending = true;
+        let viewportSaveTimer = null;
+        // Whether the main graph's saved viewport has been restored (only done once, on load).
+        let initialMainViewportApplied = false;
+
+        const readViewport = (key) => {
+            try {
+                const raw = localStorage.getItem(VIEWPORT_STORAGE_PREFIX + key);
+                if (!raw) return null;
+                const v = JSON.parse(raw);
+                if (!v || !Array.isArray(v.offset) || v.offset.length !== 2) return null;
+                const [ox, oy] = v.offset;
+                const scale = v.scale;
+                if (![ox, oy, scale].every((n) => typeof n === "number" && isFinite(n))) return null;
+                if (scale <= 0) return null;
+                return { offset: [ox, oy], scale };
+            } catch (e) {
+                return null;
+            }
+        };
+
+        const writeViewport = (key, ds) => {
+            if (!ds || !ds.offset) return;
+            try {
+                localStorage.setItem(
+                    VIEWPORT_STORAGE_PREFIX + key,
+                    JSON.stringify({ offset: [ds.offset[0], ds.offset[1]], scale: ds.scale })
+                );
+            } catch (e) {
+                /* ignore storage quota / disabled storage */
+            }
+        };
+
+        const applyViewport = (key) => {
+            if (!canvas.ds) return false;
+            const v = readViewport(key);
+            if (!v) return false;
+            canvas.ds.offset[0] = v.offset[0];
+            canvas.ds.offset[1] = v.offset[1];
+            canvas.ds.scale = v.scale;
+            canvas.setDirty(true, true);
+            return true;
+        };
+
+        const flushViewportSave = () => {
+            if (viewportSaveTimer) {
+                clearTimeout(viewportSaveTimer);
+                viewportSaveTimer = null;
+            }
+            if (viewportRestorePending) return;
+            if (canvas.ds) writeViewport(currentViewportKey, canvas.ds);
+        };
+
+        const scheduleViewportSave = () => {
+            if (viewportRestorePending || viewportSaveTimer) return;
+            viewportSaveTimer = setTimeout(() => {
+                viewportSaveTimer = null;
+                if (canvas.ds) writeViewport(currentViewportKey, canvas.ds);
+            }, 400);
+        };
+
+        // Switch the active view: persist the view we're leaving, then restore the stored view
+        // for the new key. Returns true if a saved viewport was applied so callers can decide
+        // whether to fall back to their own default framing.
+        const activateViewport = (key) => {
+            cancelViewportAnimation();
+            flushViewportSave();
+            currentViewportKey = key;
+            const applied = applyViewport(key);
+            viewportRestorePending = false;
+            return applied;
+        };
+
+        // Smoothly tween the viewport (pan + zoom) toward a target. Any in-flight animation is
+        // cancelled first, and user pan/zoom (via ds.onredraw below) also cancels it so we
+        // never fight the user's input.
+        let viewportAnimId = null;
+        const cancelViewportAnimation = () => {
+            if (viewportAnimId != null) {
+                cancelAnimationFrame(viewportAnimId);
+                viewportAnimId = null;
+            }
+        };
+
+        const animateViewportTo = (targetOffsetX, targetOffsetY, targetScale, duration = 320) => {
+            if (!canvas.ds) return;
+            cancelViewportAnimation();
+            const startX = canvas.ds.offset[0];
+            const startY = canvas.ds.offset[1];
+            const startScale = canvas.ds.scale;
+            const dX = targetOffsetX - startX;
+            const dY = targetOffsetY - startY;
+            const dScale = targetScale - startScale;
+            const settle = () => {
+                canvas.ds.offset[0] = targetOffsetX;
+                canvas.ds.offset[1] = targetOffsetY;
+                canvas.ds.scale = targetScale;
+                canvas.setDirty(true, true);
+            };
+            if (Math.abs(dX) < 0.5 && Math.abs(dY) < 0.5 && Math.abs(dScale) < 0.0005) {
+                settle();
+                return;
+            }
+            const startTime = performance.now();
+            const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+            const step = (now) => {
+                const t = Math.min((now - startTime) / duration, 1);
+                const k = easeOutCubic(t);
+                canvas.ds.offset[0] = startX + dX * k;
+                canvas.ds.offset[1] = startY + dY * k;
+                canvas.ds.scale = startScale + dScale * k;
+                canvas.setDirty(true, true);
+                if (t < 1) {
+                    viewportAnimId = requestAnimationFrame(step);
+                } else {
+                    viewportAnimId = null;
+                    settle();
+                }
+            };
+            viewportAnimId = requestAnimationFrame(step);
+        };
+
+        // Cancel any running fit animation the moment the user pans or zooms (DragAndScale
+        // fires onredraw after applying user input), so their interaction wins immediately.
+        if (canvas.ds) {
+            canvas.ds.onredraw = () => cancelViewportAnimation();
+        }
+
+        // Pan/zoom the currently displayed graph (main or subgraph) so every node fits on
+        // screen with a little padding. Uses canvas.graph, which setGraph() keeps pointing at
+        // whichever graph is active. Screen px = (graph + ds.offset) * ds.scale, and
+        // canvas.width/height are device pixels, so all math stays in device-pixel space.
+        const fitViewToNodes = () => {
+            if (!canvas.ds || !canvas.graph) return;
+            const nodes = canvas.graph._nodes;
+            if (!nodes || !nodes.length) return;
+
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            const b = new Float32Array(4);
+            for (const node of nodes) {
+                if (!node || typeof node.getBounding !== "function") continue;
+                node.getBounding(b);
+                minX = Math.min(minX, b[0]);
+                minY = Math.min(minY, b[1]);
+                maxX = Math.max(maxX, b[0] + b[2]);
+                maxY = Math.max(maxY, b[1] + b[3]);
+            }
+            if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return;
+
+            const dpr = window.devicePixelRatio || 1;
+            const padPx = 48 * dpr;
+            const viewW = Math.max(canvas.canvas.width - padPx * 2, 1);
+            const viewH = Math.max(canvas.canvas.height - padPx * 2, 1);
+            const graphW = Math.max(maxX - minX, 1);
+            const graphH = Math.max(maxY - minY, 1);
+
+            // Fit both axes, then clamp: never below the ds minimum, and don't zoom in past
+            // 100% (1 CSS px per graph unit == dpr) so a single small node isn't magnified.
+            let scale = Math.min(viewW / graphW, viewH / graphH);
+            const maxScale = Math.min(canvas.ds.max_scale || 10, dpr);
+            const minScale = canvas.ds.min_scale || 0.1;
+            scale = Math.max(minScale, Math.min(scale, maxScale));
+
+            const centerX = (minX + maxX) * 0.5;
+            const centerY = (minY + maxY) * 0.5;
+            const targetOffsetX = (canvas.canvas.width * 0.5) / scale - centerX;
+            const targetOffsetY = (canvas.canvas.height * 0.5) / scale - centerY;
+            animateViewportTo(targetOffsetX, targetOffsetY, scale);
+        };
+
         // Update node counts in the header: total nodes and visible nodes
         const updateNodeCounts = () => {
             const total = graph && graph._nodes ? graph._nodes.length : 0;
@@ -117,6 +298,7 @@
         // Call update on each canvas render (fires when moving/zooming the graph)
         canvas.onRender = () => {
             updateNodeCounts();
+            scheduleViewportSave();
         }
 
         const keybindsBar = document.getElementById("editor-keybinds-bar");
@@ -334,6 +516,11 @@
             redoBtn.addEventListener("click", () => graphRedo());
         }
 
+        const fitViewBtn = document.getElementById("editor-fit-view");
+        if (fitViewBtn) {
+            fitViewBtn.addEventListener("click", () => fitViewToNodes());
+        }
+
         document.addEventListener(
             "keydown",
             (e) => {
@@ -490,8 +677,20 @@
                             // update header counts after loading the graph
                             try { updateNodeCounts(); } catch (e) { /* ignore */ }
                             resetHistoryToCurrentGraph();
+                            // Restore the saved pan/zoom once on first load. Skip on later
+                            // setNodes (e.g. collaborative updates) so we don't yank the view
+                            // out from under the user while they're panning around.
+                            if (!initialMainViewportApplied && !window.NetsocketSubgraphs?.isEditingSubgraph?.()) {
+                                activateViewport("main");
+                                initialMainViewportApplied = true;
+                            }
                         } finally {
                             graphReconfiguring = false;
+                        }
+                        break;
+                    case "subgraphsChanged":
+                        if (window.NetsocketSubgraphs && Array.isArray(parsedMessage.broadcastData)) {
+                            window.NetsocketSubgraphs.onSubgraphsChanged(parsedMessage.broadcastData);
                         }
                         break;
                     case "populateLog":
@@ -545,7 +744,7 @@
                 broadcastPurpose: 'getNodes'
             }));
         }
-        loadGraph()
+        // Graph load is kicked off by NetsocketSubgraphs.init after definitions register
         const saveGraph = () => {
             enqueuePersistGraphChange();
         };
@@ -561,6 +760,24 @@
             }
         }
         setInterval(ping, 3000);
+
+        window.__netsocketEditorApi = {
+            getGraph: () => graph,
+            getCanvas: () => canvas,
+            sendWsRequest,
+            enqueuePersistGraphChange,
+            updateNodeCounts,
+            loadGraph,
+            isGraphBusy: () => graphReconfiguring || !graphLoaded,
+            viewport: {
+                // Switch the persisted view (e.g. "main" or "subgraph:<id>"). Persists the
+                // outgoing view and restores the incoming one; returns true if a stored
+                // viewport was applied so the caller can skip its own default framing.
+                activate: (key) => activateViewport(key),
+                // Persist the current view immediately (used before leaving a view).
+                flush: () => flushViewportSave(),
+            },
+        };
     </script>
     <div id="agent-sidebar-root" class="agent-sidebar-root" hidden aria-hidden="true">
         <div id="agent-backdrop" class="agent-backdrop" aria-hidden="true"></div>
@@ -1413,6 +1630,12 @@
     </script>
     <script type="text/javascript" src="createNode.js"></script>
     <script type="text/javascript" src="constructNodes.js"></script>
+    <script type="text/javascript" src="subgraphEditor.js"></script>
+    <script type="text/javascript">
+        if (window.NetsocketSubgraphs && window.__netsocketEditorApi) {
+            window.NetsocketSubgraphs.init(window.__netsocketEditorApi);
+        }
+    </script>
 </body>
 
 </html>

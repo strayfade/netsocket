@@ -2,7 +2,7 @@
 
 const { generateText } = require('ai')
 const { log, logColors } = require('../log')
-const { DEFAULT_MODEL, getOllamaProvider, sanitizeAiOutput } = require('./languageModel')
+const { resolveDefaultModel, getOllamaProvider, sanitizeAiOutput } = require('./languageModel')
 const {
     gatherSearchSourceContent,
     buildResearchContext,
@@ -40,7 +40,7 @@ async function deepResearch(question, options = {}) {
         return { answer: '', sources: [], error: 'Question is empty' }
     }
 
-    const modelName = String(options.model || DEFAULT_MODEL).trim() || DEFAULT_MODEL
+    const modelName = resolveDefaultModel(options.model)
     const silent = options.silent === true
 
     try {

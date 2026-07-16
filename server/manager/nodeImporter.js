@@ -332,12 +332,42 @@ const getNodeMetadata = (title) => nodeMetadata[title] || null
 const getNodeMetadataList = () =>
     Object.values(nodeMetadata).sort((a, b) => a.title.localeCompare(b.title))
 
+const registerDynamicNode = (title, nodeFunction, metadata) => {
+    if (!title || typeof nodeFunction !== 'function') {
+        return false
+    }
+    availableNodes[title] = nodeFunction
+    if (metadata) {
+        nodeMetadata[title] = metadata
+    }
+    return true
+}
+
+const unregisterDynamicNode = (title) => {
+    if (!title) {
+        return false
+    }
+    const existed = Object.prototype.hasOwnProperty.call(availableNodes, title)
+    delete availableNodes[title]
+    delete nodeMetadata[title]
+    return existed
+}
+
+const listDynamicNodeTitles = (prefix) => {
+    return Object.keys(availableNodes).filter((title) =>
+        typeof prefix === 'string' ? title.startsWith(prefix) : true
+    )
+}
+
 module.exports = {
     getAvailableNodes,
     setupNodes,
     getNumNodesImported,
     getNodeMetadata,
     getNodeMetadataList,
+    registerDynamicNode,
+    unregisterDynamicNode,
+    listDynamicNodeTitles,
     parseCallArguments,
     parseEnumPropertyCall,
     formatPropertyLine,

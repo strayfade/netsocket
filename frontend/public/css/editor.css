@@ -821,6 +821,44 @@ header #node-count-visible {
     transition-duration: 0.25s;
 }
 
+.subgraph-editor-banner {
+    position: absolute;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 14px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #ddd;
+    font-size: 13px;
+    box-shadow: 0 8px 24px #00000080;
+}
+
+.subgraph-editor-banner[hidden] {
+    display: none;
+}
+
+.subgraph-editor-banner-close {
+    appearance: none;
+    border: 1px solid #444;
+    background: #1a1a1a;
+    color: #eee;
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.subgraph-editor-banner-close:hover {
+    border-color: #888;
+    background: #222;
+}
+
 #log {
     display: block;
     position: absolute;

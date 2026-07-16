@@ -1,6 +1,5 @@
 const { string, number } = require('../../utils/inputParser')
 const { runMcpAgent } = require('../../utils/mcpAgent')
-const { MCP_AGENT_DEFAULT_MODEL } = require('../../utils/mcpAgentSettings')
 
 class NodeDefinition {
     constructor() {
@@ -12,7 +11,7 @@ class NodeDefinition {
         this.addInput('Memory Key', 'string')
         this.addProperty('Memory Key', 'default')
         this.addInput('Model', 'string')
-        this.addProperty('Model', MCP_AGENT_DEFAULT_MODEL)
+        this.addProperty('Model', '')
         this.addInput('Max Steps', 'number')
         this.addProperty('Max Steps', 15)
         this.addInput('System Prompt', 'string')
@@ -23,14 +22,14 @@ class NodeDefinition {
     }
 }
 NodeDefinition.prototype.title = 'Language Processing/MCP Agent'
-NodeDefinition.prototype.description = 'Friendly Netsocket assistant with persistent local memory. Chats naturally and runs nodes via MCP tools (list_nodes, get_node_info, execute_node) when you ask it to perform actions. Requires a tool-capable Ollama model such as qwen3.5:9b-mxfp8 or llama3.2.'
+NodeDefinition.prototype.description = 'Friendly Netsocket assistant with persistent local memory. Chats naturally and runs nodes via MCP tools (list_nodes, get_node_info, execute_node) when you ask it to perform actions. Requires a tool-capable Ollama model. Uses the Ollama default model (or MCP Agent model override) when Model is empty.'
 NodeDefinition.prototype.portMeta = {
 	inputs: {
 		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
 		Command: {"description":"User command to execute.","structure":"Natural-language command for the agent.","required":true},
 		"Conversation ID": {"description":"Input \"Conversation ID\" for MCP Agent.","structure":"Plain text string (UTF-8).","required":true},
 		"Memory Key": {"description":"Input \"Memory Key\" for MCP Agent.","structure":"Plain text string (UTF-8).","required":false},
-		Model: {"description":"Language model name or ID.","structure":"Model identifier string (provider-specific).","required":false},
+		Model: {"description":"Language model name or ID. Leave empty to use MCP Agent model override or the Ollama default model setting.","structure":"Model identifier string (provider-specific).","required":false},
 		"Max Steps": {"description":"Input \"Max Steps\" for MCP Agent.","structure":"Numeric value (integer or float).","required":false},
 		"System Prompt": {"description":"System instructions for the model.","structure":"System/instruction prompt text.","required":true},
 	},
