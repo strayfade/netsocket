@@ -330,7 +330,9 @@ const getNumNodesImported = () => {
 const getNodeMetadata = (title) => nodeMetadata[title] || null
 
 const getNodeMetadataList = () =>
-    Object.values(nodeMetadata).sort((a, b) => a.title.localeCompare(b.title))
+    Object.values(nodeMetadata).sort((a, b) =>
+        String(a?.title || '').localeCompare(String(b?.title || '')),
+    )
 
 const registerDynamicNode = (title, nodeFunction, metadata) => {
     if (!title || typeof nodeFunction !== 'function') {

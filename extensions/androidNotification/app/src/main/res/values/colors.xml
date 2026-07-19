@@ -8,5 +8,18 @@
     <color name="netsocket_outline">#333333</color>
     <color name="netsocket_on_background">#FFFFFF</color>
     <color name="netsocket_on_surface_muted">#AAAAAA</color>
+    <color name="netsocket_user_bubble">#222222</color>
+    <color name="netsocket_connected">#6FCF97</color>
+    <color name="netsocket_link">#7EB6FF</color>
+    <color name="alert_note_bg">#152033</color>
+    <color name="alert_note_accent">#4C8DFF</color>
+    <color name="alert_tip_bg">#14261C</color>
+    <color name="alert_tip_accent">#3FB950</color>
+    <color name="alert_important_bg">#241A33</color>
+    <color name="alert_important_accent">#A371F7</color>
+    <color name="alert_warning_bg">#2A2114</color>
+    <color name="alert_warning_accent">#D29922</color>
+    <color name="alert_caution_bg">#2A1517</color>
+    <color name="alert_caution_accent">#F85149</color>
     <color name="ic_launcher_background">#000000</color>
 </resources>

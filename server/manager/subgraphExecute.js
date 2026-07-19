@@ -184,6 +184,7 @@ const buildSubgraphMetadata = (definition) => {
     ]
     return {
         title,
+        name: definition.name,
         description: `Calls the "${definition.name}" subgraph.`,
         category: 'Subgraphs',
         color: 'cyan',

@@ -3,125 +3,162 @@ package com.strayfade.netsocket.notification
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
-import android.provider.Settings
+import android.view.KeyEvent
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.strayfade.netsocket.notification.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private lateinit var prefs: Prefs
+    private lateinit var adapter: MessageAdapter
 
     private val notificationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-            refreshStatus()
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    private val conversationListener = object : ConversationRepository.Listener {
+        override fun onMessagesChanged(messages: List<ChatMessage>) {
+            runOnUiThread {
+                adapter.submitList(messages.toList()) {
+                    if (messages.isNotEmpty()) {
+                        binding.messageList.scrollToPosition(messages.lastIndex)
+                    }
+                }
+                binding.emptyState.visibility =
+                    if (messages.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+            }
         }
+    }
+
+    private val connectionListener = object : HostConnection.Listener {
+        override fun onStateChanged(state: HostConnection.State) {
+            runOnUiThread { renderConnection(state) }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        prefs = Prefs(this)
+        applyInsets()
 
-        binding.hostInput.setText(prefs.host)
-        binding.portInput.setText(prefs.port)
-        binding.secretInput.setText(prefs.secret)
-        binding.httpsSwitch.isChecked = prefs.useHttps
-        binding.forwardingSwitch.isChecked = prefs.forwardingEnabled
-        updateEndpointPreview()
+        ConversationRepository.init(this)
+        IncomingNotifier.ensureChannel(this)
 
-        binding.hostInput.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) updateEndpointPreview()
+        adapter = MessageAdapter(MarkdownRenderer.create(this))
+        binding.messageList.layoutManager = LinearLayoutManager(this).apply {
+            stackFromEnd = true
         }
-        binding.portInput.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) updateEndpointPreview()
+        binding.messageList.adapter = adapter
+        // Show any persisted history immediately.
+        adapter.submitList(ConversationRepository.snapshot())
+        binding.emptyState.visibility =
+            if (ConversationRepository.snapshot().isEmpty()) {
+                android.view.View.VISIBLE
+            } else {
+                android.view.View.GONE
+            }
+        binding.settingsButton.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
-        binding.secretInput.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) updateEndpointPreview()
+        binding.clearButton.setOnClickListener {
+            ConversationRepository.clear()
         }
-        binding.httpsSwitch.setOnCheckedChangeListener { _, _ ->
-            updateEndpointPreview()
+        binding.sendButton.setOnClickListener { sendCurrentCommand() }
+        binding.commandInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEND) {
+                sendCurrentCommand()
+                true
+            } else {
+                false
+            }
         }
-
-        binding.saveButton.setOnClickListener { saveSettings() }
-        binding.openListenerButton.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-        }
-        binding.batteryButton.setOnClickListener { requestBatteryExemption() }
-        binding.startServiceButton.setOnClickListener {
-            KeepAliveService.start(this)
-            Toast.makeText(this, R.string.keepalive_started, Toast.LENGTH_SHORT).show()
-            refreshStatus()
+        binding.commandInput.setOnKeyListener { _, keyCode, event ->
+            if (keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN) {
+                if (event.isShiftPressed) {
+                    false
+                } else {
+                    sendCurrentCommand()
+                    true
+                }
+            } else {
+                false
+            }
         }
 
         requestPostNotificationsIfNeeded()
         KeepAliveService.start(this)
-        binding.deviceIdValue.text = DeviceId.get(this)
-    }
 
-    override fun onResume() {
-        super.onResume()
-        refreshStatus()
-    }
-
-    private fun saveSettings() {
-        prefs.host = binding.hostInput.text?.toString().orEmpty()
-        prefs.port = binding.portInput.text?.toString().orEmpty()
-        prefs.secret = binding.secretInput.text?.toString().orEmpty()
-        prefs.useHttps = binding.httpsSwitch.isChecked
-        prefs.forwardingEnabled = binding.forwardingSwitch.isChecked
-        updateEndpointPreview()
-        Toast.makeText(this, R.string.settings_saved, Toast.LENGTH_SHORT).show()
-        refreshStatus()
-    }
-
-    private fun updateEndpointPreview() {
-        binding.endpointPreview.text = Prefs.buildEndpointUrl(
-            host = binding.hostInput.text?.toString().orEmpty(),
-            port = binding.portInput.text?.toString().orEmpty(),
-            useHttps = binding.httpsSwitch.isChecked,
-            secret = binding.secretInput.text?.toString().orEmpty()
-        )
-    }
-
-    private fun refreshStatus() {
-        val listenerEnabled = isNotificationListenerEnabled()
-        val batteryUnrestricted = isIgnoringBatteryOptimizations()
-        binding.listenerStatus.text = getString(
-            if (listenerEnabled) R.string.status_listener_enabled else R.string.status_listener_disabled
-        )
-        binding.batteryStatus.text = getString(
-            if (batteryUnrestricted) R.string.status_battery_ok else R.string.status_battery_restricted
-        )
-        updateEndpointPreview()
-    }
-
-    private fun isNotificationListenerEnabled(): Boolean {
-        val enabled = NotificationManagerCompat.getEnabledListenerPackages(this)
-        return enabled.contains(packageName)
-    }
-
-    private fun isIgnoringBatteryOptimizations(): Boolean {
-        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-        return powerManager.isIgnoringBatteryOptimizations(packageName)
-    }
-
-    private fun requestBatteryExemption() {
-        if (isIgnoringBatteryOptimizations()) {
-            Toast.makeText(this, R.string.status_battery_ok, Toast.LENGTH_SHORT).show()
-            return
+        if (Prefs(this).commandSecret.isBlank()) {
+            // First launch / unconfigured — nudge toward settings.
+            Toast.makeText(this, R.string.setup_required_toast, Toast.LENGTH_LONG).show()
         }
-        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-            data = Uri.parse("package:$packageName")
+    }
+
+    override fun onStart() {
+        super.onStart()
+        ConversationRepository.setChatVisible(true)
+        ConversationRepository.addListener(conversationListener)
+        HostConnection.addListener(connectionListener)
+    }
+
+    override fun onStop() {
+        ConversationRepository.setChatVisible(false)
+        ConversationRepository.removeListener(conversationListener)
+        HostConnection.removeListener(connectionListener)
+        super.onStop()
+    }
+
+    private fun sendCurrentCommand() {
+        val text = binding.commandInput.text?.toString().orEmpty()
+        if (text.isBlank()) return
+
+        val result = ConversationRepository.sendCommand(text)
+        when (result) {
+            "/settings" -> {
+                binding.commandInput.text?.clear()
+                startActivity(Intent(this, SettingsActivity::class.java))
+            }
+            null -> binding.commandInput.text?.clear()
+            else -> Toast.makeText(this, result, Toast.LENGTH_SHORT).show()
         }
-        startActivity(intent)
+    }
+
+    private fun renderConnection(state: HostConnection.State) {
+        binding.connectionStatus.text = when {
+            state.connected -> getString(R.string.status_connected)
+            state.connecting -> getString(R.string.status_connecting)
+            state.lastError.isNotBlank() -> state.lastError
+            else -> getString(R.string.status_disconnected)
+        }
+        binding.connectionStatus.setTextColor(
+            getColor(
+                if (state.connected) {
+                    R.color.netsocket_connected
+                } else {
+                    R.color.netsocket_on_surface_muted
+                }
+            )
+        )
+        binding.sendButton.isEnabled = true
+    }
+
+    private fun applyInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.rootContainer) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val bottom = maxOf(systemBars.bottom, ime.bottom)
+            view.updatePadding(top = systemBars.top, bottom = bottom)
+            insets
+        }
     }
 
     private fun requestPostNotificationsIfNeeded() {
@@ -137,4 +174,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    companion object {
+        const val EXTRA_FOCUS_CHAT = "focus_chat"
+    }
 }

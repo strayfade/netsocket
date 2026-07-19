@@ -13,12 +13,18 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 
+/**
+ * Foreground keep-alive that holds the host WebSocket open and keeps notification
+ * forwarding reliable while the screen is locked.
+ */
 class KeepAliveService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
+        IncomingNotifier.ensureChannel(this)
+        ConversationRepository.init(this)
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
@@ -29,13 +35,16 @@ class KeepAliveService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+        HostConnection.start(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        HostConnection.start(this)
         return START_STICKY
     }
 
     override fun onDestroy() {
+        HostConnection.stop()
         super.onDestroy()
     }
 

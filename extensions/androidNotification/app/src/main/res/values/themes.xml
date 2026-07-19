@@ -16,4 +16,11 @@
         <item name="android:colorBackground">@color/netsocket_background</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
+
+    <style name="Widget.Netsocket.SettingsRow" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/netsocket_surface_variant</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="rippleColor">@color/netsocket_outline</item>
+    </style>
 </resources>

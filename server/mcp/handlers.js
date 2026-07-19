@@ -39,10 +39,10 @@ const scoreNodeMatch = (node, query) => {
     const q = String(query || '').trim().toLowerCase()
     if (!q) return 0
 
-    const title = node.title.toLowerCase()
-    const name = node.name.toLowerCase()
-    const category = node.category.toLowerCase()
-    const description = String(node.description || '').toLowerCase()
+    const title = String(node?.title || '').toLowerCase()
+    const name = String(node?.name || '').toLowerCase()
+    const category = String(node?.category || '').toLowerCase()
+    const description = String(node?.description || '').toLowerCase()
     const full = `${category}/${name}`
 
     if (title === q || name === q || full === q) return 1000
@@ -112,7 +112,8 @@ const searchNodeSummaries = (query, limit = 12) => {
     return getNodeMetadataList()
         .map((node) => ({ node, score: scoreNodeMatch(node, q) }))
         .filter((entry) => entry.score > 0)
-        .sort((a, b) => compareSearchResults(a, b) || a.node.title.localeCompare(b.node.title))
+        .sort((a, b) => compareSearchResults(a, b)
+            || String(a.node?.title || '').localeCompare(String(b.node?.title || '')))
         .slice(0, limit)
         .map((entry) => toSummary(entry.node))
 }
@@ -135,7 +136,9 @@ const listNodeSummaries = (filter) => {
 
     if (categoryFilter) {
         const normalized = String(categoryFilter).trim().toLowerCase()
-        const byCategory = nodes.filter((node) => node.category.toLowerCase() === normalized)
+        const byCategory = nodes.filter(
+            (node) => String(node?.category || '').toLowerCase() === normalized,
+        )
         if (byCategory.length > 0) {
             nodes = byCategory
         } else {

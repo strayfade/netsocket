@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/assistant_label"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:textColor="@color/netsocket_on_surface_muted" />
+
+        <ImageButton
+            android:id="@+id/copyButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/copy_response"
+            android:src="@drawable/ic_copy"
+            android:visibility="gone"
+            app:tint="@color/netsocket_on_surface_muted" />
+    </LinearLayout>
+
+    <HorizontalScrollView
+        android:id="@+id/messageScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:fillViewport="true"
+        android:scrollbars="horizontal">
+
+        <TextView
+            android:id="@+id/messageText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:lineSpacingExtra="2dp"
+            android:minWidth="280dp"
+            android:textColor="@color/netsocket_on_background"
+            android:textIsSelectable="true"
+            android:textSize="15sp" />
+    </HorizontalScrollView>
+
+    <ProgressBar
+        android:id="@+id/pendingSpinner"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginTop="8dp"
+        android:indeterminate="true"
+        android:visibility="gone" />
+</LinearLayout>

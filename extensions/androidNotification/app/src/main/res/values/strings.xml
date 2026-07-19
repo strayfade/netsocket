@@ -1,16 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">netsocket</string>
-    <string name="app_subtitle">Forwards every device notification to your netsocket server, including while the screen is locked.</string>
+    <string name="app_subtitle">Command palette and notification forwarding for your netsocket host.</string>
     <string name="listener_service_label">netsocket notification listener</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_hub_subtitle">Choose a category to configure netsocket.</string>
+    <string name="settings_general">General</string>
+    <string name="settings_general_desc">Host, port, HTTPS/WSS, and device ID</string>
+    <string name="settings_command">Command palette</string>
+    <string name="settings_command_desc">Auth secret and response timeout</string>
+    <string name="settings_forwarding">Notification forwarding</string>
+    <string name="settings_forwarding_desc">Forward device notifications to netsocket</string>
+    <string name="settings_permissions">Permissions</string>
+    <string name="settings_permissions_desc">Notification access, battery, and keep-alive</string>
+    <string name="back">Back</string>
+    <string name="clear_chat">Clear conversation</string>
+    <string name="send_command">Send</string>
+    <string name="copy_response">Copy response</string>
+    <string name="response_copied">Copied to clipboard</string>
+    <string name="command_hint">Message netsocket…</string>
+    <string name="chat_empty_state">Send a command to your netsocket host.\nResponses appear here — or as a notification if the app is in the background.</string>
+    <string name="assistant_label">netsocket</string>
+    <string name="setup_required_toast">Open Settings and set your Command Palette secret to connect</string>
+
+    <string name="status_connected">Connected</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_disconnected">Disconnected</string>
+
+    <string name="connection_heading">Host connection</string>
+    <string name="forwarding_heading">Notification forwarding</string>
+    <string name="forwarding_subtitle">Forwards device notifications to netsocket while the screen is locked.</string>
+
     <string name="host_hint">Host</string>
     <string name="port_hint">Port (optional)</string>
-    <string name="port_helper">Leave blank to use the HTTPS/HTTP default (443/80).</string>
-    <string name="secret_hint">Secret key</string>
-    <string name="secret_helper">Appended to /v1/postNotification/ — must match Notification Secret Key in netsocket settings</string>
-    <string name="use_https">Use HTTPS</string>
+    <string name="port_helper">Leave blank to use the HTTPS/HTTP default (443/80). Use 4675 for a local host.</string>
+    <string name="command_secret_hint">Command Palette secret</string>
+    <string name="command_secret_helper">Must match Command Palette secret in netsocket preferences — used for WebSocket auth</string>
+    <string name="notification_secret_hint">Notification secret key</string>
+    <string name="notification_secret_helper">Appended to /v1/postNotification/ — must match Notification Secret Key in netsocket settings</string>
+    <string name="response_timeout_hint">Response timeout (seconds)</string>
+    <string name="response_timeout_helper">How long to wait for a command response (5–300). Default 120.</string>
+    <string name="use_https">Use HTTPS / WSS</string>
     <string name="forwarding_enabled">Forward notifications</string>
-    <string name="endpoint_label">Endpoint</string>
+    <string name="endpoint_label">Notification endpoint</string>
+    <string name="ws_endpoint_label">WebSocket</string>
     <string name="device_id_label">Device ID</string>
     <string name="save_settings">Save settings</string>
     <string name="settings_saved">Settings saved</string>
@@ -23,8 +57,26 @@
     <string name="open_battery_settings">Allow unrestricted battery</string>
     <string name="start_keepalive">Start keep-alive service</string>
     <string name="keepalive_started">Keep-alive service started</string>
+    <string name="redaction_heading">Notification content (Android 15+)</string>
+    <string name="status_redaction_on">Content redaction: active — Android may hide sensitive/OTP notification text</string>
+    <string name="status_redaction_off">Content redaction: disabled</string>
+    <string name="disable_redaction_button">Disable notification redaction</string>
+    <string name="redaction_disabled_toast">Enhanced notifications disabled — content will no longer be redacted</string>
+    <string name="redaction_already_off_toast">Already disabled</string>
+    <string name="redaction_failed_toast">Couldn\'t change the setting — grant WRITE_SECURE_SETTINGS via adb</string>
+    <string name="redaction_not_needed_toast">Only needed on Android 15+</string>
+    <string name="redaction_dialog_title">Fix redacted notifications</string>
+    <string name="redaction_dialog_message">Android 15+ can mark messages that contain codes as \u201Csensitive\u201D and hide their text from notification listeners (shown as \u201Csensitive notification content hidden\u201D). This is tied to the \u201CSuggest actions and replies for notifications\u201D / \u201CEnhanced notifications\u201D setting.\n\nTo let this app turn that setting off for you, grant it permission once via adb:\n\nadb shell pm grant %1$s android.permission.WRITE_SECURE_SETTINGS\n\nThen reopen this app and tap the button again. You can also turn off \u201CEnhanced notifications\u201D manually under system notification settings.</string>
+    <string name="redaction_dialog_open_settings">Open notification settings</string>
+    <string name="redaction_dialog_copy_cmd">Copy adb command</string>
+    <string name="redaction_dialog_close">Close</string>
+    <string name="redaction_cmd_copied_toast">adb command copied to clipboard</string>
     <string name="keepalive_channel_name">netsocket keep-alive</string>
-    <string name="keepalive_channel_description">Persistent service so notifications are forwarded while locked</string>
-    <string name="keepalive_title">netsocket is forwarding notifications</string>
-    <string name="keepalive_text">Running in the background</string>
+    <string name="keepalive_channel_description">Persistent service so the host connection and notification forwarding stay alive</string>
+    <string name="keepalive_title">netsocket is connected</string>
+    <string name="keepalive_text">Listening for commands and notifications</string>
+    <string name="messages_channel_name">netsocket messages</string>
+    <string name="messages_channel_description">Responses and alerts from your netsocket host</string>
+    <string name="message_notification_title">netsocket</string>
+    <string name="message_notification_fallback">New message</string>
 </resources>
