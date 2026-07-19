@@ -90,7 +90,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:fontFamily="monospace"
+            android:fontFamily="@font/geist_mono"
             android:textAppearance="?attr/textAppearanceBodySmall"
             android:textColor="@color/netsocket_on_background"
             android:textIsSelectable="true" />

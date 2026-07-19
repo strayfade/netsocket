@@ -23,8 +23,15 @@ object ConversationRepository {
     @Volatile
     private var pendingConversationId: String? = null
 
+    /** Session ID reused across sends until [clear] renews it. */
+    @Volatile
+    private var activeConversationId: String? = null
+
     @Volatile
     private var chatVisible = false
+
+    @Volatile
+    private var voiceVisible = false
 
     private var timeoutRunnable: Runnable? = null
     private var appContext: Context? = null
@@ -44,6 +51,9 @@ object ConversationRepository {
 
     fun init(context: Context) {
         appContext = context.applicationContext
+        if (activeConversationId == null) {
+            activeConversationId = Prefs(context).getOrCreateConversationId()
+        }
         if (!loaded) {
             loaded = true
             synchronized(messages) {
@@ -61,7 +71,15 @@ object ConversationRepository {
         chatVisible = visible
     }
 
+    fun setVoiceVisible(visible: Boolean) {
+        voiceVisible = visible
+    }
+
     fun isChatVisible(): Boolean = chatVisible
+
+    fun isVoiceVisible(): Boolean = voiceVisible
+
+    fun isUiVisible(): Boolean = chatVisible || voiceVisible
 
     fun addListener(listener: Listener) {
         listeners.add(listener)
@@ -81,7 +99,13 @@ object ConversationRepository {
         clearTimeout()
         pendingConversationId = null
         synchronized(messages) { messages.clear() }
-        appContext?.let { ChatHistoryStore.clear(it) }
+        val context = appContext
+        if (context != null) {
+            ChatHistoryStore.clear(context)
+            activeConversationId = Prefs(context).renewConversationId()
+        } else {
+            activeConversationId = UUID.randomUUID().toString()
+        }
         notifyMessages()
         notifyAwaiting(false)
     }
@@ -105,7 +129,8 @@ object ConversationRepository {
         }
 
         clearTimeout()
-        val conversationId = UUID.randomUUID().toString()
+        val conversationId = activeConversationId
+            ?: Prefs(context).getOrCreateConversationId().also { activeConversationId = it }
         pendingConversationId = conversationId
 
         val userMessage = ChatMessage(
@@ -117,7 +142,7 @@ object ConversationRepository {
         append(userMessage)
 
         val pending = ChatMessage(
-            id = "pending-$conversationId",
+            id = "pending-$conversationId-${System.currentTimeMillis()}",
             role = MessageRole.ASSISTANT,
             text = "",
             conversationId = conversationId,
@@ -163,11 +188,13 @@ object ConversationRepository {
     }
 
     private fun handleOverlay(text: String, conversationId: String?) {
-        val pending = pendingConversationId
-        if (conversationId != null && pending != null && conversationId != pending) {
+        val active = activeConversationId
+        // Drop replies that belong to a previous (cleared) conversation.
+        if (conversationId != null && active != null && conversationId != active) {
             return
         }
 
+        val pending = pendingConversationId
         if (pending != null && (conversationId == null || conversationId == pending)) {
             clearTimeout()
             pendingConversationId = null
@@ -186,7 +213,7 @@ object ConversationRepository {
             )
         )
 
-        if (!chatVisible) {
+        if (!isUiVisible()) {
             appContext?.let { IncomingNotifier.notify(it, text) }
         }
     }

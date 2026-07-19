@@ -11,6 +11,8 @@
         android:layout_height="wrap_content"
         android:layout_gravity="end"
         android:background="@drawable/bg_bubble_user"
+        android:breakStrategy="simple"
+        android:hyphenationFrequency="none"
         android:maxWidth="320dp"
         android:paddingStart="14dp"
         android:paddingTop="10dp"

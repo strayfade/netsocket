@@ -36,8 +36,8 @@ class NetsocketNotificationListener : NotificationListenerService() {
             return
         }
 
-        // Never forward our own keep-alive notification (prevents loops).
-        if (sbn.packageName == packageName) {
+        // Never forward this app's own notifications (keep-alive, message alerts, etc.).
+        if (isOwnNotification(sbn)) {
             return
         }
 
@@ -79,6 +79,12 @@ class NetsocketNotificationListener : NotificationListenerService() {
                 wakeLock.release()
             }
         }
+    }
+
+    /** True for keep-alive, incoming-message, and any other notification posted by this app. */
+    private fun isOwnNotification(sbn: StatusBarNotification): Boolean {
+        val self = packageName
+        return sbn.packageName == self || sbn.opPkg == self
     }
 
     private fun appLabel(packageName: String): String {

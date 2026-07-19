@@ -7,7 +7,7 @@
     <string name="settings_title">Settings</string>
     <string name="settings_hub_subtitle">Choose a category to configure netsocket.</string>
     <string name="settings_general">General</string>
-    <string name="settings_general_desc">Host, port, HTTPS/WSS, and device ID</string>
+    <string name="settings_general_desc">Host, port, HTTPS/WSS, device ID, and launch mode</string>
     <string name="settings_command">Command palette</string>
     <string name="settings_command_desc">Auth secret and response timeout</string>
     <string name="settings_forwarding">Notification forwarding</string>
@@ -16,6 +16,10 @@
     <string name="settings_permissions_desc">Notification access, battery, and keep-alive</string>
     <string name="back">Back</string>
     <string name="clear_chat">Clear conversation</string>
+    <string name="clear_chat_confirm_title">Clear conversation?</string>
+    <string name="clear_chat_confirm_message">This removes all messages and starts a new conversation with the host.</string>
+    <string name="clear_chat_confirm_positive">Clear</string>
+    <string name="clear_chat_confirm_negative">Cancel</string>
     <string name="send_command">Send</string>
     <string name="copy_response">Copy response</string>
     <string name="response_copied">Copied to clipboard</string>
@@ -23,6 +27,24 @@
     <string name="chat_empty_state">Send a command to your netsocket host.\nResponses appear here — or as a notification if the app is in the background.</string>
     <string name="assistant_label">netsocket</string>
     <string name="setup_required_toast">Open Settings and set your Command Palette secret to connect</string>
+    <string name="voice_mode_default">Open voice dictation by default</string>
+    <string name="voice_mode_default_helper">Launch into the voice page instead of the text chat.</string>
+    <string name="voice_title">Voice</string>
+    <string name="voice_hint_idle"></string>
+    <string name="voice_hint_listening">Listening…</string>
+    <string name="voice_hint_processing">Sending…</string>
+    <string name="voice_hint_awaiting">Waiting for response…</string>
+    <string name="voice_hint_speaking">Speaking response…</string>
+    <string name="voice_open_chat">Text chat</string>
+    <string name="voice_open_voice">Voice</string>
+    <string name="voice_hold_button">Hold to talk</string>
+    <string name="voice_hold_button_listening">Listening…</string>
+    <string name="voice_mic_cd">Hold to dictate</string>
+    <string name="voice_permission_needed">Microphone permission is required for voice dictation</string>
+    <string name="voice_recognition_unavailable">Speech recognition is not available on this device</string>
+    <string name="voice_empty_transcript">Didn\'t catch that — try again</string>
+    <string name="voice_error">Voice input failed — try again</string>
+    <string name="voice_busy">Still waiting on a response</string>
 
     <string name="status_connected">Connected</string>
     <string name="status_connecting">Connecting…</string>

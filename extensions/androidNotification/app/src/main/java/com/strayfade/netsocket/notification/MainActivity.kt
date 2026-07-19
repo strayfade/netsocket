@@ -9,6 +9,7 @@ import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
@@ -20,6 +21,7 @@ import com.strayfade.netsocket.notification.databinding.ActivityMainBinding
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var adapter: MessageAdapter
+    private var redirectedToVoice = false
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -46,6 +48,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (shouldOpenVoiceByDefault(savedInstanceState)) {
+            redirectedToVoice = true
+            startActivity(Intent(this, VoiceActivity::class.java))
+            finish()
+            return
+        }
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         applyInsets()
@@ -66,11 +76,14 @@ class MainActivity : AppCompatActivity() {
             } else {
                 android.view.View.GONE
             }
+        binding.voiceButton.setOnClickListener {
+            startActivity(Intent(this, VoiceActivity::class.java))
+        }
         binding.settingsButton.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
         binding.clearButton.setOnClickListener {
-            ConversationRepository.clear()
+            confirmClearConversation()
         }
         binding.sendButton.setOnClickListener { sendCurrentCommand() }
         binding.commandInput.setOnEditorActionListener { _, actionId, _ ->
@@ -103,18 +116,45 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
+    private fun shouldOpenVoiceByDefault(savedInstanceState: Bundle?): Boolean {
+        if (savedInstanceState != null) return false
+        if (intent.getBooleanExtra(EXTRA_SKIP_VOICE_REDIRECT, false)) return false
+        if (intent.getBooleanExtra(EXTRA_FOCUS_CHAT, false)) return false
+        return Prefs(this).voiceModeDefault
+    }
+
     override fun onStart() {
         super.onStart()
+        if (redirectedToVoice || !::binding.isInitialized) return
         ConversationRepository.setChatVisible(true)
         ConversationRepository.addListener(conversationListener)
         HostConnection.addListener(connectionListener)
     }
 
     override fun onStop() {
-        ConversationRepository.setChatVisible(false)
-        ConversationRepository.removeListener(conversationListener)
-        HostConnection.removeListener(connectionListener)
+        if (::binding.isInitialized && !redirectedToVoice) {
+            ConversationRepository.setChatVisible(false)
+            ConversationRepository.removeListener(conversationListener)
+            HostConnection.removeListener(connectionListener)
+        }
         super.onStop()
+    }
+
+    private fun confirmClearConversation() {
+        if (ConversationRepository.snapshot().isEmpty()) return
+        AlertDialog.Builder(this)
+            .setTitle(R.string.clear_chat_confirm_title)
+            .setMessage(R.string.clear_chat_confirm_message)
+            .setPositiveButton(R.string.clear_chat_confirm_positive) { _, _ ->
+                ConversationRepository.clear()
+            }
+            .setNegativeButton(R.string.clear_chat_confirm_negative, null)
+            .show()
     }
 
     private fun sendCurrentCommand() {
@@ -139,15 +179,6 @@ class MainActivity : AppCompatActivity() {
             state.lastError.isNotBlank() -> state.lastError
             else -> getString(R.string.status_disconnected)
         }
-        binding.connectionStatus.setTextColor(
-            getColor(
-                if (state.connected) {
-                    R.color.netsocket_connected
-                } else {
-                    R.color.netsocket_on_surface_muted
-                }
-            )
-        )
         binding.sendButton.isEnabled = true
     }
 
@@ -176,5 +207,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_FOCUS_CHAT = "focus_chat"
+        const val EXTRA_SKIP_VOICE_REDIRECT = "skip_voice_redirect"
     }
 }

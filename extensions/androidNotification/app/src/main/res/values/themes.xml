@@ -15,6 +15,86 @@
         <item name="android:windowBackground">@color/netsocket_background</item>
         <item name="android:colorBackground">@color/netsocket_background</item>
         <item name="android:windowLightStatusBar">false</item>
+
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+
+        <item name="textAppearanceDisplayLarge">@style/TextAppearance.Netsocket.DisplayLarge</item>
+        <item name="textAppearanceDisplayMedium">@style/TextAppearance.Netsocket.DisplayMedium</item>
+        <item name="textAppearanceDisplaySmall">@style/TextAppearance.Netsocket.DisplaySmall</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.Netsocket.HeadlineLarge</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.Netsocket.HeadlineMedium</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.Netsocket.HeadlineSmall</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.Netsocket.TitleLarge</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.Netsocket.TitleMedium</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.Netsocket.TitleSmall</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.Netsocket.BodyLarge</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.Netsocket.BodyMedium</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.Netsocket.BodySmall</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.Netsocket.LabelLarge</item>
+        <item name="textAppearanceLabelMedium">@style/TextAppearance.Netsocket.LabelMedium</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.Netsocket.LabelSmall</item>
+    </style>
+
+    <style name="TextAppearance.Netsocket.DisplayLarge" parent="TextAppearance.Material3.DisplayLarge">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.DisplayMedium" parent="TextAppearance.Material3.DisplayMedium">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.DisplaySmall" parent="TextAppearance.Material3.DisplaySmall">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.HeadlineLarge" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.HeadlineMedium" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.HeadlineSmall" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.TitleSmall" parent="TextAppearance.Material3.TitleSmall">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.BodyMedium" parent="TextAppearance.Material3.BodyMedium">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.BodySmall" parent="TextAppearance.Material3.BodySmall">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.LabelMedium" parent="TextAppearance.Material3.LabelMedium">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
+    </style>
+    <style name="TextAppearance.Netsocket.LabelSmall" parent="TextAppearance.Material3.LabelSmall">
+        <item name="fontFamily">@font/geist</item>
+        <item name="android:fontFamily">@font/geist</item>
     </style>
 
     <style name="Widget.Netsocket.SettingsRow" parent="Widget.Material3.CardView.Filled">

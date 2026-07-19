@@ -3,6 +3,7 @@ package com.strayfade.netsocket.notification
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import java.util.UUID
 
 class Prefs(context: Context) {
     private val prefs: SharedPreferences =
@@ -34,6 +35,11 @@ class Prefs(context: Context) {
         get() = prefs.getBoolean(KEY_FORWARDING_ENABLED, true)
         set(value) = prefs.edit { putBoolean(KEY_FORWARDING_ENABLED, value) }
 
+    /** When true, the app opens the voice dictation screen instead of the text chat. */
+    var voiceModeDefault: Boolean
+        get() = prefs.getBoolean(KEY_VOICE_MODE_DEFAULT, false)
+        set(value) = prefs.edit { putBoolean(KEY_VOICE_MODE_DEFAULT, value) }
+
     var responseTimeoutSeconds: Int
         get() = prefs.getInt(KEY_RESPONSE_TIMEOUT, DEFAULT_RESPONSE_TIMEOUT_SECONDS)
             .coerceIn(MIN_RESPONSE_TIMEOUT_SECONDS, MAX_RESPONSE_TIMEOUT_SECONDS)
@@ -43,6 +49,19 @@ class Prefs(context: Context) {
                 value.coerceIn(MIN_RESPONSE_TIMEOUT_SECONDS, MAX_RESPONSE_TIMEOUT_SECONDS)
             )
         }
+
+    /** Stable ID sent with commands so host-side agent memory stays in one session. */
+    fun getOrCreateConversationId(): String {
+        val existing = prefs.getString(KEY_CONVERSATION_ID, null)?.trim().orEmpty()
+        if (existing.isNotEmpty()) return existing
+        return renewConversationId()
+    }
+
+    fun renewConversationId(): String {
+        val created = UUID.randomUUID().toString()
+        prefs.edit { putString(KEY_CONVERSATION_ID, created) }
+        return created
+    }
 
     /** @deprecated Use [notificationSecret]; kept for migration from older builds. */
     @Deprecated("Renamed to notificationSecret")
@@ -77,7 +96,9 @@ class Prefs(context: Context) {
         const val KEY_NOTIFICATION_SECRET = "notification_secret"
         const val KEY_COMMAND_SECRET = "command_secret"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
+        const val KEY_VOICE_MODE_DEFAULT = "voice_mode_default"
         const val KEY_RESPONSE_TIMEOUT = "response_timeout_seconds"
+        const val KEY_CONVERSATION_ID = "conversation_id"
         /** Pre-chat-app key; migrated into [KEY_NOTIFICATION_SECRET]. */
         private const val KEY_SECRET_LEGACY = "secret"
         const val DEFAULT_HOST = "netsocket.strayfade.com"

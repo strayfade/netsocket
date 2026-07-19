@@ -10,6 +10,7 @@ import android.text.style.LeadingMarginSpan
 import android.text.style.LineBackgroundSpan
 import android.text.style.MetricAffectingSpan
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.Markwon
 import io.noties.markwon.MarkwonVisitor
@@ -40,6 +41,9 @@ object MarkdownRenderer {
             )
             .build()
 
+        val geistMono = ResourcesCompat.getFont(context, R.font.geist_mono) ?: Typeface.MONOSPACE
+        val geistBold = ResourcesCompat.getFont(context, R.font.geist_bold) ?: Typeface.DEFAULT_BOLD
+
         return Markwon.builder(context)
             .usePlugin(SoftBreakAddsNewLinePlugin.create())
             .usePlugin(StrikethroughPlugin.create())
@@ -47,7 +51,7 @@ object MarkdownRenderer {
             .usePlugin(TablePlugin.create(tableTheme))
             .usePlugin(
                 HtmlPlugin.create { plugin ->
-                    plugin.addHandler(AlertTagHandler(context))
+                    plugin.addHandler(AlertTagHandler(context, geistBold))
                 }
             )
             .usePlugin(object : AbstractMarkwonPlugin() {
@@ -57,6 +61,7 @@ object MarkdownRenderer {
 
                 override fun configureTheme(builder: MarkwonTheme.Builder) {
                     builder
+                        .codeTypeface(geistMono)
                         .codeTextColor(ContextCompat.getColor(context, R.color.netsocket_on_background))
                         .codeBackgroundColor(
                             ContextCompat.getColor(context, R.color.netsocket_surface_variant)
@@ -95,6 +100,7 @@ object AlertMarkdown {
 
 private class AlertTagHandler(
     context: Context,
+    private val boldTypeface: Typeface,
 ) : TagHandler() {
     private val density = context.resources.displayMetrics.density
     private val colors = mapOf(
@@ -143,7 +149,7 @@ private class AlertTagHandler(
         visitor.builder().append(style.title)
         val titleEnd = visitor.length()
         visitor.builder().setSpan(
-            BoldSpan(),
+            BoldSpan(boldTypeface),
             titleStart,
             titleEnd,
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -185,13 +191,15 @@ private class AlertTagHandler(
     )
 }
 
-private class BoldSpan : MetricAffectingSpan() {
+private class BoldSpan(
+    private val typeface: Typeface,
+) : MetricAffectingSpan() {
     override fun updateDrawState(tp: TextPaint) {
-        tp.typeface = Typeface.create(tp.typeface, Typeface.BOLD)
+        tp.typeface = typeface
     }
 
     override fun updateMeasureState(textPaint: TextPaint) {
-        textPaint.typeface = Typeface.create(textPaint.typeface, Typeface.BOLD)
+        textPaint.typeface = typeface
     }
 }
 

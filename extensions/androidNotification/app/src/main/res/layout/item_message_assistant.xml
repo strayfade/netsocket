@@ -32,24 +32,17 @@
             app:tint="@color/netsocket_on_surface_muted" />
     </LinearLayout>
 
-    <HorizontalScrollView
-        android:id="@+id/messageScroll"
+    <TextView
+        android:id="@+id/messageText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:fillViewport="true"
-        android:scrollbars="horizontal">
-
-        <TextView
-            android:id="@+id/messageText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:lineSpacingExtra="2dp"
-            android:minWidth="280dp"
-            android:textColor="@color/netsocket_on_background"
-            android:textIsSelectable="true"
-            android:textSize="15sp" />
-    </HorizontalScrollView>
+        android:breakStrategy="simple"
+        android:hyphenationFrequency="none"
+        android:lineSpacingExtra="2dp"
+        android:textColor="@color/netsocket_on_background"
+        android:textIsSelectable="true"
+        android:textSize="15sp" />
 
     <ProgressBar
         android:id="@+id/pendingSpinner"
