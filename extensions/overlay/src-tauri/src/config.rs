@@ -43,6 +43,15 @@ pub struct Settings {
     pub activeProfile: String,
     pub responseTimeoutSeconds: u32,
     pub profiles: HashMap<String, ProfileConfig>,
+    #[serde(default)]
+    pub deviceId: String,
+    #[serde(default)]
+    pub identityPublicKey: String,
+    #[serde(default)]
+    pub identityPrivateKey: String,
+    /// Pinned server identity public key (set after first successful challenge).
+    #[serde(default)]
+    pub pinnedServerIdentityPublicKey: String,
 }
 
 impl Default for Settings {
@@ -58,6 +67,10 @@ impl Default for Settings {
             activeProfile: DEFAULT_PROFILE.to_string(),
             responseTimeoutSeconds: DEFAULT_RESPONSE_TIMEOUT_SECONDS,
             profiles,
+            deviceId: String::new(),
+            identityPublicKey: String::new(),
+            identityPrivateKey: String::new(),
+            pinnedServerIdentityPublicKey: String::new(),
         }
     }
 }
@@ -139,7 +152,39 @@ impl Settings {
                 );
                 profiles
             },
+            deviceId: raw.deviceId.trim().to_string(),
+            identityPublicKey: raw.identityPublicKey.trim().to_string(),
+            identityPrivateKey: raw.identityPrivateKey.trim().to_string(),
+            pinnedServerIdentityPublicKey: raw.pinnedServerIdentityPublicKey.trim().to_string(),
         }
+    }
+
+    /// Ensures a durable device ID exists. Returns true when a new ID was generated.
+    pub fn ensure_device_id(&mut self) -> bool {
+        if self.deviceId.trim().is_empty() {
+            self.deviceId = uuid::Uuid::new_v4().to_string();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Ensures an Ed25519 identity keypair exists. Returns true when keys were generated.
+    pub fn ensure_identity_keys(&mut self) -> bool {
+        if !self.identityPublicKey.trim().is_empty() && !self.identityPrivateKey.trim().is_empty() {
+            if let Some(identity) = crate::device_crypto::DeviceIdentity::from_stored(
+                &self.identityPublicKey,
+                &self.identityPrivateKey,
+            ) {
+                self.identityPublicKey = identity.public_key_b64;
+                self.identityPrivateKey = identity.private_key_b64;
+                return false;
+            }
+        }
+        let identity = crate::device_crypto::DeviceIdentity::generate();
+        self.identityPublicKey = identity.public_key_b64;
+        self.identityPrivateKey = identity.private_key_b64;
+        true
     }
 }
 
@@ -150,6 +195,8 @@ pub struct ConnectionState {
     pub lastError: String,
     pub url: String,
     pub profile: String,
+    #[serde(default)]
+    pub authStatus: String,
 }
 
 impl Default for ConnectionState {
@@ -160,6 +207,7 @@ impl Default for ConnectionState {
             lastError: String::new(),
             url: String::new(),
             profile: DEFAULT_PROFILE.to_string(),
+            authStatus: String::new(),
         }
     }
 }
@@ -203,13 +251,24 @@ pub struct CompleteHotkeyCapturePayload {
     pub cancelled: bool,
 }
 
-pub fn parse_overlay_broadcast(parsed: &serde_json::Value) -> Option<(String, Option<String>)> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OverlayBroadcast {
+    pub text: String,
+    pub conversation_id: Option<String>,
+    pub device_id: Option<String>,
+}
+
+pub fn parse_overlay_broadcast(parsed: &serde_json::Value) -> Option<OverlayBroadcast> {
     if parsed.get("broadcastPurpose")?.as_str()? != "overlay" {
         return None;
     }
     let data = parsed.get("broadcastData")?;
     if let Some(text) = data.as_str() {
-        return Some((text.to_string(), None));
+        return Some(OverlayBroadcast {
+            text: text.to_string(),
+            conversation_id: None,
+            device_id: None,
+        });
     }
     if let Some(obj) = data.as_object() {
         let text = obj
@@ -221,13 +280,32 @@ pub fn parse_overlay_broadcast(parsed: &serde_json::Value) -> Option<(String, Op
         let conversation_id = obj
             .get("conversationId")
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+        let device_id = obj
+            .get("deviceId")
+            .or_else(|| obj.get("device_id"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
         if text.is_empty() {
             return None;
         }
-        return Some((text, conversation_id));
+        return Some(OverlayBroadcast {
+            text,
+            conversation_id,
+            device_id,
+        });
     }
     None
+}
+
+/// Returns true when this device should display the alert.
+pub fn alert_targets_device(local_device_id: &str, alert_device_id: Option<&str>) -> bool {
+    match alert_device_id.map(str::trim).filter(|id| !id.is_empty()) {
+        None => true,
+        Some(target) => !local_device_id.trim().is_empty() && target == local_device_id.trim(),
+    }
 }
 
 pub fn is_external_url(url: &str) -> bool {
@@ -280,5 +358,46 @@ mod tests {
             Settings::normalize_overlay_hotkey("Alt+Space"),
             DEFAULT_HOTKEY
         );
+    }
+
+    #[test]
+    fn ensure_device_id_generates_once() {
+        let mut settings = Settings::default();
+        assert!(settings.deviceId.is_empty());
+        assert!(settings.ensure_device_id());
+        let first = settings.deviceId.clone();
+        assert!(!first.is_empty());
+        assert!(!settings.ensure_device_id());
+        assert_eq!(settings.deviceId, first);
+    }
+
+    #[test]
+    fn alert_targets_device_blank_means_all() {
+        assert!(alert_targets_device("abc", None));
+        assert!(alert_targets_device("abc", Some("")));
+        assert!(alert_targets_device("abc", Some("   ")));
+    }
+
+    #[test]
+    fn alert_targets_device_requires_match() {
+        assert!(alert_targets_device("device-a", Some("device-a")));
+        assert!(!alert_targets_device("device-a", Some("device-b")));
+        assert!(!alert_targets_device("", Some("device-a")));
+    }
+
+    #[test]
+    fn parse_overlay_broadcast_includes_device_id() {
+        let parsed = serde_json::json!({
+            "broadcastPurpose": "overlay",
+            "broadcastData": {
+                "text": "hello",
+                "conversationId": "c1",
+                "deviceId": "d1"
+            }
+        });
+        let broadcast = parse_overlay_broadcast(&parsed).expect("parsed");
+        assert_eq!(broadcast.text, "hello");
+        assert_eq!(broadcast.conversation_id.as_deref(), Some("c1"));
+        assert_eq!(broadcast.device_id.as_deref(), Some("d1"));
     }
 }

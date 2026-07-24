@@ -18,6 +18,7 @@ const defaultSettings = {
   openAtLogin: false,
   activeProfile: "production",
   responseTimeoutSeconds: DEFAULT_RESPONSE_TIMEOUT_SECONDS,
+  deviceId: "",
   profiles: {
     production: { url: "ws://127.0.0.1:4675", secret: "" },
     development: { url: "ws://127.0.0.1:4675", secret: "" },
@@ -103,15 +104,25 @@ const createConversationId = () => {
 
 const parseOverlayPayload = (broadcastData) => {
   if (typeof broadcastData === "string") {
-    return { text: broadcastData, conversationId: null };
+    return { text: broadcastData, conversationId: null, deviceId: null };
   }
   if (broadcastData && typeof broadcastData === "object") {
+    const deviceIdRaw = broadcastData.deviceId ?? broadcastData.device_id ?? null;
+    const deviceId =
+      typeof deviceIdRaw === "string" && deviceIdRaw.trim() ? deviceIdRaw.trim() : null;
     return {
       text: String(broadcastData.text ?? broadcastData.message ?? ""),
       conversationId: broadcastData.conversationId ?? null,
+      deviceId,
     };
   }
-  return { text: "", conversationId: null };
+  return { text: "", conversationId: null, deviceId: null };
+};
+
+const alertTargetsDevice = (localDeviceId, alertDeviceId) => {
+  if (!alertDeviceId) return true;
+  const local = String(localDeviceId || "").trim();
+  return Boolean(local) && local === alertDeviceId;
 };
 
 export default function App() {
@@ -128,6 +139,7 @@ export default function App() {
     connecting: false,
     lastError: "",
     url: defaultSettings.profiles.production.url,
+    authStatus: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState(null);
@@ -141,6 +153,11 @@ export default function App() {
   const flyInTimeoutRef = useRef(null);
   const flyInDismissTimeoutRef = useRef(null);
   const lastServerNotificationTextRef = useRef(null);
+  const settingsRef = useRef(defaultSettings);
+
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
 
   const isOverlayOpen = () => {
     const current = phaseRef.current;
@@ -296,10 +313,16 @@ export default function App() {
         onServerMessage: (payload) => {
           if (payload?.broadcastPurpose !== "overlay") return;
 
-          const { text, conversationId } = parseOverlayPayload(payload.broadcastData);
+          const { text, conversationId, deviceId } = parseOverlayPayload(payload.broadcastData);
           if (!text) return;
 
           const pendingId = pendingConversationRef.current;
+          const isPendingReply = Boolean(
+            conversationId && pendingId && conversationId === pendingId
+          );
+          if (!isPendingReply && !alertTargetsDevice(settingsRef.current?.deviceId, deviceId)) {
+            return;
+          }
           if (conversationId && pendingId && conversationId !== pendingId) return;
 
           storeServerNotificationText(text);
@@ -603,20 +626,28 @@ export default function App() {
               placeholder="ws://127.0.0.1:4675"
             />
 
-            <label className="setting-label">Authentication secret</label>
+            <div className="hint-row">
+              Connects with a device keypair. Approve this overlay in the netsocket dashboard under
+              Settings → Devices. No shared secret is required.
+            </div>
+            {connection.authStatus === "pending" ? (
+              <div className="hint-row">
+                Waiting for approval — open Settings → Devices in the web dashboard and approve this
+                device.
+              </div>
+            ) : null}
+            {connection.authStatus === "denied" ? (
+              <div className="hint-row">This device was denied. Ask an admin to re-approve it.</div>
+            ) : null}
+
+            <label className="setting-label">Legacy secret (optional)</label>
             <input
               className="settings-input"
               type="password"
               value={activeProfileConfig.secret || ""}
               onChange={(event) => updateProfileField("secret", event.target.value)}
-              placeholder="Must match Dashboard → Preferences → Command Palette secret"
+              placeholder="Only needed for older servers"
             />
-            {!activeProfileConfig.secret ? (
-              <div className="hint-row">
-                Required for overlay WebSocket auth. Set the same value in Netsocket dashboard
-                preferences under Command Palette.
-              </div>
-            ) : null}
 
             {HOTKEY_FIELDS.map(({ key, label }) => (
               <div key={key}>
@@ -650,6 +681,18 @@ export default function App() {
               >
                 <span className="toggle-thumb" />
               </button>
+            </div>
+
+            <label className="setting-label">Device ID</label>
+            <input
+              className="settings-input"
+              value={settings.deviceId || draftSettings.deviceId || ""}
+              readOnly
+              title="Stable identifier used for pairing and alert routing"
+            />
+            <div className="hint-row">
+              Shown in the dashboard Devices list when this overlay requests access. Also used for
+              Alert Device ID targeting.
             </div>
 
             <label className="setting-label" htmlFor="response-timeout-slider">

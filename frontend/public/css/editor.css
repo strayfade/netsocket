@@ -1107,6 +1107,139 @@ header #node-count-visible {
     background: #161616;
 }
 
+.devices-section {
+    margin-bottom: 22px;
+}
+
+.devices-section h3 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ddd;
+}
+
+.devices-empty {
+    margin: 0;
+    font-size: 12px;
+    color: #777;
+}
+
+.device-card {
+    border: 1px solid #2a2a2a;
+    background: #111;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.device-card-pending {
+    border-color: #5a4a1a;
+}
+
+.device-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.device-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.device-status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 3px 7px;
+    border-radius: 3px;
+    background: #222;
+    color: #bbb;
+}
+
+.device-status-pending {
+    background: #3a3010;
+    color: #e6c35c;
+}
+
+.device-status-approved {
+    background: #14301c;
+    color: #6dca8b;
+}
+
+.device-status-denied {
+    background: #3a1414;
+    color: #e07a7a;
+}
+
+.device-card-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.device-card-meta div {
+    min-width: 0;
+}
+
+.device-card-meta span {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.device-card-meta code {
+    display: block;
+    font-family: 'Google Sans Code', 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #ddd;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.device-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.device-card-actions button {
+    padding: 7px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    background-color: #1c1c1c;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-weight: 600;
+}
+
+.device-card-actions button:hover {
+    background: #161616;
+}
+
+.device-card-actions .device-btn-danger {
+    background: #3a1818;
+    color: #f0a0a0;
+}
+
+.device-card-actions .device-btn-danger:hover {
+    background: #4a2020;
+}
+
+.device-card-actions .device-btn-muted {
+    background: transparent;
+    border: 1px solid #333;
+    color: #999;
+}
+
 /* Click-outside layer for LiteGraph `.settings` panels (node + canvas options) */
 .litegraph-settings-backdrop {
     position: fixed;

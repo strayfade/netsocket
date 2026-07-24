@@ -1,4 +1,5 @@
 mod config;
+mod device_crypto;
 mod hotkeys;
 mod overlay;
 mod platform;
@@ -29,7 +30,20 @@ fn settings_get(app: AppHandle) -> Settings {
 
 #[tauri::command]
 fn settings_save(app: AppHandle, next_settings: Settings) -> Result<Settings, String> {
-    let safe = Settings::from_saved(next_settings);
+    let existing = app.state::<SettingsHandle>().get();
+    let mut safe = Settings::from_saved(next_settings);
+    if safe.deviceId.trim().is_empty() {
+        safe.deviceId = existing.deviceId;
+    }
+    if safe.identityPublicKey.trim().is_empty() || safe.identityPrivateKey.trim().is_empty() {
+        safe.identityPublicKey = existing.identityPublicKey;
+        safe.identityPrivateKey = existing.identityPrivateKey;
+    }
+    if safe.pinnedServerIdentityPublicKey.trim().is_empty() {
+        safe.pinnedServerIdentityPublicKey = existing.pinnedServerIdentityPublicKey;
+    }
+    safe.ensure_device_id();
+    safe.ensure_identity_keys();
     app.state::<SettingsHandle>().update(safe.clone());
     save_settings(&app, &safe)?;
     apply_autostart(&app, safe.openAtLogin)?;
@@ -94,12 +108,21 @@ fn command_send(app: AppHandle, payload: CommandSendPayload) -> Result<OkPayload
     }
 
     let conversation_id = payload.conversation_id.filter(|id| !id.is_empty());
+    let device_id = {
+        let id = app.state::<SettingsHandle>().get().deviceId;
+        if id.trim().is_empty() {
+            None
+        } else {
+            Some(id)
+        }
+    };
     set_awaiting_response(&app, conversation_id.is_some());
     runtime
         .command_tx
         .send(WsCommand::Send {
             command: text,
             conversation_id: conversation_id.clone(),
+            device_id,
         })
         .map_err(|e| e.to_string())?;
 

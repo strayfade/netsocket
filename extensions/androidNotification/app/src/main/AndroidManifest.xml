@@ -5,12 +5,17 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <!-- Not grantable at runtime; grant via adb so the app can turn off enhanced
          notifications (which otherwise redacts sensitive notification content on Android 15+):
@@ -58,9 +63,28 @@
             android:theme="@style/Theme.NetsocketNotification" />
 
         <activity
-            android:name=".SettingsActivity"
+            android:name=".FeaturesActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".AuthenticatorActivity"
+            android:exported="false"
+            android:parentActivityName=".FeaturesActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".QrScanActivity"
+            android:exported="false"
+            android:parentActivityName=".AuthenticatorActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".FeaturesActivity"
             android:windowSoftInputMode="adjustResize" />
 
         <activity

@@ -18,6 +18,8 @@ const config = {
         settings: path.join(dataDir, 'settings.json'),
         mcpAgentMemory: path.join(dataDir, 'mcp-agent-memory.json'),
         subgraphs: path.join(dataDir, 'subgraphs.json'),
+        devices: path.join(dataDir, 'devices.json'),
+        serverIdentity: path.join(dataDir, 'server-identity.json'),
     }
 }
 

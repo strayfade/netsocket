@@ -30,8 +30,19 @@ pub struct SettingsHandle {
 
 impl SettingsHandle {
     pub fn new(app: &tauri::AppHandle) -> Self {
+        let mut settings = Settings::from_saved(load_settings(app));
+        let mut dirty = false;
+        if settings.ensure_device_id() {
+            dirty = true;
+        }
+        if settings.ensure_identity_keys() {
+            dirty = true;
+        }
+        if dirty {
+            let _ = save_settings(app, &settings);
+        }
         Self {
-            inner: Arc::new(Mutex::new(load_settings(app))),
+            inner: Arc::new(Mutex::new(settings)),
         }
     }
 

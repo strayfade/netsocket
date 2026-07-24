@@ -102,15 +102,11 @@ class VoiceActivity : AppCompatActivity() {
         }
         binding.clearButton.setOnClickListener { confirmClearConversation() }
         binding.settingsButton.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+            startActivity(Intent(this, FeaturesActivity::class.java))
         }
 
         setupHoldButton()
         ensureMicPermission()
-
-        if (Prefs(this).commandSecret.isBlank()) {
-            Toast.makeText(this, R.string.setup_required_toast, Toast.LENGTH_LONG).show()
-        }
     }
 
     override fun onStart() {
@@ -308,7 +304,7 @@ class VoiceActivity : AppCompatActivity() {
         val result = ConversationRepository.sendCommand(text)
         when (result) {
             "/settings" -> {
-                startActivity(Intent(this, SettingsActivity::class.java))
+                startActivity(Intent(this, FeaturesActivity::class.java))
                 binding.statusLabel.setText(R.string.voice_hint_idle)
             }
             null -> binding.statusLabel.setText(R.string.voice_hint_awaiting)
@@ -359,6 +355,8 @@ class VoiceActivity : AppCompatActivity() {
     private fun renderConnection(state: HostConnection.State) {
         binding.connectionStatus.text = when {
             state.connected -> getString(R.string.status_connected)
+            state.authStatus == "pending" -> getString(R.string.status_pending)
+            state.authStatus == "denied" -> getString(R.string.status_denied)
             state.connecting -> getString(R.string.status_connecting)
             state.lastError.isNotBlank() -> state.lastError
             else -> getString(R.string.status_disconnected)

@@ -34,6 +34,14 @@
         <item name="textAppearanceLabelLarge">@style/TextAppearance.Netsocket.LabelLarge</item>
         <item name="textAppearanceLabelMedium">@style/TextAppearance.Netsocket.LabelMedium</item>
         <item name="textAppearanceLabelSmall">@style/TextAppearance.Netsocket.LabelSmall</item>
+
+        <item name="materialSwitchStyle">@style/Widget.Netsocket.MaterialSwitch</item>
+    </style>
+
+    <style name="Widget.Netsocket.MaterialSwitch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="thumbTint">@color/switch_thumb</item>
+        <item name="trackTint">@color/switch_track</item>
+        <item name="thumbIconTint">@color/switch_thumb_icon</item>
     </style>
 
     <style name="TextAppearance.Netsocket.DisplayLarge" parent="TextAppearance.Material3.DisplayLarge">

@@ -62,231 +62,436 @@ const wss = new WebSocket.Server({ server });
 let connectedClients = [];
 
 // Store connected clients
-const { setWsServerConnectedClients, registerConversation, unregisterSocket } = require('./utils/alert.js')
+const { setWsServerConnectedClients, registerConversation, registerDevice, unregisterSocket, normalizeId } = require('./utils/alert.js')
+const deviceRegistry = require('./manager/deviceRegistry')
+const deviceAuth = require('./utils/deviceAuth')
 const { executeGraph } = require('./manager/execute')
 var cookieParser = require('cookie-parser')
 app.use(cookieParser())
-let lastWsAuthDeniedLog = 0
-wss.on('connection', (socket, request) => {
-    const sessionToken = getTokenFromCookieHeader(request.headers.cookie)
 
-    const commandPaletteSecret = settingsManager.getSetting('triggersCommandPalette.secret')
-    if (validateToken(sessionToken) || integrationSecretMatches({ headers: request.headers }, commandPaletteSecret)) {
-        connectedClients.push(socket);
-        //log('Client connected');
-        setWsServerConnectedClients(connectedClients)
-        socket.on('close', () => {
-            connectedClients = connectedClients.filter((s) => s !== socket);
-            setWsServerConnectedClients(connectedClients)
-            unregisterSocket(socket)
-            //log('Client disconnected');
-        });
-    }
-    else {
-        const now = Date.now()
-        if (now - lastWsAuthDeniedLog > 5000) {
-            lastWsAuthDeniedLog = now
-            log('Connection denied (session missing or expired — sign in again)')
+const EDITOR_ONLY_PURPOSES = new Set([
+    'getNodes', 'setNodes', 'execute', 'populateLog',
+    'getPreferences', 'saveSetting',
+    'getSubgraphs', 'saveSubgraph', 'deleteSubgraph',
+])
+
+const broadcastToEditorClients = (payload) => {
+    const encoded = typeof payload === 'string' ? payload : JSON.stringify(payload)
+    connectedClients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN && client.netsocketRole === 'editor') {
+            client.send(encoded)
         }
-        socket.close(4401, 'session required')
+    })
+}
+
+const broadcastDevicesChanged = () => {
+    broadcastToEditorClients({
+        broadcastPurpose: 'devicesChanged',
+        broadcastData: {
+            devices: deviceRegistry.listDevices(),
+        },
+    })
+}
+
+const admitDeviceSocket = (socket) => {
+    if (!connectedClients.includes(socket)) {
+        connectedClients.push(socket)
+        setWsServerConnectedClients(connectedClients)
     }
-    socket.on('message', async (message) => {
-        try {
-            message = JSON.parse(message)
-            if (connectedClients.includes(socket)) {
-                switch (message.broadcastPurpose) {
-                    case "command": {
-                        const payload = message.broadcastData
-                        let commandText = ""
-                        let conversationId = null
+    socket.netsocketRole = 'device'
+}
 
-                        if (typeof payload === "string") {
-                            commandText = payload
-                        } else if (payload && typeof payload === "object") {
-                            commandText = String(payload.command ?? payload.text ?? "")
-                            conversationId = payload.conversationId ?? null
-                        }
+const replyToSocket = (socket, payload) => {
+    const session = deviceAuth.getSession(socket)
+    if (session?.approved && session?.sessionKey) {
+        deviceAuth.sendEncrypted(socket, payload)
+    } else {
+        deviceAuth.sendJson(socket, payload)
+    }
+}
 
-                        if (conversationId) {
-                            registerConversation(conversationId, socket)
-                        }
+const handleTrustedMessage = async (socket, message) => {
+    const role = socket.netsocketRole
+    const purpose = message.broadcastPurpose
+    const isDevice = role === 'device'
+    const isEditorOrLegacy = role === 'editor' || role === 'legacy'
 
-                        if (commandText === "/noti") {
-                            socket.send(JSON.stringify({
-                                broadcastPurpose: "overlay",
-                                broadcastData: {
-                                    text: "this is a test notification!",
-                                    conversationId: conversationId,
-                                },
-                            }))
-                        } else {
-                            await onNewCommand(commandText, conversationId)
-                        }
+    if (isDevice && EDITOR_ONLY_PURPOSES.has(purpose)) {
+        return
+    }
+    if (isDevice && !deviceAuth.isDevicePurposeAllowed(purpose) && purpose !== 'encrypted') {
+        return
+    }
 
-                        socket.send(JSON.stringify({
-                            broadcastPurpose: 'ack',
-                            conversationId: conversationId,
-                        }));
-                        break;
-                    }
-                    case "ping":
-                        socket.send(JSON.stringify({
-                            broadcastPurpose: 'pong',
-                        }));
-                        break;
-                    case "getNodes":
-                        socket.send(JSON.stringify({
-                            broadcastPurpose: 'setNodes',
-                            broadcastData: getNodes().nodes
-                        }));
-                        break;
-                    case "setNodes":
-                        if (message.broadcastData == null) {
-                            break
-                        }
-                        setNodes({
-                            nodes: message.broadcastData,
-                            currentValues: getNodes().currentValues
-                        })
-                        cronTriggerManager.syncFromGraphIfNeeded()
-                        break;
-                    case "execute":
-                        setNodes({
-                            nodes: message.broadcastData.graphNodes,
-                            currentValues: getNodes().currentValues
-                        })
-                        cronTriggerManager.syncFromGraphIfNeeded()
-                        await executeGraph(message.broadcastData.node)
-                        socket.send(JSON.stringify({
-                            broadcastPurpose: 'setNodes',
-                            broadcastData: getNodes().nodes
-                        }));
-                        break;
-                    case "populateLog":
-                        socket.send(JSON.stringify({
-                            broadcastPurpose: "populateLog",
-                            broadcastData: getLines(50)
-                        }))
-                        break;
-                    case "getPreferences": {
-                        const defs = nodePreferencesRegistry.getPrefs()
-                        const withValues = defs.map((p) => {
-                            let stored = settingsManager.getStoredValue(p.id)
-                            if (p.id === 'google.oauth.connect') {
-                                const email = settingsManager.getStoredValue(CONNECTED_EMAIL_KEY)
-                                stored = email !== undefined ? email : stored
-                            }
-                            const fallback = p.defaultVal != null && p.defaultVal !== '' ? String(p.defaultVal) : ''
-                            return {
-                                category: p.category,
-                                id: p.id,
-                                displayName: p.displayName,
-                                type: p.type,
-                                defaultVal: p.defaultVal,
-                                description: p.description || '',
-                                value: stored !== undefined ? stored : fallback
-                            }
-                        })
-                        socket.send(JSON.stringify({
-                            broadcastPurpose: "getPreferences",
-                            requestId: message.requestId,
-                            broadcastData: withValues
-                        }))
-                        break
-                    }
-                    case "saveSetting": {
-                        const { name, value } = message.broadcastData || {}
-                        if (typeof name === 'string' && name.length && name !== 'google.oauth.connect') {
-                            settingsManager.setSetting(name, value ?? '')
-                            await settingsManager.saveSettings()
-                            try {
-                                await require('./utils/hueApi').setupHueApi()
-                            } catch (e) {
-                                log(`Hue reconnect after save: ${e}`, logColors.Warning)
-                            }
-                            try {
-                                require('./utils/languageModel').reinitOllama()
-                            } catch (e) {
-                                log(`Ollama reinit after save: ${e}`, logColors.Warning)
-                            }
-                        }
-                        socket.send(JSON.stringify({
-                            broadcastPurpose: "saveSetting",
-                            requestId: message.requestId,
-                            broadcastData: { ok: true }
-                        }))
-                        break
-                    }
-                    case "getSubgraphs": {
-                        const subgraphStore = require('./manager/subgraphStore')
-                        socket.send(JSON.stringify({
-                            broadcastPurpose: "getSubgraphs",
-                            requestId: message.requestId,
-                            broadcastData: subgraphStore.listDefinitions(),
-                        }))
-                        break
-                    }
-                    case "saveSubgraph": {
-                        const subgraphStore = require('./manager/subgraphStore')
-                        try {
-                            const saved = await subgraphStore.saveDefinition(message.broadcastData || {})
-                            const payload = JSON.stringify({
-                                broadcastPurpose: "subgraphsChanged",
-                                broadcastData: subgraphStore.listDefinitions(),
-                            })
-                            connectedClients.forEach((client) => {
-                                if (client.readyState === WebSocket.OPEN) {
-                                    client.send(payload)
-                                }
-                            })
-                            socket.send(JSON.stringify({
-                                broadcastPurpose: "saveSubgraph",
-                                requestId: message.requestId,
-                                broadcastData: saved,
-                            }))
-                        } catch (e) {
-                            log(`saveSubgraph: ${e}`, logColors.Error)
-                            socket.send(JSON.stringify({
-                                broadcastPurpose: "saveSubgraph",
-                                requestId: message.requestId,
-                                broadcastData: { error: String(e?.message || e) },
-                            }))
-                        }
-                        break
-                    }
-                    case "deleteSubgraph": {
-                        const subgraphStore = require('./manager/subgraphStore')
-                        const id = message.broadcastData?.id
-                        try {
-                            const ok = await subgraphStore.deleteDefinition(id)
-                            const payload = JSON.stringify({
-                                broadcastPurpose: "subgraphsChanged",
-                                broadcastData: subgraphStore.listDefinitions(),
-                            })
-                            connectedClients.forEach((client) => {
-                                if (client.readyState === WebSocket.OPEN) {
-                                    client.send(payload)
-                                }
-                            })
-                            socket.send(JSON.stringify({
-                                broadcastPurpose: "deleteSubgraph",
-                                requestId: message.requestId,
-                                broadcastData: { ok },
-                            }))
-                        } catch (e) {
-                            log(`deleteSubgraph: ${e}`, logColors.Error)
-                            socket.send(JSON.stringify({
-                                broadcastPurpose: "deleteSubgraph",
-                                requestId: message.requestId,
-                                broadcastData: { error: String(e?.message || e) },
-                            }))
-                        }
-                        break
-                    }
+    switch (purpose) {
+        case 'command': {
+            const payload = message.broadcastData
+            let commandText = ''
+            let conversationId = null
+            let deviceId = null
+
+            if (typeof payload === 'string') {
+                commandText = payload
+            } else if (payload && typeof payload === 'object') {
+                commandText = String(payload.command ?? payload.text ?? '')
+                conversationId = payload.conversationId ?? null
+                deviceId = normalizeId(payload.deviceId ?? payload.device_id ?? null)
+            }
+
+            const deviceSession = deviceAuth.getSession(socket)
+            if (deviceSession?.deviceId) {
+                deviceId = deviceSession.deviceId
+            }
+
+            if (conversationId) {
+                registerConversation(conversationId, socket)
+            }
+            if (deviceId) {
+                registerDevice(deviceId, socket)
+            }
+
+            if (commandText === '/noti') {
+                replyToSocket(socket, {
+                    broadcastPurpose: 'overlay',
+                    broadcastData: {
+                        text: 'this is a test notification!',
+                        conversationId: conversationId,
+                        deviceId: deviceId,
+                    },
+                })
+            } else {
+                await onNewCommand(commandText, conversationId, deviceId)
+            }
+
+            replyToSocket(socket, {
+                broadcastPurpose: 'ack',
+                conversationId: conversationId,
+            })
+            break
+        }
+        case 'ping': {
+            const pingData = message.broadcastData
+            let deviceId = null
+            if (pingData && typeof pingData === 'object') {
+                deviceId = normalizeId(pingData.deviceId ?? pingData.device_id ?? null)
+            }
+            const deviceSession = deviceAuth.getSession(socket)
+            if (deviceSession?.deviceId) {
+                deviceId = deviceSession.deviceId
+                deviceRegistry.touchLastSeen(deviceId)
+            }
+            if (deviceId) {
+                registerDevice(deviceId, socket)
+            }
+            replyToSocket(socket, {
+                broadcastPurpose: 'pong',
+            })
+            break
+        }
+        case 'getNodes':
+            if (!isEditorOrLegacy) break
+            socket.send(JSON.stringify({
+                broadcastPurpose: 'setNodes',
+                broadcastData: getNodes().nodes,
+            }))
+            break
+        case 'setNodes':
+            if (!isEditorOrLegacy) break
+            if (message.broadcastData == null) break
+            setNodes({
+                nodes: message.broadcastData,
+                currentValues: getNodes().currentValues,
+            })
+            cronTriggerManager.syncFromGraphIfNeeded()
+            break
+        case 'execute':
+            if (!isEditorOrLegacy) break
+            setNodes({
+                nodes: message.broadcastData.graphNodes,
+                currentValues: getNodes().currentValues,
+            })
+            cronTriggerManager.syncFromGraphIfNeeded()
+            await executeGraph(message.broadcastData.node)
+            socket.send(JSON.stringify({
+                broadcastPurpose: 'setNodes',
+                broadcastData: getNodes().nodes,
+            }))
+            break
+        case 'populateLog':
+            if (!isEditorOrLegacy) break
+            socket.send(JSON.stringify({
+                broadcastPurpose: 'populateLog',
+                broadcastData: getLines(50),
+            }))
+            break
+        case 'getPreferences': {
+            if (!isEditorOrLegacy) break
+            const defs = nodePreferencesRegistry.getPrefs()
+            const withValues = defs.map((p) => {
+                let stored = settingsManager.getStoredValue(p.id)
+                if (p.id === 'google.oauth.connect') {
+                    const email = settingsManager.getStoredValue(CONNECTED_EMAIL_KEY)
+                    stored = email !== undefined ? email : stored
+                }
+                const fallback = p.defaultVal != null && p.defaultVal !== '' ? String(p.defaultVal) : ''
+                return {
+                    category: p.category,
+                    id: p.id,
+                    displayName: p.displayName,
+                    type: p.type,
+                    defaultVal: p.defaultVal,
+                    description: p.description || '',
+                    value: stored !== undefined ? stored : fallback,
+                }
+            })
+            socket.send(JSON.stringify({
+                broadcastPurpose: 'getPreferences',
+                requestId: message.requestId,
+                broadcastData: withValues,
+            }))
+            break
+        }
+        case 'saveSetting': {
+            if (!isEditorOrLegacy) break
+            const { name, value } = message.broadcastData || {}
+            if (typeof name === 'string' && name.length && name !== 'google.oauth.connect') {
+                settingsManager.setSetting(name, value ?? '')
+                await settingsManager.saveSettings()
+                try {
+                    await require('./utils/hueApi').setupHueApi()
+                } catch (e) {
+                    log(`Hue reconnect after save: ${e}`, logColors.Warning)
+                }
+                try {
+                    require('./utils/languageModel').reinitOllama()
+                } catch (e) {
+                    log(`Ollama reinit after save: ${e}`, logColors.Warning)
                 }
             }
+            socket.send(JSON.stringify({
+                broadcastPurpose: 'saveSetting',
+                requestId: message.requestId,
+                broadcastData: { ok: true },
+            }))
+            break
         }
-        catch (e) {
+        case 'getOtpAccounts': {
+            const {
+                otpController,
+                secondsRemainingInPeriod,
+                TOTP_PERIOD_SECONDS,
+            } = require('./utils/authenticator')
+            const accounts = await otpController.listAccounts()
+            const withCodes = await Promise.all(accounts.map(async (entry) => {
+                const code = await otpController.getCode(entry.key)
+                return {
+                    key: entry.key,
+                    issuer: entry.issuer,
+                    account: entry.account,
+                    secret: entry.secret,
+                    code: code === -1 ? null : String(code),
+                    periodSeconds: TOTP_PERIOD_SECONDS,
+                    secondsRemaining: secondsRemainingInPeriod(),
+                }
+            }))
+            replyToSocket(socket, {
+                broadcastPurpose: 'getOtpAccounts',
+                requestId: message.requestId,
+                broadcastData: { accounts: withCodes },
+            })
+            break
+        }
+        case 'importOtpFromQr': {
+            const { importOtpFromQrPayloads } = require('./utils/authenticator')
+            const data = message.broadcastData || {}
+            const payloads = data.payloads ?? data.payload ?? data.uri ?? data.uris
+            try {
+                const result = await importOtpFromQrPayloads(payloads)
+                replyToSocket(socket, {
+                    broadcastPurpose: 'importOtpFromQr',
+                    requestId: message.requestId,
+                    broadcastData: { ok: true, ...result },
+                })
+            } catch (err) {
+                replyToSocket(socket, {
+                    broadcastPurpose: 'importOtpFromQr',
+                    requestId: message.requestId,
+                    broadcastData: {
+                        ok: false,
+                        error: err && err.message ? err.message : String(err),
+                    },
+                })
+            }
+            break
+        }
+        case 'getSubgraphs': {
+            if (!isEditorOrLegacy) break
+            const subgraphStore = require('./manager/subgraphStore')
+            socket.send(JSON.stringify({
+                broadcastPurpose: 'getSubgraphs',
+                requestId: message.requestId,
+                broadcastData: subgraphStore.listDefinitions(),
+            }))
+            break
+        }
+        case 'saveSubgraph': {
+            if (!isEditorOrLegacy) break
+            const subgraphStore = require('./manager/subgraphStore')
+            try {
+                const saved = await subgraphStore.saveDefinition(message.broadcastData || {})
+                const payload = JSON.stringify({
+                    broadcastPurpose: 'subgraphsChanged',
+                    broadcastData: subgraphStore.listDefinitions(),
+                })
+                connectedClients.forEach((client) => {
+                    if (client.readyState === WebSocket.OPEN && (client.netsocketRole === 'editor' || client.netsocketRole === 'legacy')) {
+                        client.send(payload)
+                    }
+                })
+                socket.send(JSON.stringify({
+                    broadcastPurpose: 'saveSubgraph',
+                    requestId: message.requestId,
+                    broadcastData: saved,
+                }))
+            } catch (e) {
+                log(`saveSubgraph: ${e}`, logColors.Error)
+                socket.send(JSON.stringify({
+                    broadcastPurpose: 'saveSubgraph',
+                    requestId: message.requestId,
+                    broadcastData: { error: String(e?.message || e) },
+                }))
+            }
+            break
+        }
+        case 'deleteSubgraph': {
+            if (!isEditorOrLegacy) break
+            const subgraphStore = require('./manager/subgraphStore')
+            const id = message.broadcastData?.id
+            try {
+                const ok = await subgraphStore.deleteDefinition(id)
+                const payload = JSON.stringify({
+                    broadcastPurpose: 'subgraphsChanged',
+                    broadcastData: subgraphStore.listDefinitions(),
+                })
+                connectedClients.forEach((client) => {
+                    if (client.readyState === WebSocket.OPEN && (client.netsocketRole === 'editor' || client.netsocketRole === 'legacy')) {
+                        client.send(payload)
+                    }
+                })
+                socket.send(JSON.stringify({
+                    broadcastPurpose: 'deleteSubgraph',
+                    requestId: message.requestId,
+                    broadcastData: { ok },
+                }))
+            } catch (e) {
+                log(`deleteSubgraph: ${e}`, logColors.Error)
+                socket.send(JSON.stringify({
+                    broadcastPurpose: 'deleteSubgraph',
+                    requestId: message.requestId,
+                    broadcastData: { error: String(e?.message || e) },
+                }))
+            }
+            break
+        }
+        default:
+            break
+    }
+}
+
+wss.on('connection', (socket, request) => {
+    const sessionToken = getTokenFromCookieHeader(request.headers.cookie)
+    const commandPaletteSecret = settingsManager.getSetting('triggersCommandPalette.secret')
+    const hasSession = validateToken(sessionToken)
+    const hasLegacySecret = integrationSecretMatches({ headers: request.headers }, commandPaletteSecret)
+
+    if (hasSession) {
+        socket.netsocketRole = 'editor'
+        connectedClients.push(socket)
+        setWsServerConnectedClients(connectedClients)
+    } else if (hasLegacySecret) {
+        socket.netsocketRole = 'legacy'
+        connectedClients.push(socket)
+        setWsServerConnectedClients(connectedClients)
+    } else {
+        // Unauthenticated sockets may only perform the device pairing handshake.
+        socket.netsocketRole = 'unauthenticated'
+    }
+
+    socket.on('close', () => {
+        connectedClients = connectedClients.filter((s) => s !== socket)
+        setWsServerConnectedClients(connectedClients)
+        unregisterSocket(socket)
+        deviceAuth.untrackSocket(socket)
+    })
+
+    socket.on('message', async (rawMessage) => {
+        try {
+            let message = JSON.parse(rawMessage)
+            const purpose = message.broadcastPurpose
+
+            if (deviceAuth.isHandshakePurpose(purpose)) {
+                if (purpose === 'deviceHello') {
+                    const result = deviceAuth.handleDeviceHello(socket, message, request)
+                    if (result?.statusChanged || result?.isNew) {
+                        broadcastDevicesChanged()
+                    }
+                    return
+                }
+                if (purpose === 'deviceAuth') {
+                    const result = deviceAuth.handleDeviceAuth(socket, message)
+                    if (result?.ok && result.approved) {
+                        admitDeviceSocket(socket)
+                        const session = deviceAuth.getSession(socket)
+                        if (session?.deviceId) {
+                            registerDevice(session.deviceId, socket)
+                        }
+                    }
+                    return
+                }
+            }
+
+            if (purpose === 'encrypted') {
+                const session = deviceAuth.getSession(socket)
+                if (!session?.authenticated || !session?.sessionKey) {
+                    return
+                }
+                if (!session.approved) {
+                    deviceAuth.sendJson(socket, {
+                        broadcastPurpose: 'deviceStatus',
+                        broadcastData: {
+                            status: 'pending',
+                            deviceId: session.deviceId,
+                            message: 'Waiting for approval in the netsocket dashboard.',
+                        },
+                    })
+                    return
+                }
+                if (!connectedClients.includes(socket)) {
+                    admitDeviceSocket(socket)
+                }
+                try {
+                    message = deviceAuth.decryptIncoming(socket, message)
+                } catch (err) {
+                    log(`Device decrypt failed: ${err}`, logColors.Warning)
+                    return
+                }
+            }
+
+            const session = deviceAuth.getSession(socket)
+            if (session?.authenticated && !session.approved) {
+                // Authenticated but pending — only handshake/status, no commands.
+                if (purpose === 'ping') {
+                    deviceAuth.sendJson(socket, { broadcastPurpose: 'pong' })
+                }
+                return
+            }
+
+            if (!connectedClients.includes(socket)) {
+                return
+            }
+
+            await handleTrustedMessage(socket, message)
+        } catch (e) {
             log(`Error: ${e}`, logColors.Error)
         }
     })
@@ -296,7 +501,7 @@ wss.on('listening', () => {
 })
 setOnPushLog(((line) => {
     connectedClients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
+        if (client.readyState === WebSocket.OPEN && (client.netsocketRole === 'editor' || client.netsocketRole === 'legacy')) {
             client.send(JSON.stringify({
                 broadcastPurpose: "newLogLine",
                 broadcastData: line
@@ -466,7 +671,8 @@ app.post("/v1/triggers/command-palette", async (req, res) => {
     }
 
     const conversationId = body.conversationId ?? null
-    await onNewCommand(commandText, conversationId)
+    const deviceId = normalizeId(body.deviceId ?? body.device_id ?? null)
+    await onNewCommand(commandText, conversationId, deviceId)
     log(`Command received via HTTP: ${commandText}`, logColors.Success)
     return res.sendStatus(200)
 })
@@ -480,9 +686,109 @@ app.post("/v1/postCommand", async (req, res) => {
     if (typeof command !== 'string' || !command.trim()) {
         return res.sendStatus(400)
     }
-    await onNewCommand(command)
+    const deviceId = normalizeId(req.body?.deviceId ?? req.body?.device_id ?? null)
+    await onNewCommand(command, null, deviceId)
     res.sendStatus(200);
 })
+
+// MARK: Device pairing (session-authenticated only)
+app.get('/v1/devices', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const status = typeof req.query?.status === 'string' ? req.query.status.trim() : ''
+    const devices = status
+        ? deviceRegistry.listDevices({ status })
+        : deviceRegistry.listDevices()
+    return res.status(200).json({ devices })
+})
+
+app.post('/v1/devices/:deviceId/approve', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const updated = deviceRegistry.setStatus(req.params.deviceId, deviceRegistry.STATUS.APPROVED)
+    if (!updated) return res.sendStatus(404)
+    deviceAuth.notifyDeviceSockets(updated.deviceId, {
+        status: 'approved',
+        deviceId: updated.deviceId,
+        encrypted: true,
+        message: 'Device approved.',
+    })
+    deviceAuth.forEachDeviceSocket(updated.deviceId, (sock) => {
+        const session = deviceAuth.getSession(sock)
+        if (session?.authenticated && session.sessionKey) {
+            admitDeviceSocket(sock)
+            registerDevice(updated.deviceId, sock)
+        }
+    })
+    broadcastDevicesChanged()
+    log(`Device approved: ${updated.deviceId}`, logColors.Success)
+    return res.status(200).json({ device: updated })
+})
+
+app.post('/v1/devices/:deviceId/deny', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const updated = deviceRegistry.setStatus(req.params.deviceId, deviceRegistry.STATUS.DENIED)
+    if (!updated) return res.sendStatus(404)
+    deviceAuth.notifyDeviceSockets(updated.deviceId, {
+        status: 'denied',
+        deviceId: updated.deviceId,
+        message: 'This device has been denied access.',
+    })
+    broadcastDevicesChanged()
+    log(`Device denied: ${updated.deviceId}`, logColors.Warning)
+    return res.status(200).json({ device: updated })
+})
+
+app.post('/v1/devices/:deviceId/pending', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const updated = deviceRegistry.setStatus(req.params.deviceId, deviceRegistry.STATUS.PENDING)
+    if (!updated) return res.sendStatus(404)
+    deviceAuth.notifyDeviceSockets(updated.deviceId, {
+        status: 'pending',
+        deviceId: updated.deviceId,
+        message: 'Device moved back to pending.',
+    })
+    deviceAuth.forEachDeviceSocket(updated.deviceId, (sock) => {
+        const session = deviceAuth.getSession(sock)
+        if (session) session.approved = false
+        connectedClients = connectedClients.filter((s) => s !== sock)
+        setWsServerConnectedClients(connectedClients)
+        unregisterSocket(sock)
+        sock.netsocketRole = 'unauthenticated'
+    })
+    broadcastDevicesChanged()
+    return res.status(200).json({ device: updated })
+})
+
+app.patch('/v1/devices/:deviceId', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const name = req.body?.name
+    if (typeof name !== 'string') return res.status(400).json({ error: 'name_required' })
+    const updated = deviceRegistry.renameDevice(req.params.deviceId, name)
+    if (!updated) return res.sendStatus(404)
+    broadcastDevicesChanged()
+    return res.status(200).json({ device: updated })
+})
+
+app.delete('/v1/devices/:deviceId', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const deviceId = deviceRegistry.normalizeDeviceId(req.params.deviceId)
+    if (!deviceId || !deviceRegistry.getDevice(deviceId)) return res.sendStatus(404)
+    deviceAuth.notifyDeviceSockets(deviceId, {
+        status: 'denied',
+        deviceId,
+        message: 'This device has been removed.',
+    })
+    deviceAuth.forEachDeviceSocket(deviceId, (sock) => {
+        connectedClients = connectedClients.filter((s) => s !== sock)
+        setWsServerConnectedClients(connectedClients)
+        unregisterSocket(sock)
+        try { sock.close(4403, 'device removed') } catch { /* ignore */ }
+    })
+    deviceRegistry.removeDevice(deviceId)
+    broadcastDevicesChanged()
+    log(`Device removed: ${deviceId}`, logColors.Warning)
+    return res.sendStatus(204)
+})
+
 app.get("/v1/auth-state", (req, res) => {
     res.status(200).json({ needsRegistration: !hasAccount() });
 });

@@ -26,10 +26,22 @@ class Prefs(context: Context) {
         get() = prefs.getString(KEY_NOTIFICATION_SECRET, "")?.trim().orEmpty()
         set(value) = prefs.edit { putString(KEY_NOTIFICATION_SECRET, value.trim()) }
 
-    /** Command Palette secret — sent as x-socket-auth on the WebSocket. */
+    /** Command Palette secret — optional legacy fallback for older servers. */
     var commandSecret: String
         get() = prefs.getString(KEY_COMMAND_SECRET, "")?.trim().orEmpty()
         set(value) = prefs.edit { putString(KEY_COMMAND_SECRET, value.trim()) }
+
+    var identityPublicKey: String
+        get() = prefs.getString(KEY_IDENTITY_PUBLIC, "")?.trim().orEmpty()
+        set(value) = prefs.edit { putString(KEY_IDENTITY_PUBLIC, value.trim()) }
+
+    var identityPrivateKey: String
+        get() = prefs.getString(KEY_IDENTITY_PRIVATE, "")?.trim().orEmpty()
+        set(value) = prefs.edit { putString(KEY_IDENTITY_PRIVATE, value.trim()) }
+
+    var pinnedServerIdentityPublicKey: String
+        get() = prefs.getString(KEY_PINNED_SERVER, "")?.trim().orEmpty()
+        set(value) = prefs.edit { putString(KEY_PINNED_SERVER, value.trim()) }
 
     var forwardingEnabled: Boolean
         get() = prefs.getBoolean(KEY_FORWARDING_ENABLED, true)
@@ -95,6 +107,9 @@ class Prefs(context: Context) {
         const val KEY_USE_HTTPS = "use_https"
         const val KEY_NOTIFICATION_SECRET = "notification_secret"
         const val KEY_COMMAND_SECRET = "command_secret"
+        const val KEY_IDENTITY_PUBLIC = "identity_public_key"
+        const val KEY_IDENTITY_PRIVATE = "identity_private_key"
+        const val KEY_PINNED_SERVER = "pinned_server_identity_public_key"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
         const val KEY_VOICE_MODE_DEFAULT = "voice_mode_default"
         const val KEY_RESPONSE_TIMEOUT = "response_timeout_seconds"

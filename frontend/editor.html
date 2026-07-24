@@ -693,6 +693,11 @@
                             window.NetsocketSubgraphs.onSubgraphsChanged(parsedMessage.broadcastData);
                         }
                         break;
+                    case "devicesChanged":
+                        if (typeof window.__netsocketOnDevicesChanged === 'function') {
+                            window.__netsocketOnDevicesChanged(parsedMessage.broadcastData?.devices || []);
+                        }
+                        break;
                     case "populateLog":
                         log.innerHTML = (() => {
                             let newText = ""
@@ -839,7 +844,7 @@
                         <span class="material-symbols-outlined" aria-hidden="true">close</span>
                     </button>
                 </div>
-                <span class="settings-tabs-container-header">Integrations</span>
+                <span class="settings-tabs-container-header">Settings</span>
                 <div id="settings-tabs-container">
                 </div>
             </div>
@@ -1091,7 +1096,7 @@
                 return field
             }
 
-            const renderPreferences = (list) => {
+            const renderPreferences = (list, devicesList) => {
                 tabsContainerEl.innerHTML = ''
                 panelsScrollEl.innerHTML = ''
                 const prefs = Array.isArray(list) ? list : []
@@ -1105,30 +1110,188 @@
 
                 const panels = []
                 const tabs = []
+                let devicesPanelEl = null
 
                 const showTab = (index) => {
                     tabs.forEach((t, i) => t.classList.toggle('settings-tab-active', i === index))
                     panels.forEach((p, i) => { p.style.display = i === index ? '' : 'none' })
                 }
 
-                categories.forEach((cat, idx) => {
+                const formatTime = (ts) => {
+                    if (!ts) return '—'
+                    try {
+                        return new Date(ts).toLocaleString()
+                    } catch {
+                        return '—'
+                    }
+                }
+
+                const shortId = (id) => {
+                    const s = String(id || '')
+                    if (s.length <= 18) return s
+                    return `${s.slice(0, 8)}…${s.slice(-6)}`
+                }
+
+                const deviceAction = async (deviceId, action) => {
+                    const url = action === 'remove'
+                        ? `/v1/devices/${encodeURIComponent(deviceId)}`
+                        : `/v1/devices/${encodeURIComponent(deviceId)}/${action}`
+                    const method = action === 'remove' ? 'DELETE' : 'POST'
+                    const res = await fetch(url, { method, credentials: 'same-origin' })
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                    if (action !== 'remove') {
+                        const json = await res.json().catch(() => ({}))
+                        return json.device
+                    }
+                    return null
+                }
+
+                const renderDevicesPanel = (devices) => {
+                    if (!devicesPanelEl) return
+                    devicesPanelEl.innerHTML = ''
+
+                    const intro = document.createElement('div')
+                    intro.className = 'settings-field-description'
+                    intro.innerHTML = '<p>Overlay and Android clients request access with a unique device key. Approve them here to establish an encrypted session — no shared secret required.</p>'
+                    devicesPanelEl.appendChild(intro)
+
+                    const groups = [
+                        { key: 'pending', title: 'Pending approval', empty: 'No devices waiting for approval.' },
+                        { key: 'approved', title: 'Approved', empty: 'No approved devices yet.' },
+                        { key: 'denied', title: 'Denied', empty: 'No denied devices.' },
+                    ]
+
+                    const list = Array.isArray(devices) ? devices : []
+                    for (const group of groups) {
+                        const section = document.createElement('div')
+                        section.className = 'devices-section'
+                        const heading = document.createElement('h3')
+                        heading.textContent = group.title
+                        section.appendChild(heading)
+
+                        const matching = list.filter((d) => d.status === group.key)
+                        if (!matching.length) {
+                            const empty = document.createElement('p')
+                            empty.className = 'devices-empty'
+                            empty.textContent = group.empty
+                            section.appendChild(empty)
+                        } else {
+                            for (const device of matching) {
+                                const card = document.createElement('div')
+                                card.className = `device-card device-card-${device.status}`
+
+                                const top = document.createElement('div')
+                                top.className = 'device-card-top'
+                                const title = document.createElement('div')
+                                title.className = 'device-card-title'
+                                title.textContent = device.name || device.platform || 'Unknown device'
+                                const badge = document.createElement('span')
+                                badge.className = `device-status-badge device-status-${device.status}`
+                                badge.textContent = device.status
+                                top.appendChild(title)
+                                top.appendChild(badge)
+                                card.appendChild(top)
+
+                                const meta = document.createElement('div')
+                                meta.className = 'device-card-meta'
+                                meta.innerHTML = [
+                                    `<div><span>Device ID</span><code title="${device.deviceId}">${shortId(device.deviceId)}</code></div>`,
+                                    `<div><span>IP address</span><code>${device.ipAddress || '—'}</code></div>`,
+                                    `<div><span>Platform</span><code>${device.platform || '—'}</code></div>`,
+                                    `<div><span>Last seen</span><code>${formatTime(device.lastSeenAt)}</code></div>`,
+                                ].join('')
+                                card.appendChild(meta)
+
+                                const actions = document.createElement('div')
+                                actions.className = 'device-card-actions'
+
+                                const run = async (action, label) => {
+                                    try {
+                                        await deviceAction(device.deviceId, action)
+                                        const refreshed = await fetchDevices()
+                                        renderDevicesPanel(refreshed)
+                                    } catch (err) {
+                                        console.warn(`Device ${label} failed`, err)
+                                        window.alert(`Could not ${label} device.`)
+                                    }
+                                }
+
+                                if (device.status === 'pending' || device.status === 'denied') {
+                                    const approveBtn = document.createElement('button')
+                                    approveBtn.type = 'button'
+                                    approveBtn.textContent = 'Approve'
+                                    approveBtn.addEventListener('click', () => run('approve', 'approve'))
+                                    actions.appendChild(approveBtn)
+                                }
+                                if (device.status === 'pending' || device.status === 'approved') {
+                                    const denyBtn = document.createElement('button')
+                                    denyBtn.type = 'button'
+                                    denyBtn.className = 'device-btn-danger'
+                                    denyBtn.textContent = 'Deny'
+                                    denyBtn.addEventListener('click', () => run('deny', 'deny'))
+                                    actions.appendChild(denyBtn)
+                                }
+                                if (device.status === 'approved') {
+                                    const pendingBtn = document.createElement('button')
+                                    pendingBtn.type = 'button'
+                                    pendingBtn.textContent = 'Revoke'
+                                    pendingBtn.addEventListener('click', () => run('pending', 'revoke'))
+                                    actions.appendChild(pendingBtn)
+                                }
+                                const removeBtn = document.createElement('button')
+                                removeBtn.type = 'button'
+                                removeBtn.className = 'device-btn-muted'
+                                removeBtn.textContent = 'Remove'
+                                removeBtn.addEventListener('click', () => {
+                                    if (!window.confirm('Remove this device permanently? It will need to pair again.')) return
+                                    run('remove', 'remove')
+                                })
+                                actions.appendChild(removeBtn)
+
+                                card.appendChild(actions)
+                                section.appendChild(card)
+                            }
+                        }
+                        devicesPanelEl.appendChild(section)
+                    }
+                }
+
+                const fetchDevices = async () => {
+                    const res = await fetch('/v1/devices', { credentials: 'same-origin' })
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                    const json = await res.json()
+                    return Array.isArray(json.devices) ? json.devices : []
+                }
+
+                // Devices tab first so pending approvals are visible immediately
+                {
                     const tab = document.createElement('div')
-                    tab.className = 'settings-tab' + (idx === 0 ? ' settings-tab-active' : '')
+                    tab.className = 'settings-tab settings-tab-active'
+                    tab.textContent = 'Devices'
+                    tab.addEventListener('click', () => showTab(0))
+                    tabsContainerEl.appendChild(tab)
+                    tabs.push(tab)
+
+                    devicesPanelEl = document.createElement('div')
+                    devicesPanelEl.className = 'settings-panel'
+                    devicesPanelEl.style.display = ''
+                    panelsScrollEl.appendChild(devicesPanelEl)
+                    panels.push(devicesPanelEl)
+                    renderDevicesPanel(devicesList || [])
+                }
+
+                categories.forEach((cat, idx) => {
+                    const tabIndex = idx + 1
+                    const tab = document.createElement('div')
+                    tab.className = 'settings-tab'
                     tab.textContent = cat
-                    tab.addEventListener('click', () => showTab(idx))
+                    tab.addEventListener('click', () => showTab(tabIndex))
                     tabsContainerEl.appendChild(tab)
                     tabs.push(tab)
 
                     const panel = document.createElement('div')
                     panel.className = 'settings-panel'
-                    panel.style.display = idx === 0 ? '' : 'none'
-                    //const h = document.createElement('h3')
-                    //h.textContent = cat
-                    //panel.appendChild(h)
-                    //const sep = document.createElement('span')
-                    //sep.className = 'separator'
-                    //sep.setAttribute('aria-hidden', 'true')
-                    //panel.appendChild(sep)
+                    panel.style.display = 'none'
                     for (const pref of byCat[cat]) {
                         panel.appendChild(buildFieldRow(pref))
                     }
@@ -1136,24 +1299,36 @@
                     panels.push(panel)
                 })
 
-                if (!categories.length) {
-                    const empty = document.createElement('p')
-                    empty.style.color = '#666'
-                    empty.style.fontSize = '13px'
-                    empty.textContent = 'No settings are registered by the loaded nodes.'
-                    panelsScrollEl.appendChild(empty)
+                window.__netsocketOnDevicesChanged = (devices) => {
+                    if (settingsModal.style.display === 'block') {
+                        renderDevicesPanel(devices)
+                    }
+                }
+
+                if (!categories.length && !(devicesList || []).length) {
+                    // Devices panel already shows empty states; nothing else to add.
                 }
             }
 
             openSettingsBtn.addEventListener('click', async (e) => {
                 e.preventDefault()
                 settingsModal.style.display = 'block'
+                let devices = []
+                try {
+                    const res = await fetch('/v1/devices', { credentials: 'same-origin' })
+                    if (res.ok) {
+                        const json = await res.json()
+                        devices = Array.isArray(json.devices) ? json.devices : []
+                    }
+                } catch (err) {
+                    console.warn('Failed to load devices', err)
+                }
                 try {
                     const response = await sendWsRequest({ broadcastPurpose: 'getPreferences' })
-                    renderPreferences(response.broadcastData)
+                    renderPreferences(response.broadcastData, devices)
                 } catch (err) {
                     console.warn('Failed to load preferences', err)
-                    renderPreferences([])
+                    renderPreferences([], devices)
                 }
             })
 

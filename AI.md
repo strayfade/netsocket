@@ -89,7 +89,9 @@ Netsocket runs on users' machines and stores credentials, automation graphs, OAu
 ### HTTP and transport hardening
 
 - Preserve baseline headers from `securityHeaders` middleware.
-- WebSocket connections must validate session tokens or integration secrets before joining `connectedClients`.
+- WebSocket connections must validate a user session, a legacy integration secret, or complete the device pairing handshake (`deviceHello` / `deviceAuth`) before joining trusted clients. Approved devices use encrypted sessions; pending devices must not receive command privileges.
+- Device approve/deny/remove APIs under `/v1/devices*` are session-authenticated only (`canAccessPrivateApi`). Never expose them to integration secrets or unauthenticated clients.
+- Device identity keys and server identity material live under `DATA_DIR` (`devices.json`, `server-identity.json`). Treat them as sensitive credentials.
 - Keep JSON body limits intentional; do not raise limits without a documented reason.
 - Prefer same-origin relative paths for frontend API calls.
 

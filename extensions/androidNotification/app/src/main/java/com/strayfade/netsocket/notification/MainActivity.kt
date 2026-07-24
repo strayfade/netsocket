@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, VoiceActivity::class.java))
         }
         binding.settingsButton.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+            startActivity(Intent(this, FeaturesActivity::class.java))
         }
         binding.clearButton.setOnClickListener {
             confirmClearConversation()
@@ -109,11 +109,6 @@ class MainActivity : AppCompatActivity() {
 
         requestPostNotificationsIfNeeded()
         KeepAliveService.start(this)
-
-        if (Prefs(this).commandSecret.isBlank()) {
-            // First launch / unconfigured — nudge toward settings.
-            Toast.makeText(this, R.string.setup_required_toast, Toast.LENGTH_LONG).show()
-        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -165,7 +160,7 @@ class MainActivity : AppCompatActivity() {
         when (result) {
             "/settings" -> {
                 binding.commandInput.text?.clear()
-                startActivity(Intent(this, SettingsActivity::class.java))
+                startActivity(Intent(this, FeaturesActivity::class.java))
             }
             null -> binding.commandInput.text?.clear()
             else -> Toast.makeText(this, result, Toast.LENGTH_SHORT).show()
@@ -175,6 +170,8 @@ class MainActivity : AppCompatActivity() {
     private fun renderConnection(state: HostConnection.State) {
         binding.connectionStatus.text = when {
             state.connected -> getString(R.string.status_connected)
+            state.authStatus == "pending" -> getString(R.string.status_pending)
+            state.authStatus == "denied" -> getString(R.string.status_denied)
             state.connecting -> getString(R.string.status_connecting)
             state.lastError.isNotBlank() -> state.lastError
             else -> getString(R.string.status_disconnected)
