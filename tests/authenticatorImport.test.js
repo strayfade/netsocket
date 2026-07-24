@@ -8,6 +8,8 @@ const {
     importOtpFromQrPayloads,
     parseOtpAccountsString,
     serializeOtpAccounts,
+    padBase32To16Bytes,
+    otpController,
     OTP_SETTING_KEY,
 } = require('../server/utils/authenticator');
 
@@ -121,5 +123,26 @@ describe('authenticator QR import', () => {
             serializeOtpAccounts(map),
             'Example:user@example.com:JBSWY3DPEHPK3PXP'
         );
+    });
+
+    it('pads Base32 secrets shorter than 16 bytes for otplib', () => {
+        // 16 chars → 10 bytes; 24 chars → 15 bytes (e.g. Stripe-style secrets)
+        const ten = padBase32To16Bytes('N7DV2C2ZHNKSPFQ5');
+        const fifteen = padBase32To16Bytes('XZVR5H7ZT3GCTX2FBE4HQA2K');
+        assert.equal(Buffer.from(base32.decode.asBytes(ten)).length, 16);
+        assert.equal(Buffer.from(base32.decode.asBytes(fifteen)).length, 16);
+    });
+
+    it('generates OTP codes for secrets under 128 bits', async () => {
+        settingsManager.setSetting(
+            OTP_SETTING_KEY,
+            'Stripe:user@example.com:XZVR5H7ZT3GCTX2FBE4HQA2K,GitHub:user:ZUNZZ5Z7Y5R6BWZB'
+        );
+        const stripe = await otpController.getCode('Stripe:user@example.com');
+        const github = await otpController.getCode('GitHub:user');
+        assert.notEqual(stripe, -1);
+        assert.notEqual(github, -1);
+        assert.match(String(stripe), /^\d{6}$/);
+        assert.match(String(github), /^\d{6}$/);
     });
 });

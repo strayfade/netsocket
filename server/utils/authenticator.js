@@ -1,4 +1,4 @@
-const { OTP } = require('otplib');
+const { OTP, createGuardrails } = require('otplib');
 const base32 = require('hi-base32');
 const { log, logColors } = require('../log');
 const settingsManager = require('../manager/settingsManager');
@@ -12,24 +12,33 @@ require('../manager/nodePreferencesRegistry').addPref(
     '<p>Account keys used by the OTP node are <code>Issuer:Account</code> (e.g. <code>GitHub:strayfade</code>).</p>'
 );
 
-const otpGenerator = new OTP();
+// Many real authenticator secrets are 80-bit (10 bytes) or other lengths under 128-bit.
+// otplib defaults to MIN_SECRET_BYTES=16; allow shorter keys used by existing TOTP accounts.
+const otpGenerator = new OTP({
+    guardrails: createGuardrails({ MIN_SECRET_BYTES: 1 }),
+});
 const OTP_SETTING_KEY = 'authentication.otp_accounts';
 const TOTP_PERIOD_SECONDS = 30;
 
+/**
+ * Normalize a Base32 secret. Zero-pad secrets shorter than 16 bytes so they
+ * satisfy otplib's default 128-bit floor. For HMAC-SHA1 this is equivalent to
+ * using the short key (HMAC pads keys to the hash block size internally).
+ * @param {string} encoded
+ * @returns {string}
+ */
 const padBase32To16Bytes = (encoded) => {
-    const clean = encoded.replace(/\s+/g, '').toUpperCase();
+    const clean = String(encoded || '')
+        .replace(/\s+/g, '')
+        .replace(/=+$/, '')
+        .toUpperCase();
     const decoded = Buffer.from(base32.decode.asBytes(clean));
-    if (decoded.length === 16) {
+    if (decoded.length >= 16) {
         return base32.encode(decoded).replace(/=+$/, '');
     }
-
-    if (decoded.length === 10) {
-        const padded = Buffer.alloc(16);
-        decoded.copy(padded);
-        return base32.encode(padded).replace(/=+$/, '');
-    }
-
-    return base32.encode(decoded).replace(/=+$/, '');
+    const padded = Buffer.alloc(16);
+    decoded.copy(padded);
+    return base32.encode(padded).replace(/=+$/, '');
 };
 
 /**
@@ -447,6 +456,7 @@ module.exports = {
     parseOtpAuthUri,
     parseOtpAuthMigrationUri,
     importOtpFromQrPayloads,
+    padBase32To16Bytes,
     OTP_SETTING_KEY,
     TOTP_PERIOD_SECONDS,
 };

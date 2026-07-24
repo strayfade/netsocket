@@ -59,10 +59,10 @@ object TotpCodes {
         }
     }
 
-    /** Match server padBase32To16Bytes behavior for 10-byte secrets. */
+    /** Match server padBase32To16Bytes: zero-pad secrets shorter than 16 bytes. */
     private fun decodeBase32Padded(encoded: String): ByteArray? {
         val decoded = decodeBase32(encoded) ?: return null
-        if (decoded.size == 16 || decoded.size != 10) {
+        if (decoded.size >= 16) {
             return decoded
         }
         return ByteArray(16).also { decoded.copyInto(it) }
