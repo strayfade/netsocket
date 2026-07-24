@@ -5136,8 +5136,10 @@ LGraphNode.prototype.executeAction = function(action)
 
         var canvas = this.element;
         var rect = canvas.getBoundingClientRect();
-        var x = e.clientX * window.devicePixelRatio - rect.left;
-        var y = e.clientY * window.devicePixelRatio - rect.top;
+        var scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+        var scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+        var x = (e.clientX - rect.left) * scaleX;
+        var y = (e.clientY - rect.top) * scaleY;
         e.canvasx = x;
         e.canvasy = y;
         e.dragging = this.dragging;
@@ -5251,8 +5253,8 @@ LGraphNode.prototype.executeAction = function(action)
         }
 
         zooming_center = zooming_center || [
-            rect.width * 0.5,
-            rect.height * 0.5
+            this.element.width * 0.5,
+            this.element.height * 0.5
         ];
         var center = this.convertCanvasToOffset(zooming_center);
         this.scale = value;
@@ -5333,6 +5335,12 @@ LGraphNode.prototype.executeAction = function(action)
 
         this.highquality_render = false;
         this.use_gradients = true; //set to true to render titlebar with gradients
+        this.render_body_glass = false; // multi-pass body gradients (expensive)
+        this.render_title_effects = false; // title radial + gloss overlays
+        this.render_slot_glows = false; // per-slot shadowBlur (very expensive)
+        this.force_simple_shapes = false; // treat all nodes as low-quality shapes
+        this.render_quality = "medium";
+        this.render_resolution = 100; // percent of CSS size × devicePixelRatio for the backing store
         this.editor_alpha = 1; //used for transition
         this.pause_rendering = false;
         this.clear_background = true;
@@ -5342,6 +5350,8 @@ LGraphNode.prototype.executeAction = function(action)
         this.render_only_selected = true;
         this.live_mode = false;
         this.show_info = false;
+        this.show_fps = false;
+        this._fps_smooth = 0;
         this.allow_dragcanvas = true;
         this.allow_dragnodes = true;
         this.allow_interaction = true; //allow to control widgets, buttons, collapse, etc
@@ -5355,14 +5365,14 @@ LGraphNode.prototype.executeAction = function(action)
 
         this.filter = null; //allows to filter to only accept some type of nodes in a graph
 
-        this.set_canvas_dirty_on_mouse_event = true; //forces to redraw the canvas if the mouse does anything
+        this.set_canvas_dirty_on_mouse_event = false; //avoid redraw storms from idle mouse motion
         this.always_render_background = false;
-        this.render_shadows = true;
+        this.render_shadows = false;
         this.render_canvas_border = false;
-        this.render_connections_shadows = true; //too much cpu
+        this.render_connections_shadows = false; //too much cpu
         this.render_connections_border = false;
         this.render_curved_connections = true;
-        this.render_connection_arrows = true;
+        this.render_connection_arrows = false;
         this.render_collapsed_slots = false;
         this.render_execution_order = false;
         this.render_title_colored = true;
@@ -5424,12 +5434,90 @@ LGraphNode.prototype.executeAction = function(action)
     LGraphCanvas.link_type_colors = {
         "-1": LiteGraph.EVENT_LINK_COLOR,
         boolean: "red",
-        string: "#8B5CF6",
+        string: "#F7F",
         number: "#7F7",
         object: "orange",
         node: "#DCA"
     };
     LGraphCanvas.gradients = {}; //cache of gradients
+
+    LGraphCanvas.RENDER_QUALITY_PRESETS = {
+        low: {
+            label: "Low",
+            description: "Flat fills, no shadows or gradients. Fastest pan and zoom.",
+            use_gradients: false,
+            render_body_glass: false,
+            render_title_effects: false,
+            render_slot_glows: false,
+            render_shadows: false,
+            render_connections_shadows: false,
+            render_connection_arrows: false,
+            highquality_render: false,
+            force_simple_shapes: true,
+            set_canvas_dirty_on_mouse_event: false,
+            links_render_mode: LiteGraph.LINEAR_LINK
+        },
+        medium: {
+            label: "Medium",
+            description: "Rounded nodes and title color. No drop shadows or glass effects.",
+            use_gradients: true,
+            render_body_glass: false,
+            render_title_effects: false,
+            render_slot_glows: false,
+            render_shadows: false,
+            render_connections_shadows: false,
+            render_connection_arrows: false,
+            highquality_render: false,
+            force_simple_shapes: false,
+            set_canvas_dirty_on_mouse_event: false,
+            links_render_mode: LiteGraph.SPLINE_LINK
+        },
+        high: {
+            label: "High",
+            description: "Full glass, title effects, and node shadows. Heaviest on the CPU.",
+            use_gradients: true,
+            render_body_glass: true,
+            render_title_effects: true,
+            render_slot_glows: false,
+            render_shadows: true,
+            render_connections_shadows: false,
+            render_connection_arrows: false,
+            highquality_render: false,
+            force_simple_shapes: false,
+            set_canvas_dirty_on_mouse_event: false,
+            links_render_mode: LiteGraph.SPLINE_LINK
+        }
+    };
+
+    /**
+     * Applies a named render-quality preset (low / medium / high).
+     * @method applyRenderQuality
+     * @param {string} quality
+     */
+    LGraphCanvas.prototype.applyRenderQuality = function (quality) {
+        var key = String(quality || "medium").toLowerCase();
+        var preset = LGraphCanvas.RENDER_QUALITY_PRESETS[key];
+        if (!preset) {
+            key = "medium";
+            preset = LGraphCanvas.RENDER_QUALITY_PRESETS.medium;
+        }
+        this.render_quality = key;
+        this.use_gradients = !!preset.use_gradients;
+        this.render_body_glass = !!preset.render_body_glass;
+        this.render_title_effects = !!preset.render_title_effects;
+        this.render_slot_glows = !!preset.render_slot_glows;
+        this.render_shadows = !!preset.render_shadows;
+        this.render_connections_shadows = !!preset.render_connections_shadows;
+        this.render_connection_arrows = !!preset.render_connection_arrows;
+        this.highquality_render = !!preset.highquality_render;
+        this.force_simple_shapes = !!preset.force_simple_shapes;
+        this.set_canvas_dirty_on_mouse_event = !!preset.set_canvas_dirty_on_mouse_event;
+        if (preset.links_render_mode != null) {
+            this.links_render_mode = preset.links_render_mode;
+        }
+        this.setDirty(true, true);
+        return key;
+    };
 
     /**
      * clears all the data inside
@@ -5829,6 +5917,59 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     /**
+     * Backing-store scale vs CSS pixels: devicePixelRatio × (render_resolution / 100).
+     * Prefer the live canvas width / CSS width ratio when available.
+     * @method getRenderScale
+     **/
+    LGraphCanvas.prototype.getRenderScale = function () {
+        if (this.canvas) {
+            var rect = this.canvas.getBoundingClientRect();
+            if (rect.width > 0) {
+                return this.canvas.width / rect.width;
+            }
+        }
+        var dpr = (typeof window !== "undefined" && window.devicePixelRatio) || 1;
+        var pct = this.render_resolution != null ? this.render_resolution : 100;
+        return dpr * (pct / 100);
+    };
+
+    /**
+     * Sets the render resolution percentage (25–100) used when sizing the canvas bitmap.
+     * Callers should resize the canvas afterward so the backing store matches.
+     * @method setRenderResolution
+     **/
+    LGraphCanvas.prototype.setRenderResolution = function (percent) {
+        var p = Math.round(Number(percent));
+        if (!isFinite(p)) {
+            p = 100;
+        }
+        p = Math.max(25, Math.min(100, p));
+        this.render_resolution = p;
+        this.setDirty(true, true);
+        return p;
+    };
+
+    /**
+     * Maps a browser client coordinate into canvas backing-store pixels.
+     * Works for any devicePixelRatio and render_resolution.
+     * @method clientToCanvas
+     **/
+    LGraphCanvas.prototype.clientToCanvas = function (clientX, clientY, out) {
+        out = out || [0, 0];
+        if (!this.canvas) {
+            out[0] = clientX;
+            out[1] = clientY;
+            return out;
+        }
+        var b = this.canvas.getBoundingClientRect();
+        var sx = b.width > 0 ? this.canvas.width / b.width : this.getRenderScale();
+        var sy = b.height > 0 ? this.canvas.height / b.height : sx;
+        out[0] = (clientX - b.left) * sx;
+        out[1] = (clientY - b.top) * sy;
+        return out;
+    };
+
+    /**
      * Used to attach the canvas in a popup
      *
      * @method getCanvasWindow
@@ -5993,8 +6134,12 @@ LGraphNode.prototype.executeAction = function(action)
         var dx = pts[1].x - pts[0].x;
         var dy = pts[1].y - pts[0].y;
         var dist = Math.sqrt(dx * dx + dy * dy);
-        var midX = ((pts[0].x + pts[1].x) * 0.5) * (window.devicePixelRatio || 1);
-        var midY = ((pts[0].y + pts[1].y) * 0.5) * (window.devicePixelRatio || 1);
+        var mid = this.clientToCanvas(
+            (pts[0].x + pts[1].x) * 0.5,
+            (pts[0].y + pts[1].y) * 0.5
+        );
+        var midX = mid[0];
+        var midY = mid[1];
 
         if (this._pinch_dist != null && dist > 0) {
             var scale = this.ds.scale * (dist / this._pinch_dist);
@@ -6047,8 +6192,9 @@ LGraphNode.prototype.executeAction = function(action)
         LGraphCanvas.active_canvas = this;
         var that = this;
 
-        var x = e.clientX * window.devicePixelRatio;
-        var y = e.clientY * window.devicePixelRatio;
+        var canvasPos = this.clientToCanvas(e.clientX, e.clientY);
+        var x = canvasPos[0];
+        var y = canvasPos[1];
         //console.log(y,this.viewport);
         //console.log("pointerevents: processMouseDown pointerId:"+e.pointerId+" which:"+e.which+" isPrimary:"+e.isPrimary+" :: x y "+x+" "+y);
 
@@ -6071,8 +6217,8 @@ LGraphNode.prototype.executeAction = function(action)
         var skip_action = false;
         var now = LiteGraph.getTime();
         var is_double_click = (now - this.last_mouseclick < 300) && is_primary;
-        this.mouse[0] = e.clientX * window.devicePixelRatio;
-        this.mouse[1] = e.clientY * window.devicePixelRatio;
+        this.mouse[0] = x;
+        this.mouse[1] = y;
         this.graph_mouse[0] = e.canvasX;
         this.graph_mouse[1] = e.canvasY;
         this.last_click_position = [this.mouse[0], this.mouse[1]];
@@ -6491,8 +6637,8 @@ LGraphNode.prototype.executeAction = function(action)
         //if(this.node_selected != prev_selected)
         //	this.onNodeSelectionChange(this.node_selected);
 
-        this.last_mouse[0] = e.clientX * window.devicePixelRatio;
-        this.last_mouse[1] = e.clientY * window.devicePixelRatio;
+        this.last_mouse[0] = this.mouse[0];
+        this.last_mouse[1] = this.mouse[1];
         this.last_mouseclick = LiteGraph.getTime();
         this.last_mouse_dragging = true;
 
@@ -6549,7 +6695,7 @@ LGraphNode.prototype.executeAction = function(action)
         }
         this._checkLongPressCancel(e);
 
-        var mouse = [e.clientX * window.devicePixelRatio, e.clientY * window.devicePixelRatio];
+        var mouse = this.clientToCanvas(e.clientX, e.clientY);
         this.mouse[0] = mouse[0];
         this.mouse[1] = mouse[1];
         var delta = [
@@ -7125,8 +7271,9 @@ LGraphNode.prototype.executeAction = function(action)
 
         this.adjustMouseEvent(e);
 
-        var x = e.clientX * window.devicePixelRatio;
-        var y = e.clientY * window.devicePixelRatio;
+        var canvasPos = this.clientToCanvas(e.clientX, e.clientY);
+        var x = canvasPos[0];
+        var y = canvasPos[1];
         var is_inside = !this.viewport || (this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]));
         if (!is_inside)
             return;
@@ -7140,7 +7287,7 @@ LGraphNode.prototype.executeAction = function(action)
         }
 
         //this.setZoom( scale, [ e.clientX, e.clientY ] );
-        this.ds.changeScale(scale, [e.clientX * window.devicePixelRatio, e.clientY * window.devicePixelRatio]);
+        this.ds.changeScale(scale, [x, y]);
 
         this.graph.change();
 
@@ -7496,8 +7643,9 @@ LGraphNode.prototype.executeAction = function(action)
     LGraphCanvas.prototype.processDrop = function (e) {
         e.preventDefault();
         this.adjustMouseEvent(e);
-        var x = e.clientX * window.devicePixelRatio;
-        var y = e.clientY * window.devicePixelRatio;
+        var canvasPos = this.clientToCanvas(e.clientX, e.clientY);
+        var x = canvasPos[0];
+        var y = canvasPos[1];
         var is_inside = !this.viewport || (this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]));
         if (!is_inside) {
             return;
@@ -7799,12 +7947,13 @@ LGraphNode.prototype.executeAction = function(action)
         var clientY_rel = 0;
 
         if (this.canvas) {
-            var b = this.canvas.getBoundingClientRect();
-            clientX_rel = e.clientX * window.devicePixelRatio - b.left;
-            clientY_rel = e.clientY * window.devicePixelRatio - b.top;
+            var pos = this.clientToCanvas(e.clientX, e.clientY);
+            clientX_rel = pos[0];
+            clientY_rel = pos[1];
         } else {
-            clientX_rel = e.clientX * window.devicePixelRatio;
-            clientY_rel = e.clientY * window.devicePixelRatio;
+            var scale = this.getRenderScale();
+            clientX_rel = e.clientX * scale;
+            clientY_rel = e.clientY * scale;
         }
 
         // e.deltaX = clientX_rel - this.last_mouse_position[0];
@@ -7867,11 +8016,7 @@ LGraphNode.prototype.executeAction = function(action)
 
     //converts event coordinates from canvas2D to graph coordinates
     LGraphCanvas.prototype.convertEventToCanvasOffset = function (e) {
-        var rect = this.canvas.getBoundingClientRect();
-        return this.convertCanvasToOffset([
-            e.clientX * window.devicePixelRatio - rect.left,
-            e.clientY * window.devicePixelRatio - rect.top
-        ]);
+        return this.convertCanvasToOffset(this.clientToCanvas(e.clientX, e.clientY));
     };
 
     /**
@@ -7961,11 +8106,24 @@ LGraphNode.prototype.executeAction = function(action)
             this.drawBackCanvas();
         }
 
+        // Keep painting while the FPS overlay is on so the counter stays live.
+        if (this.show_fps) {
+            this.dirty_canvas = true;
+        }
+
         if (this.dirty_canvas || force_canvas) {
             this.drawFrontCanvas();
         }
 
         this.fps = this.render_time ? 1.0 / this.render_time : 0;
+        if (this._fps_smooth) {
+            this._fps_smooth = this._fps_smooth * 0.85 + this.fps * 0.15;
+        } else {
+            this._fps_smooth = this.fps;
+        }
+        if (this.show_fps) {
+            this._recordFpsSample(this.fps);
+        }
         this.frame += 1;
     };
 
@@ -8059,11 +8217,9 @@ LGraphNode.prototype.executeAction = function(action)
                 this.drawExecutionOrder(ctx);
             }
 
-            //connections ontop?
-            if (this.graph.config.links_ontop) {
-                if (!this.live_mode) {
-                    this.drawConnections(ctx);
-                }
+            //draw connections on the front canvas (above nodes)
+            if (!this.live_mode) {
+                this.drawConnections(ctx);
             }
 
             //current connection (the one being dragged by the mouse)
@@ -8083,12 +8239,12 @@ LGraphNode.prototype.executeAction = function(action)
                 }
                 var connShape = connInOrOut.shape;
 
-                switch (connType) {
-                    case LiteGraph.EVENT:
-                        link_color = LiteGraph.EVENT_LINK_COLOR;
-                        break;
-                    default:
-                        link_color = LiteGraph.CONNECTING_LINK_COLOR;
+                if (this.connecting_output) {
+                    link_color = this.getSlotConnectionColor(this.connecting_output, true, true);
+                } else if (connType === LiteGraph.EVENT || connType === "-1") {
+                    link_color = LiteGraph.EVENT_LINK_COLOR;
+                } else {
+                    link_color = this.getSlotConnectionColor(connInOrOut, false, true);
                 }
 
                 //the connection being dragged by the mouse
@@ -8223,6 +8379,10 @@ LGraphNode.prototype.executeAction = function(action)
 
         if (this.onDrawOverlay) {
             this.onDrawOverlay(ctx);
+        }
+
+        if (this.show_fps) {
+            this.renderFps(ctx, area ? area[0] : 0, area ? area[1] : 0);
         }
 
         if (area) {
@@ -8465,6 +8625,72 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     /**
+     * Records an FPS sample for percentile high/low stats.
+     * @method _recordFpsSample
+     **/
+    LGraphCanvas.prototype._recordFpsSample = function (fps) {
+        if (!(fps > 0) || !isFinite(fps)) {
+            return;
+        }
+        if (!this._fps_samples) {
+            this._fps_samples = [];
+            this._fps_1_low = 0;
+            this._fps_1_high = 0;
+        }
+        var samples = this._fps_samples;
+        samples.push(fps);
+        // Keep roughly the last 5s at 60fps (enough for stable 1% stats).
+        if (samples.length > 300) {
+            samples.splice(0, samples.length - 300);
+        }
+        if (samples.length < 8) {
+            this._fps_1_low = fps;
+            this._fps_1_high = fps;
+            return;
+        }
+        var sorted = samples.slice().sort(function (a, b) { return a - b; });
+        var last = sorted.length - 1;
+        var lowIndex = Math.max(0, Math.floor(last * 0.01));
+        var highIndex = Math.min(last, Math.ceil(last * 0.99));
+        this._fps_1_low = sorted[lowIndex];
+        this._fps_1_high = sorted[highIndex];
+    };
+
+    /**
+     * draws a compact framerate readout in the top-left of the canvas
+     * @method renderFps
+     **/
+    LGraphCanvas.prototype.renderFps = function (ctx, x, y) {
+        var dpr = this.getRenderScale();
+        x = ((x || 0) / dpr) + 12;
+        y = ((y || 0) / dpr) + 18;
+        var fps = this._fps_smooth || this.fps || 0;
+        var low = this._fps_1_low || 0;
+        var high = this._fps_1_high || 0;
+        var line1 = fps.toFixed(0) + " FPS";
+        var line2 = "1%  " + low.toFixed(0) + " – " + high.toFixed(0);
+
+        ctx.save();
+        // Draw in CSS pixels so the overlay stays sharp and correctly sized on HiDPI.
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+
+        ctx.font = "600 13px 'Geist', sans-serif";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+        ctx.fillText(line1, x + 1, y + 1);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillText(line1, x, y);
+
+        ctx.font = "500 11px 'Geist', sans-serif";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+        ctx.fillText(line2, x + 1, y + 16);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
+        ctx.fillText(line2, x, y + 15);
+        ctx.restore();
+    };
+
+    /**
      * draws the back canvas (the one containing the background and the connections)
      * @method drawBackCanvas
      **/
@@ -8629,10 +8855,7 @@ LGraphNode.prototype.executeAction = function(action)
                 ctx.shadowColor = "rgba(0,0,0,0)";
             }
 
-            //draw connections
-            if (!this.live_mode) {
-                this.drawConnections(ctx);
-            }
+            // Links are drawn on the front canvas above nodes.
 
             ctx.shadowColor = "rgba(0,0,0,0)";
 
@@ -8659,7 +8882,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         var color = node.color || node.constructor.color || LiteGraph.NODE_DEFAULT_COLOR;
         var bgcolor = node.bgcolor || node.constructor.bgcolor || LiteGraph.NODE_DEFAULT_BGCOLOR;
-        var low_quality = this.ds.scale < 0.6; //zoomed out
+        var low_quality = this.force_simple_shapes || this.ds.scale < 0.6; //zoomed out or low preset
 
         //only render if it forces it to do it
         if (this.live_mode) {
@@ -8679,7 +8902,7 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.shadowColor = LiteGraph.DEFAULT_SHADOW_COLOR;
             ctx.shadowOffsetX = this.ds.scale;
             ctx.shadowOffsetY = this.ds.scale;
-            ctx.shadowBlur = 5 * this.ds.scale * window.devicePixelRatio;
+            ctx.shadowBlur = 5 * this.ds.scale * this.getRenderScale();
         } else {
             ctx.shadowColor = "transparent";
         }
@@ -8902,23 +9125,36 @@ LGraphNode.prototype.executeAction = function(action)
                                 ctx.closePath();
                                 ctx.fill();
 
-                                ctx.shadowColor = "black";
-                                ctx.shadowBlur = 20;
-                                ctx.shadowOffsetX = 0;
-                                ctx.shadowOffsetY = 0;
+                                if (this.render_slot_glows) {
+                                    ctx.shadowColor = "black";
+                                    ctx.shadowBlur = 20;
+                                    ctx.shadowOffsetX = 0;
+                                    ctx.shadowOffsetY = 0;
+                                } else {
+                                    ctx.shadowColor = "transparent";
+                                    ctx.shadowBlur = 0;
+                                }
                                 ctx.beginPath();
                                 ctx.arc(x, y, 5, 0, Math.PI * 2);
                                 ctx.closePath();
                                 ctx.fill();
 
-                                if (filled) return;
+                                if (filled) {
+                                    ctx.shadowBlur = 0;
+                                    ctx.shadowColor = "transparent";
+                                    return;
+                                }
 
                                 ctx.beginPath();
                                 ctx.arc(x, y, 3, 0, Math.PI * 2);
                                 ctx.closePath();
-                                ctx.shadowBlur = 4;
+                                if (this.render_slot_glows) {
+                                    ctx.shadowBlur = 4;
+                                }
                                 ctx.fillStyle = "black"
                                 ctx.fill();
+                                ctx.shadowBlur = 0;
+                                ctx.shadowColor = "transparent";
                             }
                             renderSlot(pos[0], pos[1], filled)
                         }
@@ -9069,23 +9305,36 @@ LGraphNode.prototype.executeAction = function(action)
                                 ctx.closePath();
                                 ctx.fill();
 
-                                ctx.shadowColor = "black";
-                                ctx.shadowBlur = 20;
-                                ctx.shadowOffsetX = 0;
-                                ctx.shadowOffsetY = 0;
+                                if (this.render_slot_glows) {
+                                    ctx.shadowColor = "black";
+                                    ctx.shadowBlur = 20;
+                                    ctx.shadowOffsetX = 0;
+                                    ctx.shadowOffsetY = 0;
+                                } else {
+                                    ctx.shadowColor = "transparent";
+                                    ctx.shadowBlur = 0;
+                                }
                                 ctx.beginPath();
                                 ctx.arc(x, y, 5, 0, Math.PI * 2);
                                 ctx.closePath();
                                 ctx.fill();
 
-                                if (filled) return;
+                                if (filled) {
+                                    ctx.shadowBlur = 0;
+                                    ctx.shadowColor = "transparent";
+                                    return;
+                                }
 
                                 ctx.beginPath();
                                 ctx.arc(x, y, 3, 0, Math.PI * 2);
                                 ctx.closePath();
-                                ctx.shadowBlur = 4;
+                                if (this.render_slot_glows) {
+                                    ctx.shadowBlur = 4;
+                                }
                                 ctx.fillStyle = "black"
                                 ctx.fill();
+                                ctx.shadowBlur = 0;
+                                ctx.shadowColor = "transparent";
                             }
                             renderSlot(pos[0], pos[1], filled)
                         }
@@ -9307,16 +9556,21 @@ LGraphNode.prototype.executeAction = function(action)
         selected,
         mouse_over
     ) {
-        //bg rect
+        //bg rect — only apply Canvas2D blur when shadows are enabled (very expensive)
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "black"
+        if (this.render_shadows && !this.force_simple_shapes && this.ds.scale >= 0.5) {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "black";
+        } else {
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = "transparent";
+        }
         ctx.strokeStyle = fgcolor;
         ctx.fillStyle = "#00000080";
 
         var title_height = LiteGraph.NODE_TITLE_HEIGHT;
-        var low_quality = this.ds.scale < 0.5;
+        var low_quality = this.force_simple_shapes || this.ds.scale < 0.5;
 
         //render node area depending on shape
         var shape =
@@ -9361,56 +9615,54 @@ LGraphNode.prototype.executeAction = function(action)
                 // ---------- 1. BASE SHAPE ----------
                 ctx.beginPath();
                 ctx.roundRect(x, y, w, h, radius);
-
-                // translucent base
                 ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
                 ctx.fill();
 
+                if (this.render_body_glass) {
+                    // ---------- 2. TOP HIGHLIGHT ----------
+                    ctx.save();
 
-                // ---------- 2. TOP HIGHLIGHT ----------
-                ctx.save();
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, w, h, radius);
+                    ctx.clip();
 
-                ctx.beginPath();
-                ctx.roundRect(x, y, w, h, radius);
-                ctx.clip();
+                    const topGrad = ctx.createLinearGradient(x, y, x, y + h * 0.5);
+                    topGrad.addColorStop(0, "rgba(255,255,255,0.65)");
+                    topGrad.addColorStop(0.2, "rgba(255,255,255,0.25)");
+                    topGrad.addColorStop(1, "rgba(255,255,255,0)");
 
-                const topGrad = ctx.createLinearGradient(x, y, x, y + h * 0.5);
-                topGrad.addColorStop(0, "rgba(255,255,255,0.65)");
-                topGrad.addColorStop(0.2, "rgba(255,255,255,0.25)");
-                topGrad.addColorStop(1, "rgba(255,255,255,0)");
+                    ctx.fillStyle = topGrad;
+                    ctx.fillRect(x, y, w, h * 0.5);
 
-                ctx.fillStyle = topGrad;
-                ctx.fillRect(x, y, w, h * 0.5);
-
-                ctx.restore();
-
-
-                // ---------- 3. BOTTOM SHADOW ----------
-                ctx.save();
-
-                ctx.beginPath();
-                ctx.roundRect(x, y, w, h, radius);
-                ctx.clip();
-
-                const bottomGrad = ctx.createLinearGradient(x, y + h * 0.8, x, y + h);
-                bottomGrad.addColorStop(0, "rgba(0,0,0,0)");
-                bottomGrad.addColorStop(0.6, "rgba(0,0,0,0.2)");
-                bottomGrad.addColorStop(1, "rgba(0,0,0,0.4)");
-
-                ctx.fillStyle = bottomGrad;
-                ctx.fillRect(x, y + h * 0.8, w, h * 0.2);
-
-                ctx.restore();
+                    ctx.restore();
 
 
-                // ---------- 4. OPTIONAL: INNER EDGE GLOSS ----------
-                ctx.beginPath();
-                ctx.roundRect(x, y, w, h, radius);
+                    // ---------- 3. BOTTOM SHADOW ----------
+                    ctx.save();
 
-                ctx.strokeStyle = "rgba(255,255,255,0.05)";
-                ctx.lineWidth = 1;
-                ctx.stroke();
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, w, h, radius);
+                    ctx.clip();
 
+                    const bottomGrad = ctx.createLinearGradient(x, y + h * 0.8, x, y + h);
+                    bottomGrad.addColorStop(0, "rgba(0,0,0,0)");
+                    bottomGrad.addColorStop(0.6, "rgba(0,0,0,0.2)");
+                    bottomGrad.addColorStop(1, "rgba(0,0,0,0.4)");
+
+                    ctx.fillStyle = bottomGrad;
+                    ctx.fillRect(x, y + h * 0.8, w, h * 0.2);
+
+                    ctx.restore();
+
+
+                    // ---------- 4. OPTIONAL: INNER EDGE GLOSS ----------
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, w, h, radius);
+
+                    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
 
                 // ---------- 5. FINAL BLACK OUTLINE (SOLID) ----------
                 ctx.beginPath();
@@ -9460,7 +9712,7 @@ LGraphNode.prototype.executeAction = function(action)
             ) {
                 var title_color = node.constructor.title_color || fgcolor;
 
-                if (node.flags.collapsed) {
+                if (node.flags.collapsed && this.render_shadows) {
                     ctx.shadowColor = LiteGraph.DEFAULT_SHADOW_COLOR;
                 }
 
@@ -9494,63 +9746,66 @@ LGraphNode.prototype.executeAction = function(action)
                         );
                     }
                     ctx.fill();
-                    ctx.roundRect(
-                        0,
-                        -title_height,
-                        size[0] + 1,
-                        title_height,
-                        node.flags.collapsed ? [this.round_radius] : [this.round_radius, this.round_radius, 0, 0]
-                    );
-                    ctx.globalAlpha = 1
-                    var grad2 = LGraphCanvas.gradients[`${title_color}:2`];
-                    if (!grad2) {
-                        const gradX = size[0] / 49
-                        const gradY = -title_height / 2
-                        grad2 = LGraphCanvas.gradients[`${title_color}:2`] = ctx.createRadialGradient(gradX + 50, gradY, 30, gradX + (size[0] - 50), gradY, 150);
-                        grad2.addColorStop(0, "#00000030");
-                        grad2.addColorStop(1, "transparent");
+                    if (this.render_title_effects) {
+                        ctx.beginPath();
+                        ctx.roundRect(
+                            0,
+                            -title_height,
+                            size[0] + 1,
+                            title_height,
+                            node.flags.collapsed ? [this.round_radius] : [this.round_radius, this.round_radius, 0, 0]
+                        );
+                        ctx.globalAlpha = 1
+                        var grad2 = LGraphCanvas.gradients[`${title_color}:2`];
+                        if (!grad2) {
+                            const gradX = size[0] / 49
+                            const gradY = -title_height / 2
+                            grad2 = LGraphCanvas.gradients[`${title_color}:2`] = ctx.createRadialGradient(gradX + 50, gradY, 30, gradX + (size[0] - 50), gradY, 150);
+                            grad2.addColorStop(0, "#00000030");
+                            grad2.addColorStop(1, "transparent");
+                        }
+                        ctx.fillStyle = grad2
+                        ctx.fill();
+
+                        ctx.save();
+
+                        // Reuse the same rounded path
+                        ctx.beginPath();
+                        ctx.roundRect(
+                            0,
+                            -title_height,
+                            size[0] + 1,
+                            title_height,
+                            node.flags.collapsed
+                                ? [this.round_radius]
+                                : [this.round_radius, this.round_radius, 0, 0]
+                        );
+                        ctx.clip();
+
+                        // Create a vertical gradient (top → middle)
+                        const gradient = ctx.createLinearGradient(
+                            0,
+                            -title_height,
+                            0,
+                            -title_height + title_height * 0.1
+                        );
+
+                        // Strong white at top, fades out
+                        gradient.addColorStop(0, "rgba(255, 255, 255, 0.2)");
+                        gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+                        ctx.fillStyle = gradient;
+
+                        // Only draw the top portion
+                        ctx.fillRect(
+                            0,
+                            -title_height,
+                            size[0] + 1,
+                            title_height * 0.1
+                        );
+
+                        ctx.restore();
                     }
-                    ctx.fillStyle = grad2
-                    ctx.fill();
-
-                    ctx.save();
-
-                    // Reuse the same rounded path
-                    ctx.beginPath();
-                    ctx.roundRect(
-                        0,
-                        -title_height,
-                        size[0] + 1,
-                        title_height,
-                        node.flags.collapsed
-                            ? [this.round_radius]
-                            : [this.round_radius, this.round_radius, 0, 0]
-                    );
-                    ctx.clip();
-
-                    // Create a vertical gradient (top → middle)
-                    const gradient = ctx.createLinearGradient(
-                        0,
-                        -title_height,
-                        0,
-                        -title_height + title_height * 0.1
-                    );
-
-                    // Strong white at top, fades out
-                    gradient.addColorStop(0, "rgba(255, 255, 255, 0.2)");
-                    gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-
-                    ctx.fillStyle = gradient;
-
-                    // Only draw the top portion
-                    ctx.fillRect(
-                        0,
-                        -title_height,
-                        size[0] + 1,
-                        title_height * 0.1
-                    );
-
-                    ctx.restore();
                 }
                 renderTitleBar();
                 ctx.shadowColor = "transparent";
@@ -9773,6 +10028,32 @@ LGraphNode.prototype.executeAction = function(action)
     var tempB = new Float32Array(2);
 
     /**
+     * Resolves the canvas stroke/fill color for a node slot (matches pin rendering).
+     * @method getSlotConnectionColor
+     **/
+    LGraphCanvas.prototype.getSlotConnectionColor = function (slot, isOutput, connected) {
+        if (!slot) {
+            return this.default_link_color;
+        }
+        var slot_type = slot.type;
+        if (connected) {
+            return slot.color_on ||
+                this.default_connection_color_byType[slot_type] ||
+                (isOutput
+                    ? this.default_connection_color.output_on
+                    : this.default_connection_color.input_on) ||
+                this.default_link_color;
+        }
+        return slot.color_off ||
+            this.default_connection_color_byTypeOff[slot_type] ||
+            this.default_connection_color_byType[slot_type] ||
+            (isOutput
+                ? this.default_connection_color.output_off
+                : this.default_connection_color.input_off) ||
+            this.default_link_color;
+    };
+
+    /**
      * draws every connection visible in the canvas
      * OPTIMIZE THIS: pre-catch connections position instead of recomputing them every time
      * @method drawConnections
@@ -9784,6 +10065,8 @@ LGraphNode.prototype.executeAction = function(action)
         margin_area[1] = visible_area[1] - 20;
         margin_area[2] = visible_area[2] + 40;
         margin_area[3] = visible_area[3] + 40;
+
+        this.visible_links.length = 0;
 
         //draw connections
         ctx.lineWidth = this.connections_width;
@@ -9863,6 +10146,8 @@ LGraphNode.prototype.executeAction = function(action)
                     end_slot.dir ||
                     (node.horizontal ? LiteGraph.UP : LiteGraph.LEFT);
 
+                var link_color = link.color || this.getSlotConnectionColor(start_slot, true, true);
+
                 this.renderLink(
                     ctx,
                     start_node_slotpos,
@@ -9870,7 +10155,7 @@ LGraphNode.prototype.executeAction = function(action)
                     link,
                     false,
                     0,
-                    null,
+                    link_color,
                     start_dir,
                     end_dir
                 );
@@ -11708,8 +11993,8 @@ LGraphNode.prototype.executeAction = function(action)
         }
 
         if (e) {
-            dialog.style.left = e.clientX * window.devicePixelRatio + offsetx + "px";
-            dialog.style.top = e.clientY * window.devicePixelRatio + offsety + "px";
+            dialog.style.left = e.clientX + offsetx + "px";
+            dialog.style.top = e.clientY + offsety + "px";
         } else {
             dialog.style.left = canvas.width * 0.5 + offsetx + "px";
             dialog.style.top = canvas.height * 0.5 + offsety + "px";
@@ -11857,8 +12142,8 @@ LGraphNode.prototype.executeAction = function(action)
         }
 
         if (event) {
-            dialog.style.left = event.clientX * window.devicePixelRatio + offsetx + "px";
-            dialog.style.top = event.clientY * window.devicePixelRatio + offsety + "px";
+            dialog.style.left = event.clientX + offsetx + "px";
+            dialog.style.top = event.clientY + offsety + "px";
         } else {
             dialog.style.left = canvas.width * 0.5 + offsetx + "px";
             dialog.style.top = canvas.height * 0.5 + offsety + "px";
@@ -12086,8 +12371,8 @@ LGraphNode.prototype.executeAction = function(action)
         //compute best position
         var rect = canvas.getBoundingClientRect();
 
-        var left = (event ? event.clientX * window.devicePixelRatio : (rect.left + rect.width * 0.5)) - 80;
-        var top = (event ? event.clientY * window.devicePixelRatio : (rect.top + rect.height * 0.5)) - 20;
+        var left = (event ? event.clientX : (rect.left + rect.width * 0.5)) - 80;
+        var top = (event ? event.clientY : (rect.top + rect.height * 0.5)) - 20;
         dialog.style.left = left + "px";
         dialog.style.top = top + "px";
 
@@ -12594,8 +12879,8 @@ LGraphNode.prototype.executeAction = function(action)
             offsetx += options.position[0];
             offsety += options.position[1];
         } else if (options.event) {
-            offsetx += options.event.clientX * window.devicePixelRatio;
-            offsety += options.event.clientY * window.devicePixelRatio;
+            offsetx += options.event.clientX;
+            offsety += options.event.clientY;
         } //centered
         else {
             offsetx += this.canvas.width * 0.5;
@@ -12923,10 +13208,10 @@ LGraphNode.prototype.executeAction = function(action)
                 };
 
                 var stepButtons = [
-                    { label: "+1", step: 1 },
-                    { label: "+0.1", step: 0.1 },
-                    { label: "-0.1", step: -0.1 },
                     { label: "-1", step: -1 },
+                    { label: "-0.1", step: -0.1 },
+                    { label: "+0.1", step: 0.1 },
+                    { label: "+1", step: 1 },
                 ];
 
                 for (var si = 0; si < stepButtons.length; ++si) {
@@ -14972,8 +15257,8 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     ContextMenu.isCursorOverElement = function (event, element) {
-        var left = event.clientX * window.devicePixelRatio;
-        var top = event.clientY * window.devicePixelRatio;
+        var left = event.clientX;
+        var top = event.clientY;
         var rect = element.getBoundingClientRect();
         if (!rect) {
             return false;

@@ -1,13 +1,5 @@
 const { log, logColors } = require('../../log')
 const { number, string, bool } = require('../../utils/inputParser')
-require('../../manager/nodePreferencesRegistry').addPref(
-    'Command Palette',
-    'triggersCommandPalette.secret',
-    'Command Palette Secret Key (legacy)',
-    'text',
-    '',
-    'Optional legacy shared secret for older clients. Prefer device pairing: open Settings → Devices and approve overlay/Android requests.'
-);
 class NodeDefinition {
     constructor() {
         this.addOutput("", LiteGraph.EVENT);

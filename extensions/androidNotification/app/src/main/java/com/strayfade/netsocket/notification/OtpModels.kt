@@ -27,10 +27,17 @@ data class OtpAccount(
 
 object TotpCodes {
     const val PERIOD_SECONDS = 30
+    const val PERIOD_MILLIS = PERIOD_SECONDS * 1000
 
     fun secondsRemaining(nowMs: Long = System.currentTimeMillis()): Int {
         val elapsed = ((nowMs / 1000L) % PERIOD_SECONDS).toInt()
         return PERIOD_SECONDS - elapsed
+    }
+
+    /** Milliseconds left in the current TOTP period (for smooth progress). */
+    fun millisRemaining(nowMs: Long = System.currentTimeMillis()): Int {
+        val elapsed = (nowMs % PERIOD_MILLIS).toInt()
+        return PERIOD_MILLIS - elapsed
     }
 
     fun generate(secret: String, nowMs: Long = System.currentTimeMillis()): String? {

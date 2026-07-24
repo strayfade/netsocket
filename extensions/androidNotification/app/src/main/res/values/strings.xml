@@ -14,6 +14,7 @@
     <string name="authenticator_title">Authenticator</string>
     <string name="authenticator_subtitle">Codes from your netsocket OTP account registry.</string>
     <string name="authenticator_empty">No OTP accounts yet.\nScan a setup QR to add one.</string>
+    <string name="authenticator_offline_empty">No OTP accounts saved on this device yet.\nConnect to your host and sync, or scan a QR while connected.</string>
     <string name="authenticator_scan">Scan QR code</string>
     <string name="authenticator_scan_title">Scan QR</string>
     <string name="authenticator_scan_hint">Point at an otpauth or Google Authenticator export QR</string>
@@ -26,6 +27,7 @@
     <string name="authenticator_copy">Copy code</string>
     <string name="authenticator_not_connected">Connect to your netsocket host to load OTP accounts</string>
     <string name="authenticator_load_failed">Failed to load OTP accounts</string>
+    <string name="authenticator_reorder_failed">Could not save code order</string>
     <string name="authenticator_status_connected">Synced with host</string>
     <string name="authenticator_camera_denied">Camera permission is required to scan QR codes</string>
     <string name="authenticator_camera_failed">Could not open the camera</string>

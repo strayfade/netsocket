@@ -324,6 +324,33 @@ const handleTrustedMessage = async (socket, message) => {
             }
             break
         }
+        case 'reorderOtpAccounts': {
+            const { reorderOtpAccounts } = require('./utils/authenticator')
+            const data = message.broadcastData || {}
+            const keys = data.keys ?? data.order ?? []
+            try {
+                if (!Array.isArray(keys)) {
+                    throw new Error('keys must be an array of account keys')
+                }
+                const result = reorderOtpAccounts(keys)
+                await settingsManager.saveSettings()
+                replyToSocket(socket, {
+                    broadcastPurpose: 'reorderOtpAccounts',
+                    requestId: message.requestId,
+                    broadcastData: { ok: true, ...result },
+                })
+            } catch (err) {
+                replyToSocket(socket, {
+                    broadcastPurpose: 'reorderOtpAccounts',
+                    requestId: message.requestId,
+                    broadcastData: {
+                        ok: false,
+                        error: err && err.message ? err.message : String(err),
+                    },
+                })
+            }
+            break
+        }
         case 'getSubgraphs': {
             if (!isEditorOrLegacy) break
             const subgraphStore = require('./manager/subgraphStore')
@@ -1016,10 +1043,6 @@ const { killProcessOnPort } = require('./utils/killProcessOnPort');
         log(`Server running on http://127.0.0.1:${PORT}`)
         log(`Dashboard URL: http://127.0.0.1:${PORT}/dashboard`)
         log(`MCP endpoint: http://127.0.0.1:${PORT}/mcp`)
-        if (!authSkipped() && !settingsManager.getSetting('triggersCommandPalette.secret')) {
-            log('Overlay/automation WebSocket auth: Command Palette secret is not configured.', logColors.Warning)
-            log('Dashboard → Preferences → Command Palette → Command Palette Secret Key, then enter the same value in the overlay Authentication secret field.', logColors.Warning)
-        }
     })
 })()
 

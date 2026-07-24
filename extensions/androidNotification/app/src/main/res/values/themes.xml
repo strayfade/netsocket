@@ -36,6 +36,23 @@
         <item name="textAppearanceLabelSmall">@style/TextAppearance.Netsocket.LabelSmall</item>
 
         <item name="materialSwitchStyle">@style/Widget.Netsocket.MaterialSwitch</item>
+        <item name="materialButtonStyle">@style/Widget.Netsocket.Button</item>
+        <item name="colorSecondaryContainer">@color/netsocket_surface_variant</item>
+        <item name="colorOnSecondaryContainer">@color/netsocket_on_background</item>
+        <item name="colorPrimaryContainer">@color/netsocket_primary</item>
+        <item name="colorOnPrimaryContainer">@color/netsocket_on_primary</item>
+    </style>
+
+    <style name="Widget.Netsocket.Button" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/netsocket_primary</item>
+        <item name="android:textColor">@color/netsocket_on_primary</item>
+        <item name="rippleColor">@color/netsocket_outline</item>
+    </style>
+
+    <style name="Widget.Netsocket.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/netsocket_outline</item>
+        <item name="android:textColor">@color/netsocket_on_background</item>
+        <item name="rippleColor">@color/netsocket_outline</item>
     </style>
 
     <style name="Widget.Netsocket.MaterialSwitch" parent="Widget.Material3.CompoundButton.MaterialSwitch">

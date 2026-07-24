@@ -15,6 +15,9 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -58,6 +61,13 @@ class QrScanActivity : AppCompatActivity() {
         binding = ActivityQrScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
         cameraExecutor = Executors.newSingleThreadExecutor()
+
+        val baseTopPadding = (16 * resources.displayMetrics.density).toInt()
+        ViewCompat.setOnApplyWindowInsetsListener(binding.topBar) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = baseTopPadding + systemBars.top)
+            insets
+        }
 
         binding.backButton.setOnClickListener {
             finishWithResultIfNeeded()

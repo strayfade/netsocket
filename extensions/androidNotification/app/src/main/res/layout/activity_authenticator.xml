@@ -26,14 +26,31 @@
             android:src="@drawable/ic_arrow_back"
             app:tint="@color/netsocket_on_background" />
 
-        <TextView
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:text="@string/authenticator_title"
-            android:textAppearance="?attr/textAppearanceHeadlineSmall"
-            android:textColor="@color/netsocket_on_background" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/authenticator_title"
+                android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                android:textColor="@color/netsocket_on_background" />
+
+            <ImageView
+                android:id="@+id/syncStatus"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="8dp"
+                android:contentDescription="@string/authenticator_status_connected"
+                android:src="@drawable/ic_check"
+                android:visibility="gone"
+                app:tint="@color/netsocket_connected" />
+        </LinearLayout>
 
         <ImageButton
             android:id="@+id/scanButton"
@@ -45,26 +62,10 @@
             app:tint="@color/netsocket_on_background" />
     </LinearLayout>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/authenticator_subtitle"
-        android:textAppearance="?attr/textAppearanceBodyMedium"
-        android:textColor="@color/netsocket_on_surface_muted" />
-
-    <TextView
-        android:id="@+id/statusText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:textAppearance="?attr/textAppearanceBodySmall"
-        android:textColor="@color/netsocket_on_surface_muted" />
-
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:layout_weight="1">
 
         <androidx.recyclerview.widget.RecyclerView
@@ -92,12 +93,4 @@
             android:layout_gravity="center"
             android:visibility="gone" />
     </FrameLayout>
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/scanFab"
-        style="@style/Widget.Material3.Button.TonalButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/authenticator_scan" />
 </LinearLayout>

@@ -12,9 +12,10 @@ use crate::settings_store::{save_settings, SettingsHandle};
 use futures_util::{SinkExt, StreamExt};
 use parking_lot::Mutex;
 use serde::Serialize;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::{
     connect_async,
     tungstenite::{
@@ -26,14 +27,28 @@ use tokio_tungstenite::{
     },
 };
 
-#[derive(Debug)]
 pub enum WsCommand {
     Send {
         command: String,
         conversation_id: Option<String>,
         device_id: Option<String>,
     },
+    Request {
+        purpose: String,
+        data: Option<serde_json::Value>,
+        request_id: String,
+        reply_tx: oneshot::Sender<Result<serde_json::Value, String>>,
+    },
     Reconnect,
+}
+
+fn fail_pending_requests(
+    pending: &mut HashMap<String, oneshot::Sender<Result<serde_json::Value, String>>>,
+    reason: &str,
+) {
+    for (_, tx) in pending.drain() {
+        let _ = tx.send(Err(reason.to_string()));
+    }
 }
 
 pub struct WsRuntime {
@@ -271,6 +286,10 @@ async fn ws_loop(
         let mut ping_interval =
             tokio::time::interval(std::time::Duration::from_millis(PING_INTERVAL_MS));
         ping_interval.tick().await;
+        let mut pending_requests: HashMap<
+            String,
+            oneshot::Sender<Result<serde_json::Value, String>>,
+        > = HashMap::new();
 
         loop {
             tokio::select! {
@@ -299,10 +318,41 @@ async fn ws_loop(
                                 }
                             });
                             if send_app_message(&mut write, &session_key, approved, payload).await.is_err() {
+                                fail_pending_requests(&mut pending_requests, "Connection lost.");
+                                break;
+                            }
+                        }
+                        Some(WsCommand::Request {
+                            purpose,
+                            data,
+                            request_id,
+                            reply_tx,
+                        }) => {
+                            if !approved {
+                                let _ = reply_tx.send(Err(
+                                    "Waiting for approval in the netsocket dashboard (Settings → Devices)."
+                                        .to_string(),
+                                ));
+                                continue;
+                            }
+                            let mut payload = serde_json::json!({
+                                "broadcastPurpose": purpose,
+                                "requestId": request_id,
+                            });
+                            if let Some(data) = data {
+                                payload["broadcastData"] = data;
+                            }
+                            pending_requests.insert(request_id, reply_tx);
+                            if send_app_message(&mut write, &session_key, approved, payload)
+                                .await
+                                .is_err()
+                            {
+                                fail_pending_requests(&mut pending_requests, "Connection lost.");
                                 break;
                             }
                         }
                         Some(WsCommand::Reconnect) | None => {
+                            fail_pending_requests(&mut pending_requests, "Connection reset.");
                             break;
                         }
                     }
@@ -498,6 +548,35 @@ async fn ws_loop(
                                 match decrypt_payload(key, nonce, ciphertext) {
                                     Ok(inner) => message = inner,
                                     Err(_) => continue,
+                                }
+                            }
+
+                            if let Some(request_id) =
+                                message.get("requestId").and_then(|v| v.as_str())
+                            {
+                                if let Some(tx) = pending_requests.remove(request_id) {
+                                    let data = message
+                                        .get("broadcastData")
+                                        .cloned()
+                                        .unwrap_or_else(|| serde_json::json!({}));
+                                    let explicit_ok = data
+                                        .get("ok")
+                                        .and_then(|v| v.as_bool())
+                                        .unwrap_or(true);
+                                    let error = data
+                                        .get("error")
+                                        .and_then(|v| v.as_str())
+                                        .map(str::trim)
+                                        .filter(|s| !s.is_empty())
+                                        .map(str::to_string);
+                                    if explicit_ok && error.is_none() {
+                                        let _ = tx.send(Ok(data));
+                                    } else {
+                                        let _ = tx.send(Err(error.unwrap_or_else(|| {
+                                            "Request failed".to_string()
+                                        })));
+                                    }
+                                    continue;
                                 }
                             }
 

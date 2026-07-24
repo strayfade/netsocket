@@ -138,6 +138,34 @@ function mergeOtpAccounts(additions) {
 }
 
 /**
+ * @param {string[]} orderedKeys
+ * @returns {{ total: number, accounts: object[] }}
+ */
+function reorderOtpAccounts(orderedKeys) {
+    const current = parseOtpAccountsString(settingsManager.getSetting(OTP_SETTING_KEY));
+    const next = new Map();
+    const seen = new Set();
+    for (const rawKey of orderedKeys || []) {
+        const key = String(rawKey || '').trim();
+        if (!key || seen.has(key) || !current.has(key)) {
+            continue;
+        }
+        next.set(key, current.get(key));
+        seen.add(key);
+    }
+    for (const [key, secret] of current.entries()) {
+        if (!seen.has(key)) {
+            next.set(key, secret);
+        }
+    }
+    settingsManager.setSetting(OTP_SETTING_KEY, serializeOtpAccounts(next));
+    return {
+        total: next.size,
+        accounts: listAccountRecords(next),
+    };
+}
+
+/**
  * @param {Map<string, string>} [map]
  * @returns {{ key: string, issuer: string, account: string, secret: string }[]}
  */
@@ -451,6 +479,7 @@ module.exports = {
     parseOtpAccountsString,
     serializeOtpAccounts,
     mergeOtpAccounts,
+    reorderOtpAccounts,
     listAccountRecords,
     secondsRemainingInPeriod,
     parseOtpAuthUri,

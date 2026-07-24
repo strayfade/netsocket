@@ -212,6 +212,13 @@ object HostConnection {
         return request("importOtpFromQr", data = data, callback = callback)
     }
 
+    fun reorderOtpAccounts(keys: List<String>, callback: RequestCallback): Boolean {
+        val array = JSONArray()
+        keys.forEach { array.put(it) }
+        val data = JSONObject().put("keys", array)
+        return request("reorderOtpAccounts", data = data, callback = callback)
+    }
+
     private fun localDeviceId(): String {
         val context = appContext ?: return ""
         return DeviceId.get(context)

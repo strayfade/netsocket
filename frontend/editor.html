@@ -60,6 +60,10 @@
                     <button type="button" id="editor-fit-view" class="header-toolbar-btn" title="Fit all nodes to view">
                         <span class="material-symbols-outlined" aria-hidden="true">fit_screen</span>
                     </button>
+                    <button type="button" id="editor-toggle-log" class="header-toolbar-btn" title="Show log"
+                        aria-pressed="false" aria-controls="log">
+                        <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
+                    </button>
                 </span>
             </div>
             <form class="header-command" id="agent-command-form" autocomplete="off">
@@ -73,8 +77,8 @@
                     <span class="material-symbols-outlined"
                         style="font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;">cloud_download</span>
                 </a>
-                <a href="#" id="open-settings" aria-label="Integrations">
-                    <span class="header-link-label">Integrations</span>
+                <a href="#" id="open-settings" aria-label="Settings">
+                    <span class="header-link-label">Settings</span>
                     <span class="material-symbols-outlined"
                         style="font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;">settings</span>
                 </a>
@@ -91,7 +95,7 @@
     </div>
     <div class="connection-banner"></div>
     <canvas id='nodegraph'></canvas>
-    <textarea id="log" spellcheck="false"></textarea>
+    <textarea id="log" spellcheck="false" readonly tabindex="-1" aria-label="Server log" hidden></textarea>
     <script>
 
         (async () => {
@@ -106,6 +110,91 @@
         let graph = new LGraph();
         let canvas = new LGraphCanvas("#nodegraph", graph);
         canvas.allow_searchbox = false;
+
+        const RENDER_QUALITY_STORAGE_KEY = "netsocket:renderQuality";
+        const readStoredRenderQuality = () => {
+            try {
+                const raw = localStorage.getItem(RENDER_QUALITY_STORAGE_KEY);
+                if (raw && LGraphCanvas.RENDER_QUALITY_PRESETS[raw]) return raw;
+            } catch (e) { /* ignore */ }
+            return "medium";
+        };
+        const writeStoredRenderQuality = (quality) => {
+            try {
+                localStorage.setItem(RENDER_QUALITY_STORAGE_KEY, quality);
+            } catch (e) { /* ignore */ }
+        };
+        window.applyNetsocketRenderQuality = (quality) => {
+            const applied = canvas.applyRenderQuality(quality);
+            writeStoredRenderQuality(applied);
+            return applied;
+        };
+        window.getNetsocketRenderQuality = () => canvas.render_quality || readStoredRenderQuality();
+        window.applyNetsocketRenderQuality(readStoredRenderQuality());
+
+        const SHOW_FPS_STORAGE_KEY = "netsocket:showFps";
+        const readStoredShowFps = () => {
+            try {
+                return localStorage.getItem(SHOW_FPS_STORAGE_KEY) === "true";
+            } catch (e) {
+                return false;
+            }
+        };
+        const writeStoredShowFps = (enabled) => {
+            try {
+                localStorage.setItem(SHOW_FPS_STORAGE_KEY, enabled ? "true" : "false");
+            } catch (e) { /* ignore */ }
+        };
+        window.setNetsocketShowFps = (enabled) => {
+            canvas.show_fps = !!enabled;
+            writeStoredShowFps(canvas.show_fps);
+            canvas.setDirty(true, false);
+            return canvas.show_fps;
+        };
+        window.getNetsocketShowFps = () => !!canvas.show_fps;
+        window.setNetsocketShowFps(readStoredShowFps());
+
+        const RENDER_RESOLUTION_STORAGE_KEY = "netsocket:renderResolution";
+        const clampRenderResolution = (value) => {
+            const n = Math.round(Number(value));
+            if (!isFinite(n)) return 100;
+            return Math.max(25, Math.min(100, n));
+        };
+        const readStoredRenderResolution = () => {
+            try {
+                const raw = localStorage.getItem(RENDER_RESOLUTION_STORAGE_KEY);
+                if (raw != null) return clampRenderResolution(raw);
+            } catch (e) { /* ignore */ }
+            return 100;
+        };
+        const writeStoredRenderResolution = (percent) => {
+            try {
+                localStorage.setItem(RENDER_RESOLUTION_STORAGE_KEY, String(percent));
+            } catch (e) { /* ignore */ }
+        };
+        window.setNetsocketRenderResolution = (percent) => {
+            const oldPct = canvas.render_resolution != null ? canvas.render_resolution : 100;
+            const applied = canvas.setRenderResolution(percent);
+            // Keep the on-screen graph framing stable when the backing-store size changes.
+            if (oldPct > 0 && applied !== oldPct && canvas.ds) {
+                canvas.ds.scale *= applied / oldPct;
+            }
+            writeStoredRenderResolution(applied);
+            if (typeof window.__netsocketForceCanvasResize === "function") {
+                window.__netsocketForceCanvasResize();
+            }
+            return applied;
+        };
+        window.getNetsocketRenderResolution = () =>
+            canvas.render_resolution != null ? canvas.render_resolution : readStoredRenderResolution();
+        {
+            const initialPct = readStoredRenderResolution();
+            canvas.setRenderResolution(initialPct);
+            // Match CSS-space framing to a 100% baseline (ds.scale starts as devicePixelRatio).
+            if (canvas.ds && initialPct !== 100) {
+                canvas.ds.scale = ((window.devicePixelRatio || 1) * initialPct) / 100;
+            }
+        }
 
         // Persist the viewport pan/zoom (canvas.ds.offset + canvas.ds.scale) per view so
         // reloading the page restores where the user was looking instead of resetting.
@@ -525,7 +614,10 @@
             "keydown",
             (e) => {
                 const tag = (e.target && e.target.tagName && e.target.tagName.toLowerCase()) || "";
-                if (tag === "input" || tag === "textarea" || tag === "select" || e.target?.isContentEditable) {
+                if (
+                    (tag === "input" || tag === "textarea" || tag === "select" || e.target?.isContentEditable) &&
+                    e.target?.id !== "log"
+                ) {
                     return;
                 }
                 const mod = e.ctrlKey || e.metaKey;
@@ -621,9 +713,45 @@
         const scrollToBottom = () => {
             log.scrollTop = log.scrollHeight;
         };
-        log.addEventListener("mouseleave", async () => {
-            await new Promise(resolve => setTimeout(resolve, 1));
-            scrollToBottom();
+
+        const toggleLogBtn = document.getElementById("editor-toggle-log");
+        let logVisible = false;
+        // lastSize / detectResizeNeeded are assigned below; setLogVisible runs after init.
+        const setLogVisible = (visible) => {
+            logVisible = !!visible;
+            log.classList.toggle("is-visible", logVisible);
+            log.hidden = !logVisible;
+            if (toggleLogBtn) {
+                toggleLogBtn.classList.toggle("is-active", logVisible);
+                toggleLogBtn.setAttribute("aria-pressed", logVisible ? "true" : "false");
+                toggleLogBtn.title = logVisible ? "Hide log" : "Show log";
+            }
+            if (logVisible) {
+                scrollToBottom();
+            }
+            if (typeof detectResizeNeeded === "function") {
+                lastSize = [0, 0, 0, 0, -1];
+                detectResizeNeeded();
+            }
+        };
+        if (toggleLogBtn) {
+            toggleLogBtn.addEventListener("click", () => setLogVisible(!logVisible));
+        }
+
+        // Keep the log read-only even if readonly is bypassed somehow.
+        log.addEventListener("beforeinput", (e) => e.preventDefault());
+        log.addEventListener("keydown", (e) => {
+            // Allow copy / select-all / navigation; block anything that would edit.
+            const mod = e.ctrlKey || e.metaKey;
+            if (mod && (e.code === "KeyC" || e.code === "KeyA")) return;
+            if (
+                e.code === "ArrowUp" || e.code === "ArrowDown" ||
+                e.code === "ArrowLeft" || e.code === "ArrowRight" ||
+                e.code === "Home" || e.code === "End" ||
+                e.code === "PageUp" || e.code === "PageDown" ||
+                e.code === "Tab"
+            ) return;
+            e.preventDefault();
         });
 
         const connectWebSocket = () => {
@@ -717,27 +845,55 @@
         };
         connectWebSocket();
 
-        // On resize
-        let lastSize = []
-        nodegraph.style.width = "100vw";
-        nodegraph.style.height = "100vh";
+        // On resize — size the graph canvas between the top chrome and the optional log panel.
+        // Bitmap size is CSS size × devicePixelRatio × (render_resolution / 100).
+        let lastSize = [0, 0, 0, 0, 0];
+        const measureEditorChrome = () => {
+            const chrome = document.querySelector(".editor-top-chrome");
+            return chrome ? chrome.offsetHeight : 0;
+        };
+        const measureLogInset = () => {
+            if (!logVisible) return 0;
+            return Math.max(1, Math.floor(window.innerHeight / 3));
+        };
         const resize = () => {
-            lastSize = [
-                window.innerWidth, window.innerHeight
-            ];
+            const topInset = measureEditorChrome();
+            const bottomInset = measureLogInset();
+            const w = Math.max(1, window.innerWidth);
+            const h = Math.max(1, window.innerHeight - topInset - bottomInset);
+            const renderPct = canvas.render_resolution != null ? canvas.render_resolution : 100;
+            lastSize = [w, h, topInset, bottomInset, renderPct];
+            nodegraph.style.top = `${topInset}px`;
+            nodegraph.style.width = `${w}px`;
+            nodegraph.style.height = `${h}px`;
             const dpr = window.devicePixelRatio || 1;
+            const scale = dpr * (renderPct / 100);
+            const bw = Math.max(1, Math.round(w * scale));
+            const bh = Math.max(1, Math.round(h * scale));
             // Use LGraphCanvas.resize so bgcanvas stays in sync and setDirty triggers a full redraw
             // (setting canvas width/height alone clears the bitmap without marking dirty).
-            canvas.resize(lastSize[0] * dpr, lastSize[1] * dpr);
-        }
+            canvas.resize(bw, bh);
+        };
         const detectResizeNeeded = () => {
-            let currentSize = [
-                window.innerWidth, window.innerHeight
-            ]
-            if (currentSize[0] != lastSize[0] || currentSize[1] != lastSize[1]) {
-                resize()
+            const topInset = measureEditorChrome();
+            const bottomInset = measureLogInset();
+            const w = Math.max(1, window.innerWidth);
+            const h = Math.max(1, window.innerHeight - topInset - bottomInset);
+            const renderPct = canvas.render_resolution != null ? canvas.render_resolution : 100;
+            if (
+                w !== lastSize[0] ||
+                h !== lastSize[1] ||
+                topInset !== lastSize[2] ||
+                bottomInset !== lastSize[3] ||
+                renderPct !== lastSize[4]
+            ) {
+                resize();
             }
-        }
+        };
+        window.__netsocketForceCanvasResize = () => {
+            lastSize = [0, 0, 0, 0, -1];
+            detectResizeNeeded();
+        };
         setInterval(detectResizeNeeded, 6)
         detectResizeNeeded()
 
@@ -1280,8 +1436,176 @@
                     renderDevicesPanel(devicesList || [])
                 }
 
+                // Rendering quality (client-side; not part of server preference registry)
+                {
+                    const tabIndex = tabs.length
+                    const tab = document.createElement('div')
+                    tab.className = 'settings-tab'
+                    tab.textContent = 'Rendering'
+                    tab.addEventListener('click', () => showTab(tabIndex))
+                    tabsContainerEl.appendChild(tab)
+                    tabs.push(tab)
+
+                    const panel = document.createElement('div')
+                    panel.className = 'settings-panel'
+                    panel.style.display = 'none'
+
+                    const intro = document.createElement('div')
+                    intro.className = 'settings-field-description'
+                    intro.innerHTML = '<p>Control how the node graph is drawn. Lower presets disable expensive Canvas2D effects (shadows, gradients, glass) so pan and zoom stay smooth.</p>'
+                    panel.appendChild(intro)
+
+                    const field = document.createElement('div')
+                    field.className = 'settings-field'
+                    const title = document.createElement('div')
+                    title.className = 'settings-label-block'
+                    title.textContent = 'Quality preset'
+                    field.appendChild(title)
+
+                    const desc = document.createElement('div')
+                    desc.className = 'settings-field-description'
+                    const descText = document.createElement('p')
+                    desc.appendChild(descText)
+                    field.appendChild(desc)
+
+                    const row = document.createElement('div')
+                    row.className = 'settings-field-row settings-quality-presets'
+
+                    const presets = (window.LGraphCanvas && LGraphCanvas.RENDER_QUALITY_PRESETS) || {}
+                    const order = ['low', 'medium', 'high']
+                    let current = (typeof window.getNetsocketRenderQuality === 'function')
+                        ? window.getNetsocketRenderQuality()
+                        : 'medium'
+
+                    const syncActive = () => {
+                        row.querySelectorAll('.settings-quality-btn').forEach((btn) => {
+                            btn.classList.toggle('settings-quality-btn-active', btn.dataset.quality === current)
+                        })
+                        const preset = presets[current]
+                        descText.textContent = preset && preset.description
+                            ? preset.description
+                            : ''
+                    }
+
+                    for (const key of order) {
+                        const preset = presets[key]
+                        if (!preset) continue
+                        const btn = document.createElement('button')
+                        btn.type = 'button'
+                        btn.className = 'settings-quality-btn'
+                        btn.dataset.quality = key
+                        btn.textContent = preset.label || key
+                        btn.addEventListener('click', () => {
+                            if (typeof window.applyNetsocketRenderQuality === 'function') {
+                                current = window.applyNetsocketRenderQuality(key)
+                            } else {
+                                current = key
+                            }
+                            syncActive()
+                        })
+                        row.appendChild(btn)
+                    }
+
+                    field.appendChild(row)
+                    panel.appendChild(field)
+                    syncActive()
+
+                    const fpsField = document.createElement('div')
+                    fpsField.className = 'settings-field'
+                    const fpsTitle = document.createElement('div')
+                    fpsTitle.className = 'settings-label-block'
+                    fpsTitle.textContent = 'Show framerate'
+                    fpsField.appendChild(fpsTitle)
+                    const fpsDesc = document.createElement('div')
+                    fpsDesc.className = 'settings-field-description'
+                    fpsDesc.innerHTML = '<p>Display a live FPS counter in the top-left of the graph canvas. Keeps the canvas redrawing every frame while enabled.</p>'
+                    fpsField.appendChild(fpsDesc)
+                    const fpsRow = document.createElement('label')
+                    fpsRow.className = 'settings-field-row'
+                    const fpsCb = document.createElement('input')
+                    fpsCb.type = 'checkbox'
+                    fpsCb.checked = typeof window.getNetsocketShowFps === 'function'
+                        ? window.getNetsocketShowFps()
+                        : false
+                    const fpsSpan = document.createElement('span')
+                    fpsSpan.textContent = 'Enabled'
+                    fpsRow.appendChild(fpsCb)
+                    fpsRow.appendChild(fpsSpan)
+                    fpsField.appendChild(fpsRow)
+                    fpsCb.addEventListener('change', () => {
+                        if (typeof window.setNetsocketShowFps === 'function') {
+                            window.setNetsocketShowFps(fpsCb.checked)
+                        }
+                    })
+                    panel.appendChild(fpsField)
+
+                    const resField = document.createElement('div')
+                    resField.className = 'settings-field'
+                    const resTitle = document.createElement('div')
+                    resTitle.className = 'settings-label-block'
+                    resTitle.textContent = 'Render resolution'
+                    resField.appendChild(resTitle)
+                    const resDesc = document.createElement('div')
+                    resDesc.className = 'settings-field-description'
+                    resDesc.innerHTML = '<p>Draw the graph at a percentage of the display size, then upscale. Lower values fill fewer pixels and usually raise FPS; text and edges look softer.</p>'
+                    resField.appendChild(resDesc)
+
+                    const resRow = document.createElement('div')
+                    resRow.className = 'settings-field-row settings-render-resolution'
+                    const resRange = document.createElement('input')
+                    resRange.type = 'range'
+                    resRange.min = '25'
+                    resRange.max = '100'
+                    resRange.step = '5'
+                    resRange.value = String(
+                        typeof window.getNetsocketRenderResolution === 'function'
+                            ? window.getNetsocketRenderResolution()
+                            : 100
+                    )
+                    const resValue = document.createElement('span')
+                    resValue.className = 'settings-render-resolution-value'
+                    const syncResLabel = () => {
+                        resValue.textContent = `${resRange.value}%`
+                    }
+                    syncResLabel()
+                    const applyRes = () => {
+                        if (typeof window.setNetsocketRenderResolution === 'function') {
+                            const applied = window.setNetsocketRenderResolution(resRange.value)
+                            resRange.value = String(applied)
+                            syncResLabel()
+                        } else {
+                            syncResLabel()
+                        }
+                    }
+                    resRange.addEventListener('input', syncResLabel)
+                    resRange.addEventListener('change', applyRes)
+                    resRow.appendChild(resRange)
+                    resRow.appendChild(resValue)
+                    resField.appendChild(resRow)
+
+                    const resPresets = document.createElement('div')
+                    resPresets.className = 'settings-field-row settings-quality-presets'
+                    for (const pct of [50, 75, 100]) {
+                        const btn = document.createElement('button')
+                        btn.type = 'button'
+                        btn.className = 'settings-quality-btn'
+                        btn.textContent = `${pct}%`
+                        btn.addEventListener('click', () => {
+                            resRange.value = String(pct)
+                            applyRes()
+                        })
+                        resPresets.appendChild(btn)
+                    }
+                    resField.appendChild(resPresets)
+                    panel.appendChild(resField)
+
+                    panelsScrollEl.appendChild(panel)
+                    panels.push(panel)
+                }
+
+                const categoryBase = tabs.length
                 categories.forEach((cat, idx) => {
-                    const tabIndex = idx + 1
+                    const tabIndex = categoryBase + idx
                     const tab = document.createElement('div')
                     tab.className = 'settings-tab'
                     tab.textContent = cat

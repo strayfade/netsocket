@@ -1,37 +1,72 @@
 package com.strayfade.netsocket.notification
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
-import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.strayfade.netsocket.notification.databinding.ItemOtpAccountBinding
 
 class OtpAccountAdapter(
-    private val onCopy: (OtpAccount) -> Unit,
     private val onClick: (OtpAccount) -> Unit,
-) : ListAdapter<OtpAccount, OtpAccountAdapter.Holder>(Diff) {
+) : RecyclerView.Adapter<OtpAccountAdapter.Holder>() {
 
-    private var secondsRemaining: Int = TotpCodes.PERIOD_SECONDS
+    private val items = mutableListOf<OtpAccount>()
+    private var millisRemaining: Int = TotpCodes.PERIOD_MILLIS
+    private var recyclerView: RecyclerView? = null
 
-    object Diff : DiffUtil.ItemCallback<OtpAccount>() {
-        override fun areItemsTheSame(oldItem: OtpAccount, newItem: OtpAccount): Boolean {
-            return oldItem.key == newItem.key
-        }
+    fun currentItems(): List<OtpAccount> = items.toList()
 
-        override fun areContentsTheSame(oldItem: OtpAccount, newItem: OtpAccount): Boolean {
-            return oldItem == newItem
-        }
+    fun submitAccounts(accounts: List<OtpAccount>) {
+        items.clear()
+        items.addAll(accounts)
+        notifyDataSetChanged()
     }
 
-    fun updateTimer(seconds: Int) {
-        secondsRemaining = seconds
-        notifyItemRangeChanged(0, itemCount, PAYLOAD_TIMER)
+    fun moveItem(from: Int, to: Int): Boolean {
+        if (from == to || from !in items.indices || to !in items.indices) {
+            return false
+        }
+        val item = items.removeAt(from)
+        items.add(to, item)
+        notifyItemMoved(from, to)
+        return true
+    }
+
+    /** Update visible progress rings without RecyclerView change notifications. */
+    fun updateTimer(millis: Int) {
+        millisRemaining = millis
+        val list = recyclerView ?: return
+        for (i in 0 until list.childCount) {
+            val child = list.getChildAt(i) ?: continue
+            (list.getChildViewHolder(child) as? Holder)?.bindTimer(millis)
+        }
     }
 
     fun refreshCodes() {
-        notifyItemRangeChanged(0, itemCount, PAYLOAD_CODE)
+        val list = recyclerView ?: return
+        for (i in 0 until list.childCount) {
+            val child = list.getChildAt(i) ?: continue
+            val holder = list.getChildViewHolder(child) as? Holder ?: continue
+            val position = holder.bindingAdapterPosition
+            if (position != RecyclerView.NO_POSITION && position in items.indices) {
+                holder.bindCode(items[position])
+            }
+        }
     }
+
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        this.recyclerView = recyclerView
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+        if (this.recyclerView === recyclerView) {
+            this.recyclerView = null
+        }
+    }
+
+    override fun getItemCount(): Int = items.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val binding = ItemOtpAccountBinding.inflate(
@@ -43,31 +78,24 @@ class OtpAccountAdapter(
     }
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
-        holder.bind(getItem(position), secondsRemaining)
-    }
-
-    override fun onBindViewHolder(holder: Holder, position: Int, payloads: MutableList<Any>) {
-        if (payloads.isEmpty()) {
-            onBindViewHolder(holder, position)
-            return
-        }
-        val account = getItem(position)
-        payloads.forEach { payload ->
-            when (payload) {
-                PAYLOAD_TIMER -> holder.bindTimer(secondsRemaining)
-                PAYLOAD_CODE -> holder.bindCode(account)
-            }
-        }
+        holder.bind(items[position], millisRemaining)
     }
 
     inner class Holder(
         private val binding: ItemOtpAccountBinding,
     ) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(account: OtpAccount, seconds: Int) {
-            binding.accountName.text = account.displayName
+        fun bind(account: OtpAccount, millis: Int) {
+            val issuer = account.issuer.ifBlank { account.key }
+            val label = account.account
+            binding.issuerName.text = issuer
+            binding.accountName.text = label
+            binding.accountName.visibility = if (label.isBlank()) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
             bindCode(account)
-            bindTimer(seconds)
-            binding.copyButton.setOnClickListener { onCopy(account) }
+            bindTimer(millis)
             binding.root.setOnClickListener { onClick(account) }
         }
 
@@ -80,15 +108,12 @@ class OtpAccountAdapter(
             }
         }
 
-        fun bindTimer(seconds: Int) {
-            binding.timerProgress.max = TotpCodes.PERIOD_SECONDS
-            binding.timerProgress.progress = seconds
-            binding.timerText.text = seconds.toString()
+        fun bindTimer(millis: Int) {
+            binding.timerProgress.max = TotpCodes.PERIOD_MILLIS
+            binding.timerProgress.setProgressCompat(
+                millis.coerceIn(0, TotpCodes.PERIOD_MILLIS),
+                false,
+            )
         }
-    }
-
-    companion object {
-        private const val PAYLOAD_TIMER = "timer"
-        private const val PAYLOAD_CODE = "code"
     }
 }

@@ -10,7 +10,7 @@ pub const MIN_RESPONSE_TIMEOUT_SECONDS: u32 = 5;
 pub const MAX_RESPONSE_TIMEOUT_SECONDS: u32 = 300;
 pub const RECONNECT_DELAY_MS: u64 = 1750;
 pub const PING_INTERVAL_MS: u64 = 10000;
-pub const HIDE_ANIMATION_MS: u64 = 260;
+pub const HIDE_ANIMATION_MS: u64 = 180;
 pub const TYPE_RESPONSE_DELAY_MS: u64 = 500;
 
 pub const HOTKEY_SETTING_KEYS: [&str; 3] = [
@@ -34,6 +34,10 @@ impl Default for ProfileConfig {
     }
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub hotkey: String,
@@ -52,6 +56,8 @@ pub struct Settings {
     /// Pinned server identity public key (set after first successful challenge).
     #[serde(default)]
     pub pinnedServerIdentityPublicKey: String,
+    #[serde(default = "default_true")]
+    pub animationsEnabled: bool,
 }
 
 impl Default for Settings {
@@ -71,6 +77,7 @@ impl Default for Settings {
             identityPublicKey: String::new(),
             identityPrivateKey: String::new(),
             pinnedServerIdentityPublicKey: String::new(),
+            animationsEnabled: true,
         }
     }
 }
@@ -156,6 +163,7 @@ impl Settings {
             identityPublicKey: raw.identityPublicKey.trim().to_string(),
             identityPrivateKey: raw.identityPrivateKey.trim().to_string(),
             pinnedServerIdentityPublicKey: raw.pinnedServerIdentityPublicKey.trim().to_string(),
+            animationsEnabled: raw.animationsEnabled,
         }
     }
 
@@ -240,6 +248,24 @@ pub struct CommandSendPayload {
     pub command: String,
     #[serde(rename = "conversationId", default)]
     pub conversation_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RequestSendPayload {
+    pub purpose: String,
+    #[serde(default)]
+    pub data: Option<serde_json::Value>,
+    #[serde(rename = "timeoutMs", default)]
+    pub timeout_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RequestResultPayload {
+    pub ok: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]

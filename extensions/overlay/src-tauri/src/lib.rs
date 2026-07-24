@@ -6,7 +6,10 @@ mod platform;
 mod settings_store;
 mod websocket;
 
-use config::{CommandSendPayload, CompleteHotkeyCapturePayload, OkPayload, Settings};
+use config::{
+    CommandSendPayload, CompleteHotkeyCapturePayload, OkPayload, RequestResultPayload,
+    RequestSendPayload, Settings,
+};
 use hotkeys::{apply_autostart, complete_hotkey_capture, hotkey_matches, register_all_hotkeys, start_hotkey_capture};
 use overlay::{
     enter_notification_standby, hide_overlay_now, main_window, notify_ready, overlay_interactive,
@@ -137,6 +140,86 @@ fn command_send(app: AppHandle, payload: CommandSendPayload) -> Result<OkPayload
         ok: true,
         error: None,
         conversationId: conversation_id,
+    })
+}
+
+#[tauri::command]
+async fn request_send(
+    app: AppHandle,
+    payload: RequestSendPayload,
+) -> Result<RequestResultPayload, String> {
+    let purpose = payload.purpose.trim().to_string();
+    if purpose.is_empty() {
+        return Ok(RequestResultPayload {
+            ok: false,
+            error: Some("Missing request purpose.".to_string()),
+            data: None,
+        });
+    }
+
+    let runtime = app.state::<WsRuntime>();
+    let connected = runtime.connection.lock().connected;
+    if !connected {
+        emit_connection_for_app(&app);
+        return Ok(RequestResultPayload {
+            ok: false,
+            error: Some("Websocket is not connected.".to_string()),
+            data: None,
+        });
+    }
+
+    let request_id = uuid::Uuid::new_v4().to_string();
+    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    runtime
+        .command_tx
+        .send(WsCommand::Request {
+            purpose,
+            data: payload.data,
+            request_id,
+            reply_tx,
+        })
+        .map_err(|e| e.to_string())?;
+
+    let timeout_ms = payload.timeout_ms.unwrap_or(15_000).clamp(1_000, 120_000);
+    match tokio::time::timeout(
+        std::time::Duration::from_millis(timeout_ms),
+        reply_rx,
+    )
+    .await
+    {
+        Ok(Ok(Ok(data))) => Ok(RequestResultPayload {
+            ok: true,
+            error: None,
+            data: Some(data),
+        }),
+        Ok(Ok(Err(error))) => Ok(RequestResultPayload {
+            ok: false,
+            error: Some(error),
+            data: None,
+        }),
+        Ok(Err(_)) => Ok(RequestResultPayload {
+            ok: false,
+            error: Some("Request cancelled.".to_string()),
+            data: None,
+        }),
+        Err(_) => Ok(RequestResultPayload {
+            ok: false,
+            error: Some("Request timed out.".to_string()),
+            data: None,
+        }),
+    }
+}
+
+#[tauri::command]
+fn clipboard_write_text(app: AppHandle, text: String) -> Result<OkPayload, String> {
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+    app.clipboard()
+        .write_text(text)
+        .map_err(|e| e.to_string())?;
+    Ok(OkPayload {
+        ok: true,
+        error: None,
+        conversationId: None,
     })
 }
 
@@ -280,6 +363,7 @@ pub fn run() {
 
             if let Some(window) = main_window(app.handle()) {
                 overlay::apply_overlay_bounds(&window).ok();
+                let _ = crate::platform::configure_overlay_occlusion_bypass(&window);
                 let _ = window.set_always_on_top(true);
                 let _ = window.hide();
 
@@ -291,6 +375,7 @@ pub fn run() {
                             | tauri::WindowEvent::ThemeChanged(_)
                     ) {
                         let _ = overlay::apply_overlay_bounds(&bounds_window);
+                        let _ = crate::platform::configure_overlay_occlusion_bypass(&bounds_window);
                     }
                 });
             }
@@ -310,6 +395,8 @@ pub fn run() {
             settings_complete_hotkey_capture,
             connection_get,
             command_send,
+            request_send,
+            clipboard_write_text,
             overlay_hide_now,
             overlay_show_for_notification,
             overlay_hide_notification,

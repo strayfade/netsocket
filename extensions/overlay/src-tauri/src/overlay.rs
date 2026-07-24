@@ -3,7 +3,10 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, WebviewWindow};
 
 use crate::config::HIDE_ANIMATION_MS;
-use crate::platform::{capture_previous_focus, restore_previous_focus};
+use crate::platform::{
+    capture_previous_focus, configure_overlay_occlusion_bypass, restore_previous_focus,
+};
+use crate::settings_store::SettingsHandle;
 
 pub struct OverlayState {
     pub overlay_visible: bool,
@@ -86,6 +89,7 @@ pub fn enter_notification_standby(app: &AppHandle) -> Result<bool, String> {
         handle.lock().notification_mode = true;
     }
     apply_overlay_bounds(&window)?;
+    let _ = configure_overlay_occlusion_bypass(&window);
     let _ = window.set_always_on_top(true);
     window.show().map_err(|e| e.to_string())?;
     window
@@ -130,6 +134,7 @@ pub fn show_overlay(app: &AppHandle) {
     }
 
     let _ = apply_overlay_bounds(&window);
+    let _ = configure_overlay_occlusion_bypass(&window);
     let _ = window.set_always_on_top(true);
     let _ = window.show();
     let _ = window.set_focus();
@@ -174,12 +179,16 @@ pub fn hide_overlay(app: &AppHandle) {
         state.pending_show = false;
     }
     let _ = send_hide_intent_to_renderer(app);
+    let delay_ms = if app.state::<SettingsHandle>().get().animationsEnabled {
+        HIDE_ANIMATION_MS + 40
+    } else {
+        0
+    };
     let app_handle = app.clone();
     tauri::async_runtime::spawn(async move {
-        tokio::time::sleep(std::time::Duration::from_millis(
-            HIDE_ANIMATION_MS + 40,
-        ))
-        .await;
+        if delay_ms > 0 {
+            tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+        }
         hide_overlay_now(&app_handle, false);
     });
 }

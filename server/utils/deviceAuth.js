@@ -36,6 +36,7 @@ const DEVICE_PURPOSES = new Set([
     'encrypted',
     'getOtpAccounts',
     'importOtpFromQr',
+    'reorderOtpAccounts',
 ])
 
 const HANDSHAKE_PURPOSES = new Set([

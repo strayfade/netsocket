@@ -32,6 +32,14 @@ export const overlayApi = {
   getOverlayVisible: () => invoke("overlay_get_visible"),
   openExternal: (url) => invoke("shell_open_external", { url }),
   sendCommand: (query) => invoke("command_send", { payload: query }),
+  sendRequest: (payload) => invoke("request_send", { payload }),
+  getOtpAccounts: () =>
+    invoke("request_send", { payload: { purpose: "getOtpAccounts" } }),
+  reorderOtpAccounts: (keys) =>
+    invoke("request_send", {
+      payload: { purpose: "reorderOtpAccounts", data: { keys } },
+    }),
+  writeClipboard: (text) => invoke("clipboard_write_text", { text }),
   hideNow: () => invoke("overlay_hide_now"),
   showForNotification: () => invoke("overlay_show_for_notification"),
   hideNotification: () => invoke("overlay_hide_notification"),

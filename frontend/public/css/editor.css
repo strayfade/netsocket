@@ -860,35 +860,71 @@ header #node-count-visible {
 }
 
 #log {
-    display: block;
+    display: none;
     position: absolute;
     width: 100vw;
     left: 0;
     bottom: 0;
-    height: 34px;
+    height: 33.333vh;
     z-index: 1;
     resize: none;
     background-color: black;
     border: none;
+    border-top: 1px solid #141414;
     font-size: 12px;
     font-family: monospace;
     color: white;
-    padding: 4px 10px;
-    border-top: 1px solid #141414;
-    overflow: hidden;
-    box-shadow: 0px 0px 10px transparent;
+    padding: 10px;
+    overflow: auto;
+    box-shadow: none;
+    outline: none;
+    cursor: default;
+    caret-color: transparent;
 }
 
-#log:hover {
-    height: 50vh;
-    padding: 10px 10px;
-    box-shadow: 0px 0px 50px #00000040;
+#log.is-visible {
+    display: block;
 }
 
-#log:focus {
+#log:focus,
+#log:focus-visible {
     outline: none;
     border: none;
-    border-top: 1px solid var(--input-focus-border);
+    border-top: 1px solid #141414;
+    box-shadow: none;
+}
+
+.header-toolbar-btn.is-active {
+    color: black;
+    background-color: white;
+}
+
+#nodegraph {
+    position: absolute;
+    left: 0;
+    z-index: 0;
+    display: block;
+    image-rendering: auto;
+}
+
+#settings-modal .settings-render-resolution {
+    gap: 12px;
+}
+
+#settings-modal .settings-render-resolution input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    accent-color: #c8c8c8;
+}
+
+#settings-modal .settings-render-resolution-value {
+    flex-shrink: 0;
+    min-width: 3.2em;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 600;
+    color: #e8e8e8;
+    font-variant-numeric: tabular-nums;
 }
 
 .visually-hidden {
@@ -1105,6 +1141,37 @@ header #node-count-visible {
 
 #settings-modal .settings-field-row button:hover {
     background: #161616;
+}
+
+#settings-modal .settings-quality-presets {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+#settings-modal .settings-quality-btn {
+    flex: 1;
+    min-width: 72px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: #1c1c1c;
+    border: 1px solid var(--input-border);
+    border-radius: var(--input-radius);
+    color: #c8c8c8;
+}
+
+#settings-modal .settings-quality-btn:hover {
+    background: #161616;
+    color: #fff;
+}
+
+#settings-modal .settings-quality-btn-active,
+#settings-modal .settings-quality-btn-active:hover {
+    background: #2a2a2a;
+    border-color: #5a5a5a;
+    color: #fff;
 }
 
 .devices-section {
@@ -1741,7 +1808,7 @@ a:visited {
         height: 40px;
     }
 
-    /* Integrations / settings drawer — full width */
+    /* Settings drawer — full width */
     #settings-modal .settings-shell {
         width: 100vw;
         max-width: 100vw;
