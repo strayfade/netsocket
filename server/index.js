@@ -66,6 +66,7 @@ const { setWsServerConnectedClients, registerConversation, registerDevice, unreg
 const deviceRegistry = require('./manager/deviceRegistry')
 const deviceAuth = require('./utils/deviceAuth')
 const { executeGraph } = require('./manager/execute')
+const { setLinkActivityBroadcaster } = require('./manager/linkDebug')
 var cookieParser = require('cookie-parser')
 app.use(cookieParser())
 
@@ -83,6 +84,8 @@ const broadcastToEditorClients = (payload) => {
         }
     })
 }
+
+setLinkActivityBroadcaster(broadcastToEditorClients)
 
 const broadcastDevicesChanged = () => {
     broadcastToEditorClients({

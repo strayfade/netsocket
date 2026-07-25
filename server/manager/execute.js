@@ -13,6 +13,7 @@ const {
     ensureLinkValueSlot,
     resolvePropertyInput,
 } = require('./graphUtils')
+const { notifyLinkActivity } = require('./linkDebug')
 
 const MAX_SUBGRAPH_DEPTH = 16
 
@@ -34,6 +35,31 @@ function resolveGraphContext(options = {}) {
         persistRoot: (root) => setNodes(root),
         isScoped: false,
     }
+}
+
+/**
+ * Event link ids from `sourceNode` whose targets are in `targetNodes`.
+ * Used when triggerNodeGroup receives only node refs.
+ */
+function collectEventLinkIdsToTargets(sourceNode, targetNodes, options = {}) {
+    const ctx = resolveGraphContext(options)
+    const graphRoot = ctx.getRoot()
+    const targetIds = new Set((targetNodes || []).map((n) => n && n.id).filter((id) => id != null))
+    const ids = []
+    if (!sourceNode || !sourceNode.outputs || !targetIds.size) {
+        return ids
+    }
+    for (const output of sourceNode.outputs) {
+        if (!output || !output.links) continue
+        for (const linkId of output.links) {
+            const link = findLink(graphRoot, linkId)
+            if (!link || !isEventLink(link)) continue
+            if (targetIds.has(link[LINK.TARGET_ID])) {
+                ids.push(linkId)
+            }
+        }
+    }
+    return ids
 }
 
 async function resolveInputs(node, customInputs, runNode, options = {}) {
@@ -148,10 +174,31 @@ async function executeGraph(nodeToTrigger, customInputs, options = {}) {
         const behaviors = {
             populateNextNodeLinks: async (outputValues = []) => {
                 populateOutputLinkValues(nodeToTrigger, outputValues, options)
+                const dataLinkIds = []
+                const ctx = resolveGraphContext(options)
+                const graphRoot = ctx.getRoot()
+                if (nodeToTrigger.outputs) {
+                    for (let outIdx = 0; outIdx < nodeToTrigger.outputs.length; outIdx++) {
+                        if (outIdx >= outputValues.length || outputValues[outIdx] === undefined) {
+                            continue
+                        }
+                        const output = nodeToTrigger.outputs[outIdx]
+                        if (!output || !output.links) continue
+                        for (const linkId of output.links) {
+                            const link = findLink(graphRoot, linkId)
+                            if (!link || isEventLink(link)) continue
+                            dataLinkIds.push(linkId)
+                        }
+                    }
+                }
+                await notifyLinkActivity(dataLinkIds, 'data')
             },
             getOutputNodeGroups: () => getEventOutputGroups(nodeToTrigger, options),
             triggerNodeGroup: async (nodes = []) => {
-                for (const node of nodes) {
+                const list = Array.isArray(nodes) ? nodes : []
+                const eventLinkIds = collectEventLinkIdsToTargets(nodeToTrigger, list, options)
+                await notifyLinkActivity(eventLinkIds, 'execute')
+                for (const node of list) {
                     await executeGraph(node, undefined, options)
                 }
             },

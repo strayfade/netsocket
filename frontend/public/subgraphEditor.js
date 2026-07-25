@@ -88,7 +88,10 @@ const NetsocketSubgraphs = (() => {
         if (!node) return
         if (node.inputs) {
             for (const input of node.inputs) {
-                if (input) input.link = null
+                if (input) {
+                    input.link = null
+                    if (input.links) input.links = []
+                }
             }
         }
         if (node.outputs) {
@@ -114,7 +117,12 @@ const NetsocketSubgraphs = (() => {
         const target = graph.getNodeById(link.target_id)
         if (target && target.inputs) {
             for (const input of target.inputs) {
-                if (input && input.link === linkId) input.link = null
+                if (!input) continue
+                if (typeof LiteGraph !== "undefined" && LiteGraph.removeInputLinkRef) {
+                    LiteGraph.removeInputLinkRef(input, linkId)
+                } else if (input.link === linkId) {
+                    input.link = null
+                }
             }
         }
         delete graph.links[linkId]
@@ -139,12 +147,14 @@ const NetsocketSubgraphs = (() => {
         // input has an empty name, so it must be tracked separately or its (trigger)
         // link would be dropped and fail to render on reload.
         const keepLinks = { inputs: {}, outputs: {} }
-        let eventInputLink = null
+        let eventInputLinks = []
         if (node.inputs) {
             for (const input of node.inputs) {
                 if (!input) continue
                 if (isEventPortType(input.type) && !input.name) {
-                    eventInputLink = input.link
+                    eventInputLinks = (typeof LiteGraph !== "undefined" && LiteGraph.getInputLinkIds)
+                        ? LiteGraph.getInputLinkIds(input)
+                        : (input.link != null ? [input.link] : [])
                 } else if (input.name) {
                     keepLinks.inputs[input.name] = input.link
                 }
@@ -164,11 +174,19 @@ const NetsocketSubgraphs = (() => {
         clearNodePorts(node)
 
         node.addInput("", LiteGraph.EVENT)
-        if (eventInputLink != null && node.inputs[0]) {
-            node.inputs[0].link = eventInputLink
-            restoredInputLinkIds.add(eventInputLink)
-            if (graph && graph.links && graph.links[eventInputLink]) {
-                graph.links[eventInputLink].target_slot = 0
+        if (eventInputLinks.length && node.inputs[0]) {
+            if (eventInputLinks.length > 1) {
+                node.inputs[0].links = eventInputLinks.slice()
+                node.inputs[0].link = eventInputLinks[0]
+            } else {
+                node.inputs[0].link = eventInputLinks[0]
+                node.inputs[0].links = [eventInputLinks[0]]
+            }
+            for (const linkId of eventInputLinks) {
+                restoredInputLinkIds.add(linkId)
+                if (graph && graph.links && graph.links[linkId]) {
+                    graph.links[linkId].target_slot = 0
+                }
             }
         }
         for (const input of definition.inputs || []) {
@@ -213,8 +231,8 @@ const NetsocketSubgraphs = (() => {
         // Drop links whose port no longer exists after a definition change so they don't
         // linger in the pool pointing at slots that were removed.
         if (graph && graph.links) {
-            if (eventInputLink != null && !restoredInputLinkIds.has(eventInputLink)) {
-                dropLink(graph, eventInputLink)
+            for (const linkId of eventInputLinks) {
+                if (!restoredInputLinkIds.has(linkId)) dropLink(graph, linkId)
             }
             for (const id of Object.values(keepLinks.inputs)) {
                 if (id != null && !restoredInputLinkIds.has(id)) dropLink(graph, id)
@@ -686,17 +704,21 @@ const NetsocketSubgraphs = (() => {
         for (const node of nodesList) {
             if (node.inputs) {
                 node.inputs.forEach((input, slot) => {
-                    if (input.link == null) return
-                    const link = graph.links[input.link]
-                    if (!link || selectedIds.has(link.origin_id)) return
-                    inbound.push({
-                        targetNodeId: node.id,
-                        targetSlot: slot,
-                        type: input.type,
-                        nameHint: input.name || `in_${inbound.length + 1}`,
-                        originId: link.origin_id,
-                        originSlot: link.origin_slot,
-                    })
+                    const linkIds = (typeof LiteGraph !== "undefined" && LiteGraph.getInputLinkIds)
+                        ? LiteGraph.getInputLinkIds(input)
+                        : (input.link != null ? [input.link] : [])
+                    for (const linkId of linkIds) {
+                        const link = graph.links[linkId]
+                        if (!link || selectedIds.has(link.origin_id)) continue
+                        inbound.push({
+                            targetNodeId: node.id,
+                            targetSlot: slot,
+                            type: input.type,
+                            nameHint: input.name || `in_${inbound.length + 1}`,
+                            originId: link.origin_id,
+                            originSlot: link.origin_slot,
+                        })
+                    }
                 })
             }
             if (node.outputs) {
@@ -738,7 +760,10 @@ const NetsocketSubgraphs = (() => {
             serialized.id = newId
             serialized.pos = [node.pos[0] - minX + 280, node.pos[1] - minY + 80]
             if (serialized.inputs) {
-                for (const input of serialized.inputs) input.link = null
+                for (const input of serialized.inputs) {
+                    input.link = null
+                    if (input.links) input.links = []
+                }
             }
             if (serialized.outputs) {
                 for (const output of serialized.outputs) output.links = null

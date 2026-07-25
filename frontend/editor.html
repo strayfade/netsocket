@@ -154,6 +154,28 @@
         window.getNetsocketShowFps = () => !!canvas.show_fps;
         window.setNetsocketShowFps(readStoredShowFps());
 
+        /** Pulse lime flash on links reported by server debug mode. */
+        window.applyNetsocketLinkActivity = (payload) => {
+            const ids = payload && Array.isArray(payload.linkIds) ? payload.linkIds : [];
+            if (!ids.length || !graph || !graph.links) return;
+            const now = (typeof LiteGraph !== 'undefined' && LiteGraph.getTime)
+                ? LiteGraph.getTime()
+                : Date.now();
+            let any = false;
+            for (const id of ids) {
+                const link = graph.links[id];
+                if (!link) continue;
+                link._last_time = now;
+                link._debug_pulse = true;
+                any = true;
+            }
+            if (!any) return;
+            graph._last_trigger_time = now;
+            if (canvas) {
+                canvas.setDirty(true, true);
+            }
+        };
+
         const RENDER_RESOLUTION_STORAGE_KEY = "netsocket:renderResolution";
         const clampRenderResolution = (value) => {
             const n = Math.round(Number(value));
@@ -839,6 +861,11 @@
                             }
                         } finally {
                             graphReconfiguring = false;
+                        }
+                        break;
+                    case "linkActivity":
+                        if (typeof window.applyNetsocketLinkActivity === 'function') {
+                            window.applyNetsocketLinkActivity(parsedMessage.broadcastData);
                         }
                         break;
                     case "subgraphsChanged":
