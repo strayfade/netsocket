@@ -314,6 +314,7 @@ module.exports = {
     filterArray,
     flattenObject,
     unflattenObject,
+    parseFlatPath,
     validateJsonSchema,
     parseCsv,
     serializeCsv,

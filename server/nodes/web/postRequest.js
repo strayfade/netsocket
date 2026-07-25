@@ -1,6 +1,6 @@
 const { log, logColors } = require('../../log')
-const { number, string, bool } = require('../../utils/inputParser')
-const axios = require('axios')
+const { number } = require('../../utils/inputParser')
+const { performWebRequest, parseHeadersInput } = require('../../utils/httpRequest')
 
 class NodeDefinition {
     constructor() {
@@ -18,37 +18,41 @@ class NodeDefinition {
             "application/xml",
             "application/octet-stream",
         ])
-        this.addOutput("", LiteGraph.EVENT);
+        this.addInput("Headers", "object")
+        this.addProperty("Headers", "{}")
+        this.addInput("Timeout Ms", "number")
+        this.addProperty("Timeout Ms", "30000")
+        this.addInput("Retries", "number")
+        this.addProperty("Retries", "0")
+        this.addOutput("Success", LiteGraph.EVENT);
+        this.addOutput("Failed", LiteGraph.EVENT);
         this.addOutput("Response", "string")
+        this.addOutput("Status", "number")
     }
 }
 NodeDefinition.prototype.title = "Web/POST Request"
-NodeDefinition.prototype.description = "Sends an HTTP POST request with a body and content type header, outputting the response body as a JSON string."
-NodeDefinition.prototype.portMeta = {
-	inputs: {
-		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
-		URL: {"description":"Request target URL.","structure":"HTTP or HTTPS URL string.","required":true},
-		Body: {"description":"HTTP request payload.","structure":"Request body string (often JSON).","required":false},
-		"Content Type": {"description":"Input \"Content Type\" for POST Request.","structure":"Text response body (often JSON serialized as a string).","required":true},
-	},
-	outputs: {
-
-	},
-}
+NodeDefinition.prototype.description = "Sends an HTTP POST with body, content type, optional JSON headers, timeout, and retries. Routes to Success or Failed and outputs response body and status."
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "arrow_upload_progress"
+
 const NodeFunction = async (node, params, behaviors) => {
-
-    let webContent = await axios.post(string(io.input.URL), string(io.input.Body), {
-        headers: {
-            'Content-Type': string(io.input["Content Type"])
-        }
-    })
-    if (webContent.data)
-        webContent.data = JSON.stringify(webContent.data)
-
-    await behaviors.populateNextNodeLinks([webContent.data]);
-    await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[0]);
-    return true
+    try {
+        const result = await performWebRequest('POST', params.URL, {
+            body: params.Body,
+            contentType: params["Content Type"],
+            headers: parseHeadersInput(params.Headers),
+            timeoutMs: number(params["Timeout Ms"]),
+            retries: number(params.Retries),
+        })
+        await behaviors.populateNextNodeLinks([null, null, result.body, result.status]);
+        const groups = behaviors.getOutputNodeGroups()
+        await behaviors.triggerNodeGroup(result.ok ? (groups[0] || []) : (groups[1] || []));
+        return result.ok
+    } catch (error) {
+        log(`POST request failed: ${error.message}`, logColors.Error)
+        await behaviors.populateNextNodeLinks([null, null, "", 0]);
+        await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[1] || []);
+        return false
+    }
 }
 module.exports = { NodeDefinition, NodeFunction }

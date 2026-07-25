@@ -13730,6 +13730,29 @@ LGraphNode.prototype.executeAction = function(action)
         panel.node = node;
         panel.classList.add("settings");
 
+        // Keep close + title on one row; description sits below in the header
+        var headerTop = document.createElement("div");
+        headerTop.className = "dialog-header-top";
+        while (panel.header.firstChild) {
+            headerTop.appendChild(panel.header.firstChild);
+        }
+        panel.header.appendChild(headerTop);
+
+        var iconName = (node.constructor && node.constructor.icon) || "function";
+        var titleIcon = document.createElement("span");
+        titleIcon.className = "material-symbols-outlined dialog-title-icon";
+        titleIcon.setAttribute("aria-hidden", "true");
+        titleIcon.textContent = iconName;
+        panel.title_element.insertBefore(titleIcon, panel.title_element.firstChild);
+
+        var description = node.description || (node.constructor && node.constructor.prototype.description) || "";
+        if (description) {
+            var descEl = document.createElement("div");
+            descEl.className = "dialog-node-description";
+            descEl.textContent = description;
+            panel.header.appendChild(descEl);
+        }
+
         function ensurePanelTypedInputs(node) {
             if (!node || !node.inputs) {
                 return;

@@ -1,6 +1,6 @@
 const { log, logColors } = require('../../log')
-const { string } = require('../../utils/inputParser')
-const { performWebRequest } = require('../../utils/httpRequest')
+const { number } = require('../../utils/inputParser')
+const { performWebRequest, parseHeadersInput } = require('../../utils/httpRequest')
 
 class NodeDefinition {
     constructor() {
@@ -18,24 +18,20 @@ class NodeDefinition {
             "application/xml",
             "application/octet-stream",
         ])
-        this.addOutput("", LiteGraph.EVENT);
+        this.addInput("Headers", "object")
+        this.addProperty("Headers", "{}")
+        this.addInput("Timeout Ms", "number")
+        this.addProperty("Timeout Ms", "30000")
+        this.addInput("Retries", "number")
+        this.addProperty("Retries", "0")
+        this.addOutput("Success", LiteGraph.EVENT);
+        this.addOutput("Failed", LiteGraph.EVENT);
         this.addOutput("Response", "string")
         this.addOutput("Status", "number")
     }
 }
 NodeDefinition.prototype.title = "Web/PUT Request"
-NodeDefinition.prototype.description = "Sends an HTTP PUT request with a configurable body and content type, outputting the response body and status code."
-NodeDefinition.prototype.portMeta = {
-	inputs: {
-		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
-		URL: {"description":"Request target URL.","structure":"HTTP or HTTPS URL string.","required":true},
-		Body: {"description":"HTTP request payload.","structure":"Request body string (often JSON).","required":false},
-		"Content Type": {"description":"Input \"Content Type\" for PUT Request.","structure":"Text response body (often JSON serialized as a string).","required":true},
-	},
-	outputs: {
-
-	},
-}
+NodeDefinition.prototype.description = "Sends an HTTP PUT with body, content type, optional JSON headers, timeout, and retries. Routes to Success or Failed and outputs response body and status."
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "upload"
 
@@ -44,15 +40,19 @@ const NodeFunction = async (node, params, behaviors) => {
         const result = await performWebRequest('PUT', params.URL, {
             body: params.Body,
             contentType: params["Content Type"],
+            headers: parseHeadersInput(params.Headers),
+            timeoutMs: number(params["Timeout Ms"]),
+            retries: number(params.Retries),
         })
-        await behaviors.populateNextNodeLinks([null, result.body, result.status]);
-        await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[0]);
-        return true
+        await behaviors.populateNextNodeLinks([null, null, result.body, result.status]);
+        const groups = behaviors.getOutputNodeGroups()
+        await behaviors.triggerNodeGroup(result.ok ? (groups[0] || []) : (groups[1] || []));
+        return result.ok
     } catch (error) {
         log(`PUT request failed: ${error.message}`, logColors.Error)
-        await behaviors.populateNextNodeLinks([null, "", 0]);
+        await behaviors.populateNextNodeLinks([null, null, "", 0]);
+        await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[1] || []);
         return false
     }
 }
-
 module.exports = { NodeDefinition, NodeFunction }

@@ -120,9 +120,115 @@ const isBusinessHours = (timestamp, options = {}) => {
     return hour >= startHour && hour < endHour
 }
 
+const subtractDuration = (timestamp, amount, unit) => addDuration(timestamp, -Number(amount), unit)
+
+const durationBetween = (start, end, unit = 'ms') => {
+    const left = parseDate(start)
+    const right = parseDate(end)
+    if (!Number.isFinite(left) || !Number.isFinite(right)) {
+        return NaN
+    }
+    const diffMs = right - left
+    const multiplier = UNIT_MS[String(unit || 'ms').toLowerCase()]
+    if (!multiplier) {
+        return NaN
+    }
+    return diffMs / multiplier
+}
+
+const formatTimestamp = (timestamp, pattern = 'yyyy-MM-dd HH:mm:ss', timeZone = '') => {
+    const point = parseDate(timestamp)
+    if (!Number.isFinite(point)) {
+        return ''
+    }
+
+    const date = new Date(point)
+    const options = timeZone ? { timeZone: String(timeZone) } : undefined
+
+    const getPart = (type, opts = {}) => {
+        const parts = new Intl.DateTimeFormat('en-US', {
+            ...options,
+            ...opts,
+        }).formatToParts(date)
+        const found = parts.find((part) => part.type === type)
+        return found ? found.value : ''
+    }
+
+    const pad = (value, width = 2) => String(value).padStart(width, '0')
+
+    const year = options
+        ? getPart('year', { year: 'numeric' })
+        : String(date.getFullYear())
+    const month = options
+        ? pad(getPart('month', { month: '2-digit' }))
+        : pad(date.getMonth() + 1)
+    const day = options
+        ? pad(getPart('day', { day: '2-digit' }))
+        : pad(date.getDate())
+    const hour24 = options
+        ? pad(getPart('hour', { hour: '2-digit', hour12: false }))
+        : pad(date.getHours())
+    const minute = options
+        ? pad(getPart('minute', { minute: '2-digit' }))
+        : pad(date.getMinutes())
+    const second = options
+        ? pad(getPart('second', { second: '2-digit' }))
+        : pad(date.getSeconds())
+    const millisecond = pad(date.getMilliseconds(), 3)
+
+    return String(pattern || 'yyyy-MM-dd HH:mm:ss')
+        .replace(/yyyy/g, year)
+        .replace(/MM/g, month)
+        .replace(/dd/g, day)
+        .replace(/HH/g, hour24)
+        .replace(/mm/g, minute)
+        .replace(/ss/g, second)
+        .replace(/SSS/g, millisecond)
+}
+
+const convertTimezoneParts = (timestamp, timeZone = 'UTC') => {
+    const point = parseDate(timestamp)
+    if (!Number.isFinite(point)) {
+        return null
+    }
+
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: String(timeZone || 'UTC'),
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    })
+
+    const parts = formatter.formatToParts(new Date(point))
+    const map = {}
+    for (const part of parts) {
+        if (part.type !== 'literal') {
+            map[part.type] = part.value
+        }
+    }
+
+    return {
+        year: Number(map.year),
+        month: Number(map.month),
+        day: Number(map.day),
+        hour: Number(map.hour),
+        minute: Number(map.minute),
+        second: Number(map.second),
+        isoLike: `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}:${map.second}`,
+    }
+}
+
 module.exports = {
     parseDate,
     addDuration,
+    subtractDuration,
+    durationBetween,
+    formatTimestamp,
+    convertTimezoneParts,
     isWithinRange,
     isBusinessHours,
     parseWeekdays,

@@ -79,8 +79,52 @@ const verifyJwtSignature = (token, secret, algorithm = 'HS256') => {
     }
 }
 
+const encodeBase64Url = (value) => Buffer
+    .from(String(value), 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+
+const encodeJwt = (payload, secret, options = {}) => {
+    const algorithm = String(options.algorithm || 'HS256')
+    if (algorithm !== 'HS256' && algorithm !== 'HS384' && algorithm !== 'HS512') {
+        throw new Error(`Unsupported JWT algorithm: ${algorithm}`)
+    }
+
+    const header = {
+        alg: algorithm,
+        typ: 'JWT',
+        ...(options.header && typeof options.header === 'object' ? options.header : {}),
+    }
+
+    const body = payload && typeof payload === 'object' ? { ...payload } : {}
+    if (options.expiresInSeconds != null && Number.isFinite(Number(options.expiresInSeconds))) {
+        body.exp = Math.floor(Date.now() / 1000) + Math.trunc(Number(options.expiresInSeconds))
+    }
+    if (body.iat == null) {
+        body.iat = Math.floor(Date.now() / 1000)
+    }
+
+    const headerSegment = encodeBase64Url(JSON.stringify(header))
+    const payloadSegment = encodeBase64Url(JSON.stringify(body))
+    const signingInput = `${headerSegment}.${payloadSegment}`
+    const hashAlg = algorithm === 'HS384' ? 'sha384' : algorithm === 'HS512' ? 'sha512' : 'sha256'
+    const signature = crypto
+        .createHmac(hashAlg, String(secret || ''))
+        .update(signingInput)
+        .digest('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '')
+
+    return `${signingInput}.${signature}`
+}
+
 module.exports = {
     decodeJwt,
     verifyJwtSignature,
     decodeBase64Url,
+    encodeBase64Url,
+    encodeJwt,
 }

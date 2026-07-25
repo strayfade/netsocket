@@ -132,8 +132,98 @@ const fuzzyMatchScore = (a, b) => {
     return 1 - distance / maxLen
 }
 
+const formatTemplate = (template, values) => {
+    const source = values && typeof values === 'object' && !Array.isArray(values) ? values : {}
+    return String(template || '').replace(/\{([^{}]+)\}/g, (match, key) => {
+        const trimmed = String(key).trim()
+        if (!Object.prototype.hasOwnProperty.call(source, trimmed)) {
+            return match
+        }
+        const value = source[trimmed]
+        return value == null ? '' : String(value)
+    })
+}
+
+const regexMatch = (text, pattern, flags = '') => {
+    try {
+        const regex = new RegExp(String(pattern || ''), String(flags || ''))
+        const match = String(text || '').match(regex)
+        if (!match) {
+            return { matched: false, match: '', groups: [], namedGroups: {} }
+        }
+        return {
+            matched: true,
+            match: match[0],
+            groups: match.slice(1).map((entry) => (entry == null ? '' : String(entry))),
+            namedGroups: match.groups ? { ...match.groups } : {},
+        }
+    } catch {
+        return { matched: false, match: '', groups: [], namedGroups: {} }
+    }
+}
+
+const joinArray = (items, delimiter = ',') => {
+    let source = items
+    if (typeof items === 'string') {
+        try {
+            source = JSON.parse(items)
+        } catch {
+            source = [items]
+        }
+    }
+    if (!Array.isArray(source)) {
+        return ''
+    }
+    return source.map((entry) => (entry == null ? '' : String(entry))).join(String(delimiter))
+}
+
+const htmlEscape = (text) => String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+const htmlUnescape = (text) => String(text || '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&amp;/g, '&')
+
+const isEmptyValue = (value) => {
+    if (value == null) return true
+    if (typeof value === 'string') return value.trim().length === 0
+    if (Array.isArray(value)) return value.length === 0
+    if (typeof value === 'object') return Object.keys(value).length === 0
+    return false
+}
+
+const typeOfValue = (value) => {
+    if (value === null) return 'null'
+    if (Array.isArray(value)) return 'array'
+    return typeof value
+}
+
+const coalesceValue = (primary, fallback) => {
+    if (primary == null || primary === '') {
+        return fallback
+    }
+    return primary
+}
+
 module.exports = {
     markdownToHtml,
     fuzzyMatchScore,
     levenshteinDistance,
+    formatTemplate,
+    regexMatch,
+    joinArray,
+    htmlEscape,
+    htmlUnescape,
+    isEmptyValue,
+    typeOfValue,
+    coalesceValue,
+    escapeHtml,
 }

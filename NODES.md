@@ -246,7 +246,6 @@ Existing nodes are not perfectly consistent. Avoid inheriting these bugs:
 
 - Some nodes mismatch output order and `populateNextNodeLinks(...)` indexes (especially when event output is index 0).
 - `variables/setVariable.js` writes only one output value while defining event + value outputs.
-- Some web nodes reference `io.input.*` instead of `params.*`.
 - Some JSON nodes overwrite computed outputs with empty arrays after mutation.
 - `flowControl/sequence.js` currently triggers one branch twice.
 - `string/equals.js` declares boolean output but emits string values.
