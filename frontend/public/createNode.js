@@ -145,6 +145,8 @@ const createNode = (name, ioProperties) => {
             Node.icon = ioProperties.prototype.icon
         if (ioProperties.prototype.description)
             Node.prototype.description = ioProperties.prototype.description
+        if (ioProperties.prototype.hide_chrome)
+            Node.hide_chrome = true
         delete ioProperties.prototype.color;
         wrapNodeLifecycle(Node)
         return Node

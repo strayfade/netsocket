@@ -238,7 +238,9 @@ ${(() => {
                 else {
                     outConstructor += `\t\tthis.addInput("${input.name}", ${input.type != "LiteGraph.EVENT" ? `"${input.type}"` : input.type})\n`
 
-                    if (property && input.type != "LiteGraph.EVENT") {
+                    // Skip widget/property defaults for unnamed pins (e.g. Reroute, event slots)
+                    const hasInputName = input.name != null && String(input.name).length > 0
+                    if (property && input.type != "LiteGraph.EVENT" && hasInputName) {
                         if (input.type === "boolean") {
                             outConstructor += formatBooleanPropertyLine(input.name, property.defaultValue)
                         } else if (input.type === "number") {
@@ -247,7 +249,7 @@ ${(() => {
                             outConstructor += formatPropertyLine({ ...property, name: input.name })
                         }
                     }
-                    else if (input.type != "LiteGraph.EVENT") {
+                    else if (input.type != "LiteGraph.EVENT" && hasInputName) {
                         if (input.type === "boolean") {
                             outConstructor += formatBooleanPropertyLine(input.name, "False")
                         } else if (input.type === "number") {

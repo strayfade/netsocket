@@ -166,7 +166,8 @@
             const classname = base_class.name;
 
             const pos = type.lastIndexOf("/");
-            base_class.category = type.substring(0, pos);
+            // No slash → top-level node (not nested under a category folder)
+            base_class.category = pos === -1 ? null : type.substring(0, pos);
 
             if (!base_class.title) {
                 base_class.title = classname;
@@ -562,7 +563,7 @@
                 }
 
                 if (category == "") {
-                    if (type.category == null) {
+                    if (type.category == null || type.category === "") {
                         r.push(type);
                     }
                 } else if (type.category == category) {
@@ -6302,16 +6303,23 @@ LGraphNode.prototype.executeAction = function(action)
                         //search for outputs
                         if (node.outputs) {
                             for (var i = 0, l = node.outputs.length; i < l; ++i) {
+                                if (node.isSlotInteractive && !node.isSlotInteractive(false, i)) {
+                                    continue;
+                                }
                                 var output = node.outputs[i];
                                 var link_pos = node.getConnectionPos(false, i);
+                                var hit_x = (node.constructor && node.constructor.hide_chrome) ? link_pos[0] - 12 : link_pos[0] - 15;
+                                var hit_y = (node.constructor && node.constructor.hide_chrome) ? link_pos[1] - 12 : link_pos[1] - 10;
+                                var hit_w = (node.constructor && node.constructor.hide_chrome) ? 24 : 30;
+                                var hit_h = (node.constructor && node.constructor.hide_chrome) ? 24 : 20;
                                 if (
                                     isInsideRectangle(
                                         e.canvasX,
                                         e.canvasY,
-                                        link_pos[0] - 15,
-                                        link_pos[1] - 10,
-                                        30,
-                                        20
+                                        hit_x,
+                                        hit_y,
+                                        hit_w,
+                                        hit_h
                                     )
                                 ) {
                                     this.connecting_node = node;
@@ -6345,16 +6353,23 @@ LGraphNode.prototype.executeAction = function(action)
                         //search for inputs
                         if (node.inputs) {
                             for (var i = 0, l = node.inputs.length; i < l; ++i) {
+                                if (node.isSlotInteractive && !node.isSlotInteractive(true, i)) {
+                                    continue;
+                                }
                                 var input = node.inputs[i];
                                 var link_pos = node.getConnectionPos(true, i);
+                                var hit_x = (node.constructor && node.constructor.hide_chrome) ? link_pos[0] - 12 : link_pos[0] - 15;
+                                var hit_y = (node.constructor && node.constructor.hide_chrome) ? link_pos[1] - 12 : link_pos[1] - 10;
+                                var hit_w = (node.constructor && node.constructor.hide_chrome) ? 24 : 30;
+                                var hit_h = (node.constructor && node.constructor.hide_chrome) ? 24 : 20;
                                 if (
                                     isInsideRectangle(
                                         e.canvasX,
                                         e.canvasY,
-                                        link_pos[0] - 15,
-                                        link_pos[1] - 10,
-                                        30,
-                                        20
+                                        hit_x,
+                                        hit_y,
+                                        hit_w,
+                                        hit_h
                                     )
                                 ) {
                                     if (is_double_click) {
@@ -6556,6 +6571,9 @@ LGraphNode.prototype.executeAction = function(action)
                         //search for outputs
                         if (node.outputs) {
                             for (var i = 0, l = node.outputs.length; i < l; ++i) {
+                                if (node.isSlotInteractive && !node.isSlotInteractive(false, i)) {
+                                    continue;
+                                }
                                 var output = node.outputs[i];
                                 var link_pos = node.getConnectionPos(false, i);
                                 if (isInsideRectangle(e.canvasX, e.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
@@ -6570,6 +6588,9 @@ LGraphNode.prototype.executeAction = function(action)
                         //search for inputs
                         if (node.inputs) {
                             for (var i = 0, l = node.inputs.length; i < l; ++i) {
+                                if (node.isSlotInteractive && !node.isSlotInteractive(true, i)) {
+                                    continue;
+                                }
                                 var input = node.inputs[i];
                                 var link_pos = node.getConnectionPos(true, i);
                                 if (isInsideRectangle(e.canvasX, e.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
@@ -7328,10 +7349,21 @@ LGraphNode.prototype.executeAction = function(action)
     ) {
         if (node.inputs) {
             for (var i = 0, l = node.inputs.length; i < l; ++i) {
+                // Allow drop-targeting always; click gating is handled on mousedown.
+                // For chrome-less stacked pins, skip only when a more specific rule blocks outputs.
                 var input = node.inputs[i];
                 var link_pos = node.getConnectionPos(true, i);
                 var is_inside = false;
-                if (node.horizontal) {
+                if (node.constructor && node.constructor.hide_chrome) {
+                    is_inside = isInsideRectangle(
+                        canvasx,
+                        canvasy,
+                        link_pos[0] - 12,
+                        link_pos[1] - 12,
+                        24,
+                        24
+                    );
+                } else if (node.horizontal) {
                     is_inside = isInsideRectangle(
                         canvasx,
                         canvasy,
@@ -7374,10 +7406,22 @@ LGraphNode.prototype.executeAction = function(action)
     ) {
         if (node.outputs) {
             for (var i = 0, l = node.outputs.length; i < l; ++i) {
+                if (node.isSlotInteractive && !node.isSlotInteractive(false, i)) {
+                    continue;
+                }
                 var output = node.outputs[i];
                 var link_pos = node.getConnectionPos(false, i);
                 var is_inside = false;
-                if (node.horizontal) {
+                if (node.constructor && node.constructor.hide_chrome) {
+                    is_inside = isInsideRectangle(
+                        canvasx,
+                        canvasy,
+                        link_pos[0] - 12,
+                        link_pos[1] - 12,
+                        24,
+                        24
+                    );
+                } else if (node.horizontal) {
                     is_inside = isInsideRectangle(
                         canvasx,
                         canvasy,
@@ -9556,10 +9600,12 @@ LGraphNode.prototype.executeAction = function(action)
         selected,
         mouse_over
     ) {
+        var hide_chrome = !!(node.constructor && node.constructor.hide_chrome);
+
         //bg rect — only apply Canvas2D blur when shadows are enabled (very expensive)
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
-        if (this.render_shadows && !this.force_simple_shapes && this.ds.scale >= 0.5) {
+        if (!hide_chrome && this.render_shadows && !this.force_simple_shapes && this.ds.scale >= 0.5) {
             ctx.shadowBlur = 15;
             ctx.shadowColor = "black";
         } else {
@@ -9593,9 +9639,9 @@ LGraphNode.prototype.executeAction = function(action)
 
         var old_alpha = ctx.globalAlpha;
 
-        //full node shape
+        //full node shape (skipped for chrome-less nodes like Reroute; selection outline still draws)
         //if(node.flags.collapsed)
-        {
+        if (!hide_chrome) {
             ctx.beginPath();
             if (shape == LiteGraph.BOX_SHAPE || low_quality) {
                 ctx.fillRect(area[0], area[1], area[2], area[3]);

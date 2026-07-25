@@ -393,6 +393,23 @@
         const keybindsBar = document.getElementById("editor-keybinds-bar");
         const keybindsInner = document.getElementById("editor-keybinds-inner");
 
+        const SHOW_SELECTION_KEYBINDS_STORAGE_KEY = "netsocket:showSelectionKeybinds";
+        const readStoredShowSelectionKeybinds = () => {
+            try {
+                const raw = localStorage.getItem(SHOW_SELECTION_KEYBINDS_STORAGE_KEY);
+                if (raw === null) return true;
+                return raw === "true";
+            } catch (e) {
+                return true;
+            }
+        };
+        const writeStoredShowSelectionKeybinds = (enabled) => {
+            try {
+                localStorage.setItem(SHOW_SELECTION_KEYBINDS_STORAGE_KEY, enabled ? "true" : "false");
+            } catch (e) { /* ignore */ }
+        };
+        let showSelectionKeybinds = readStoredShowSelectionKeybinds();
+
         const appendKeybindItem = (keyLabels, actionText) => {
             const item = document.createElement("div");
             item.className = "editor-keybind-item";
@@ -423,7 +440,7 @@
             const n = Object.keys(sel).length;
             if (!keybindsBar || !keybindsInner) return;
             keybindsInner.innerHTML = "";
-            if (n === 0) {
+            if (n === 0 || !showSelectionKeybinds) {
                 keybindsBar.hidden = true;
                 keybindsBar.setAttribute("aria-hidden", "true");
                 return;
@@ -455,6 +472,14 @@
                 appendKeybindItem(["Shift", "Drag"], "Move Nodes");
             }
         };
+
+        window.setNetsocketShowSelectionKeybinds = (enabled) => {
+            showSelectionKeybinds = !!enabled;
+            writeStoredShowSelectionKeybinds(showSelectionKeybinds);
+            updateKeybindsBar(canvas.selected_nodes);
+            return showSelectionKeybinds;
+        };
+        window.getNetsocketShowSelectionKeybinds = () => !!showSelectionKeybinds;
 
         canvas.onSelectionChange = (selected) => {
             updateKeybindsBar(selected);
@@ -1538,6 +1563,35 @@
                         }
                     })
                     panel.appendChild(fpsField)
+
+                    const keybindsField = document.createElement('div')
+                    keybindsField.className = 'settings-field'
+                    const keybindsTitle = document.createElement('div')
+                    keybindsTitle.className = 'settings-label-block'
+                    keybindsTitle.textContent = 'Selection hotkeys bar'
+                    keybindsField.appendChild(keybindsTitle)
+                    const keybindsDesc = document.createElement('div')
+                    keybindsDesc.className = 'settings-field-description'
+                    keybindsDesc.innerHTML = '<p>Show the node-count summary and shortcut hints under the header when one or more nodes are selected.</p>'
+                    keybindsField.appendChild(keybindsDesc)
+                    const keybindsRow = document.createElement('label')
+                    keybindsRow.className = 'settings-field-row'
+                    const keybindsCb = document.createElement('input')
+                    keybindsCb.type = 'checkbox'
+                    keybindsCb.checked = typeof window.getNetsocketShowSelectionKeybinds === 'function'
+                        ? window.getNetsocketShowSelectionKeybinds()
+                        : true
+                    const keybindsSpan = document.createElement('span')
+                    keybindsSpan.textContent = 'Enabled'
+                    keybindsRow.appendChild(keybindsCb)
+                    keybindsRow.appendChild(keybindsSpan)
+                    keybindsField.appendChild(keybindsRow)
+                    keybindsCb.addEventListener('change', () => {
+                        if (typeof window.setNetsocketShowSelectionKeybinds === 'function') {
+                            window.setNetsocketShowSelectionKeybinds(keybindsCb.checked)
+                        }
+                    })
+                    panel.appendChild(keybindsField)
 
                     const resField = document.createElement('div')
                     resField.className = 'settings-field'
