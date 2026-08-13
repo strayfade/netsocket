@@ -75,6 +75,12 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".BrowserActivity"
+            android:exported="false"
+            android:parentActivityName=".FeaturesActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".QrScanActivity"
             android:exported="false"
             android:parentActivityName=".AuthenticatorActivity"

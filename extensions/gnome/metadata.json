@@ -1,0 +1,10 @@
+{
+  "uuid": "netsocket@strayfade.com",
+  "name": "Netsocket",
+  "description": "Dashboard link, command palette, and searchable OTP authenticator for your netsocket host.",
+  "shell-version": ["45", "46", "47", "48", "49"],
+  "url": "https://github.com/strayfade/netsocket",
+  "settings-schema": "org.gnome.shell.extensions.netsocket",
+  "gettext-domain": "netsocket-gnome",
+  "version-name": "1.0.0"
+}

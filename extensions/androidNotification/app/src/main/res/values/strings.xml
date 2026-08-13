@@ -10,6 +10,8 @@
     <string name="features_subtitle">Authenticator codes and app settings.</string>
     <string name="features_authenticator">Authenticator</string>
     <string name="features_authenticator_desc">View and copy OTP codes from your host</string>
+    <string name="features_website">Open netsocket</string>
+    <string name="features_website_desc">Browse your netsocket host in an in-app window</string>
     <string name="features_settings_desc">Host connection, forwarding, and permissions</string>
     <string name="authenticator_title">Authenticator</string>
     <string name="authenticator_subtitle">Codes from your netsocket OTP account registry.</string>

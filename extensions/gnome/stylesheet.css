@@ -1,0 +1,97 @@
+.netsocket-dialog {
+    padding: 6px;
+}
+
+.netsocket-status-label {
+    font-size: 0.85em;
+    color: #9a9a9a;
+    padding: 4px 8px;
+}
+
+.netsocket-command-palette,
+.netsocket-otp-window {
+    spacing: 8px;
+}
+
+.netsocket-message-scroll,
+.netsocket-otp-scroll {
+    border: 1px solid rgba(128, 128, 128, 0.25);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.netsocket-message-box {
+    spacing: 6px;
+    padding: 6px;
+}
+
+.netsocket-bubble {
+    border-radius: 10px;
+    padding: 6px 10px;
+    max-width: 380px;
+}
+
+.netsocket-bubble-user {
+    background-color: rgba(53, 132, 228, 0.35);
+}
+
+.netsocket-bubble-assistant {
+    background-color: rgba(128, 128, 128, 0.2);
+}
+
+.netsocket-bubble-system {
+    background-color: rgba(128, 128, 128, 0.1);
+    font-style: italic;
+}
+
+.netsocket-bubble-error {
+    background-color: rgba(224, 27, 36, 0.25);
+}
+
+.netsocket-entry-row {
+    spacing: 6px;
+    padding-top: 4px;
+}
+
+.netsocket-entry {
+    padding: 6px 8px;
+}
+
+.netsocket-search-entry {
+    margin-bottom: 4px;
+}
+
+.netsocket-otp-list {
+    spacing: 2px;
+}
+
+.netsocket-otp-row {
+    spacing: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+}
+
+.netsocket-otp-row:hover {
+    background-color: rgba(128, 128, 128, 0.15);
+}
+
+.netsocket-otp-issuer {
+    font-weight: bold;
+}
+
+.netsocket-otp-account {
+    font-size: 0.85em;
+    color: #9a9a9a;
+}
+
+.netsocket-otp-code {
+    font-family: monospace;
+    font-size: 1.1em;
+    min-width: 90px;
+}
+
+.netsocket-otp-remaining {
+    font-size: 0.85em;
+    color: #9a9a9a;
+    min-width: 32px;
+}

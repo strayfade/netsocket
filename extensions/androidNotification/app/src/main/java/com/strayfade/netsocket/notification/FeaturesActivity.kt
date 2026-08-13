@@ -19,6 +19,9 @@ class FeaturesActivity : AppCompatActivity() {
         binding.rowAuthenticator.setOnClickListener {
             startActivity(Intent(this, AuthenticatorActivity::class.java))
         }
+        binding.rowWebsite.setOnClickListener {
+            startActivity(Intent(this, BrowserActivity::class.java))
+        }
         binding.rowSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }

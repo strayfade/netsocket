@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="netsocket-gnome">
+  <schema id="org.gnome.shell.extensions.netsocket" path="/org/gnome/shell/extensions/netsocket/">
+    <key name="host" type="s">
+      <default>"127.0.0.1"</default>
+      <summary>Netsocket host</summary>
+      <description>Hostname or IP address of the netsocket server, without scheme or port.</description>
+    </key>
+    <key name="port" type="i">
+      <default>4675</default>
+      <summary>Netsocket port</summary>
+      <description>TCP port the netsocket server listens on.</description>
+    </key>
+    <key name="use-https" type="b">
+      <default>false</default>
+      <summary>Use TLS</summary>
+      <description>Connect using wss:// / https:// instead of ws:// / http://.</description>
+    </key>
+    <key name="response-timeout-seconds" type="i">
+      <range min="5" max="300"/>
+      <default>120</default>
+      <summary>Command response timeout</summary>
+      <description>How long to wait for an agent reply before marking a command palette message as timed out.</description>
+    </key>
+    <key name="device-name" type="s">
+      <default>""</default>
+      <summary>Device display name</summary>
+      <description>Name shown for this device in the dashboard's device list. Defaults to the hostname if empty.</description>
+    </key>
+    <key name="notify-on-reply" type="b">
+      <default>true</default>
+      <summary>Notify on reply</summary>
+      <description>Show a desktop notification when a command palette reply arrives while the window is closed.</description>
+    </key>
+  </schema>
+</schemalist>

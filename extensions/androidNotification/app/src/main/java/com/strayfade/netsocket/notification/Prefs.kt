@@ -87,6 +87,9 @@ class Prefs(context: Context) {
 
     fun webSocketUrl(): String = buildWebSocketUrl(host, port, useHttps)
 
+    /** Root site URL for the in-app browser (Features → Open netsocket). */
+    fun siteUrl(): String = buildSiteUrl(host, port, useHttps)
+
     init {
         migrateLegacySecretIfNeeded()
     }
@@ -140,6 +143,17 @@ class Prefs(context: Context) {
             useHttps: Boolean
         ): String {
             val scheme = if (useHttps) "wss" else "ws"
+            val normalizedHost = normalizeHost(host)
+            val portPart = resolvePort(port, useHttps)?.let { ":$it" }.orEmpty()
+            return "$scheme://$normalizedHost$portPart/"
+        }
+
+        fun buildSiteUrl(
+            host: String,
+            port: String,
+            useHttps: Boolean
+        ): String {
+            val scheme = if (useHttps) "https" else "http"
             val normalizedHost = normalizeHost(host)
             val portPart = resolvePort(port, useHttps)?.let { ":$it" }.orEmpty()
             return "$scheme://$normalizedHost$portPart/"
