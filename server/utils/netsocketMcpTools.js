@@ -60,7 +60,7 @@ function createNetsocketMcpTools(options = {}) {
 
     return {
         execute_node: tool({
-            description: 'Run a single node with the provided inputs and optional properties. Call get_node_info first for required inputs, type/structure guidance, and output mcpKey names. Returns output values you can pass to another node.',
+            description: 'Run a single node with the provided inputs and optional properties. Call get_node_info first for required inputs, type/structure guidance, and output mcpKey names. Returns output values you can pass to another node. Note: array/object outputs are often JSON-stringified strings — JSON.parse them when needed and most JSON nodes accept either form. Unnamed outputs use key output_0.',
             inputSchema: jsonSchema({
                 type: 'object',
                 properties: {
@@ -93,7 +93,7 @@ function createNetsocketMcpTools(options = {}) {
             },
         }),
         get_node_info: tool({
-            description: 'Get full metadata for a node type: callingGuide (required inputs, output keys/types/structures), enriched port metadata, properties, defaults, and example usage. Use the exact nodeType from list_nodes results.',
+            description: 'Get full metadata for a node type: callingGuide (required inputs, output keys/types/structures), enriched port metadata, properties, defaults, and example usage. Check outputs[].mcpKey for the exact key (output_0 for anonymous outputs). Many array/object outputs arrive as JSON strings — hint is in structure field. Use the exact nodeType from list_nodes results.',
             inputSchema: jsonSchema({
                 type: 'object',
                 properties: {

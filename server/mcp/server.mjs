@@ -23,8 +23,12 @@ export function createNetsocketMcpServer(deps) {
                 'Node types use full paths, for example "Math/Add" or "Smart Home/Philips Hue/Lights/Get All Lights".',
                 'Provide input values in execute_node.inputs keyed by input name. Match each value to the port type and structure documented on inputs[].structure.',
                 'Use execute_node.properties only for node settings listed under properties, not for inputs that already have their own port.',
-                'Event ports are graph-only; omit them from execute_node.inputs. Read results from execute_node.outputs (named by mcpKey) or execute_node.outputSlots.',
+                'Event ports are graph-only; omit them from execute_node.inputs. Read results from execute_node.outputs (named by mcpKey) or execute_node.outputSlots. Unnamed outputs use output_0; named outputs use their name (Code, Accounts, Value, Lights, Response).',
+                'Many nodes serialize array/object outputs as JSON strings — e.g. Authentication/Get OTP Accounts Accounts="[\\"Discord:Strayfade\\"]", Smart Home Get All Lights Lights is a JSON array string, Web Response is often JSON-stringified. If typeof output is string, JSON.parse it when you need an element or before feeding a JSON node (most JSON nodes accept either form).',
+                'Chaining example (OTP): 1) execute_node "Authentication/Get OTP Accounts" → JSON.parse(outputs.Accounts)[0] = "Discord:Strayfade" → 2) execute_node "Authentication/OTP" with inputs {"Account":"Discord:Strayfade"} → outputs.Code is the 6-digit code. Use "JSON/Get Array Item" (inputs Array=indexed array string, index=0) to extract one element between steps when needed.',
+                'Chaining example (HTTP → JSON): 1) Web/GET Request → outputs.Response (often JSON string) → 2) JSON/Get Object Value with inputs {"JSON": outputs.Response, "Key Name":"fieldName"} → 3) Variables/Set Variable with inputs {"Name":"myVar","New Value": extractedValue}.',
                 'When multiple nodes can fulfill a task, prefer nodes marked mcpPreferred in list_nodes or get_node_info results.',
+                'Some nodes use output_0 for anonymous outputs (Math/Add). Always check callingGuide.executeNode.outputs[].mcpKey to know the exact key.',
             ].join(' '),
         }
     )
@@ -46,7 +50,7 @@ export function createNetsocketMcpServer(deps) {
         'get_node_info',
         {
             title: 'Get Node Info',
-            description: 'Get full metadata for a node type: callingGuide (required inputs, output keys/types/structures), enriched port metadata, properties, defaults, and example usage.',
+            description: 'Get full metadata for a node type: callingGuide (required inputs, output keys/types/structures), enriched port metadata, properties, defaults, and example usage. Check outputs[].mcpKey — anonymous outputs use output_0; many array/object outputs arrive as JSON strings (see structure).',
             inputSchema: z.object({
                 nodeType: z.string().describe('Node type in Category/Name format, e.g. "Math/Add"'),
             }),
@@ -67,7 +71,7 @@ export function createNetsocketMcpServer(deps) {
         'execute_node',
         {
             title: 'Execute Node',
-            description: 'Run a single node with the provided inputs and optional properties. Call get_node_info first to learn required inputs, value types/structures, and output mcpKey names.',
+            description: 'Run a single node with the provided inputs and optional properties. Call get_node_info first to learn required inputs, value types/structures, and output mcpKey names. Note: array/object outputs are often JSON-stringified strings — JSON.parse them before using as JSON inputs; most JSON nodes accept either form. Unnamed outputs use key output_0.',
             inputSchema: z.object({
                 nodeType: z.string().describe('Node type in Category/Name format'),
                 inputs: z.record(z.string(), z.unknown()).optional().describe('Input values keyed by input port name; types must match get_node_info.inputs[].type and structure guidance'),

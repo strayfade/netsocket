@@ -13,10 +13,10 @@ NodeDefinition.prototype.title = "Authentication/OTP"
 NodeDefinition.prototype.description = "Generates a time-based one-time password (TOTP) for a named account using secrets stored in authentication preferences. Outputs the current numeric code string."
 NodeDefinition.prototype.portMeta = {
 	inputs: {
-		Account: {"description":"TOTP account identifier.","structure":"OTP account key in Issuer:Account format.","required":true},
+		Account: {"description":"TOTP account identifier — use the Issuer:Account key from Get OTP Accounts.","structure":"OTP account key in Issuer:Account format (e.g. \"Discord:Strayfade\"). For email-based accounts the Issuer prefix is still required; list accounts first if unsure.","required":true},
 	},
 	outputs: {
-		Code: {"description":"JavaScript or command text to run.","structure":"Source code or script string.","mcpKey":"Code"},
+		Code: {"description":"Current 6-digit time-based OTP code for the account (rotates ~30s).","structure":"6-digit numeric string; re-execute the node if the code is rejected due to expiry.","mcpKey":"Code"},
 	},
 }
 NodeDefinition.prototype.mcpPreferred = "Prefer for generating a 6-digit two-factor authentication code for a configured account key (Issuer:Account name)."

@@ -24,11 +24,12 @@ NodeDefinition.prototype.portMeta = {
 		Value: {"description":"Data value for the operation.","structure":"Value to store or compare.","mcpKey":"Value"},
 	},
 }
+NodeDefinition.prototype.mcpPreferred = "Prefer for persisting a value to a named server variable; pair with Variables/Get Variable or Variables/List Variables when chaining."
 NodeDefinition.prototype.color = "blue"
 NodeDefinition.prototype.icon = "database_upload"
 const NodeFunction = async (node, params, behaviors) => {
     setVar(string(params["Name"]), string(params["New Value"]))
-    await behaviors.populateNextNodeLinks([getVar(string(params["Name"]))]);
+    await behaviors.populateNextNodeLinks([null, getVar(string(params["Name"]))]);
     await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[0]);
     return true
 }

@@ -13,10 +13,10 @@ NodeDefinition.prototype.portMeta = {
 
 	},
 	outputs: {
-		Accounts: {"description":"Accounts produced by Get OTP Accounts.","structure":"JSON array (may be serialized as a string in some nodes).","mcpKey":"Accounts"},
+		Accounts: {"description":"List of OTP account keys (Issuer:Account). Parse the JSON string then pass one entry to Authentication/OTP input Account, or use JSON/Get Array Item with Index=0 to extract a single key.","structure":"JSON array string of Issuer:Account keys (e.g. [\"Discord:Strayfade\"]). Must be JSON.parsed or fed to JSON/Get Array Item before chaining to OTP.","mcpKey":"Accounts"},
 	},
 }
-NodeDefinition.prototype.mcpPreferred = "Prefer when you need the list of account keys that can be used with the OTP node to generate a one-time password."
+NodeDefinition.prototype.mcpPreferred = "Prefer when you need the list of account keys that can be used with the OTP node to generate a one-time password. Chain: Get OTP Accounts → JSON/Get Array Item (Array=Accounts, Index=0) → OTP (Account=that value)."
 NodeDefinition.prototype.color = "cyan"
 NodeDefinition.prototype.icon = "security"
 const NodeFunction = async (node, params, behaviors) => {

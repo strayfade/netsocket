@@ -20,6 +20,7 @@ NodeDefinition.prototype.portMeta = {
 		"": {"description":"Primary output of Get Object Value.","structure":"JSON object; may be returned as a parsed object or JSON string depending on the node.","mcpKey":"output_0"},
 	},
 }
+NodeDefinition.prototype.mcpPreferred = "Prefer for extracting a field from a JSON object or HTTP Response string — e.g. Web/GET Response → Get Object Value with Key Name. Accepts either string or object."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "data_object"
 const NodeFunction = async (node, params, behaviors) => {
