@@ -47,6 +47,11 @@ class Prefs(context: Context) {
         get() = prefs.getBoolean(KEY_FORWARDING_ENABLED, true)
         set(value) = prefs.edit { putBoolean(KEY_FORWARDING_ENABLED, value) }
 
+    /** Panel id the Panel feature opens (must be granted to this device). */
+    var selectedPanelId: String
+        get() = prefs.getString(KEY_SELECTED_PANEL, "")?.trim().orEmpty()
+        set(value) = prefs.edit { putString(KEY_SELECTED_PANEL, value.trim()) }
+
     /** When true, the app opens the voice dictation screen instead of the text chat. */
     var voiceModeDefault: Boolean
         get() = prefs.getBoolean(KEY_VOICE_MODE_DEFAULT, false)
@@ -117,6 +122,7 @@ class Prefs(context: Context) {
         const val KEY_VOICE_MODE_DEFAULT = "voice_mode_default"
         const val KEY_RESPONSE_TIMEOUT = "response_timeout_seconds"
         const val KEY_CONVERSATION_ID = "conversation_id"
+        const val KEY_SELECTED_PANEL = "selected_panel_id"
         /** Pre-chat-app key; migrated into [KEY_NOTIFICATION_SECRET]. */
         private const val KEY_SECRET_LEGACY = "secret"
         const val DEFAULT_HOST = "netsocket.strayfade.com"

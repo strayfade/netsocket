@@ -12,6 +12,16 @@
     <string name="features_authenticator_desc">View and copy OTP codes from your host</string>
     <string name="features_website">Open netsocket</string>
     <string name="features_website_desc">Browse your netsocket host in an in-app window</string>
+    <string name="features_panel">Panel</string>
+    <string name="features_panel_desc">Act as a wall panel for your netsocket host</string>
+    <string name="panel_title">Panel</string>
+    <string name="panel_status_loading">Loading panel…</string>
+    <string name="panel_status_pending">Waiting for host approval — approve this device in the netsocket dashboard</string>
+    <string name="panel_status_denied">Device denied by host</string>
+    <string name="panel_status_disconnected">Not connected to host</string>
+    <string name="panel_status_unassigned">No panel assigned to this device — assign it on the Panels page</string>
+    <string name="panel_status_setup_failed">Could not open panel</string>
+    <string name="panel_pick_title">Choose panel</string>
     <string name="features_settings_desc">Host connection, forwarding, and permissions</string>
     <string name="authenticator_title">Authenticator</string>
     <string name="authenticator_subtitle">Codes from your netsocket OTP account registry.</string>

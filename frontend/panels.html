@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#000000">
+    <meta name="author" content="strayfade">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:site_name" content="netsocket">
+    <meta property="og:title" content="Panels">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 18px;
+        }
+    </style>
+    <link rel="stylesheet" href="/css/shell.css">
+    <title>Panels - netsocket</title>
+</head>
+
+<body class="shell-page">
+    <div class="shell-bg" aria-hidden="true">
+        <div class="shell-bg-grid"></div>
+    </div>
+
+    <header class="shell-topbar">
+        <a class="shell-brand" href="/dashboard" aria-label="netsocket home">
+            <img src="/favicon.png" alt="">
+        </a>
+        <nav class="shell-tabs" aria-label="Primary">
+            <a class="shell-tab" data-shell-tab="dashboard" href="/dashboard">
+                <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
+                <span class="shell-tab-label">Dashboard</span>
+            </a>
+            <a class="shell-tab" data-shell-tab="automate" href="/automate">
+                <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
+                <span class="shell-tab-label">Automate</span>
+            </a>
+            <a class="shell-tab" data-shell-tab="panels" href="/panels">
+                <span class="material-symbols-outlined" aria-hidden="true">wall_art</span>
+                <span class="shell-tab-label">Panels</span>
+            </a>
+        </nav>
+        <span class="shell-topbar-spacer"></span>
+        <a class="shell-topbar-link" href="/logout">
+            <span class="shell-tab-label">Log Out</span>
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_outward</span>
+        </a>
+    </header>
+
+    <main class="shell-main">
+        <h1 class="shell-page-title">Panels</h1>
+        <p class="shell-page-subtitle">Touch surfaces around the home. Wall devices stay signed in; native app surfaces use approved device grants.</p>
+
+        <div class="shell-grid">
+            <section class="shell-card shell-card-span-4" aria-label="Create panel">
+                <h2 class="shell-card-title">New panel</h2>
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+                    <div class="admin-field">
+                        <label for="new-panel-name">Name</label>
+                        <input class="admin-input" id="new-panel-name" type="text" autocomplete="off"
+                            placeholder="Kitchen display" maxlength="120">
+                    </div>
+                    <div class="admin-field">
+                        <label for="new-panel-room">Room (optional)</label>
+                        <input class="admin-input" id="new-panel-room" type="text" autocomplete="off"
+                            placeholder="Kitchen" maxlength="120">
+                    </div>
+                    <div class="admin-field">
+                        <label>Widgets</label>
+                        <div class="admin-check-row" id="new-panel-widgets">
+                            <label class="admin-check"><input type="checkbox" value="clock" checked> Clock</label>
+                            <label class="admin-check"><input type="checkbox" value="automations" checked> Automations</label>
+                            <label class="admin-check"><input type="checkbox" value="weather"> Weather</label>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="shell-btn" id="create-panel-btn" type="button">Create panel</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="shell-card shell-card-span-8" aria-label="Panels list">
+                <h2 class="shell-card-title">Room panels</h2>
+                <ul class="shell-list" id="panels-list">
+                    <li class="shell-list-item"><span class="shell-skeleton" style="flex: 1;">Loading panels</span></li>
+                </ul>
+                <p class="shell-empty" id="panels-empty" hidden>No panels yet. Create one to provision a wall surface.</p>
+            </section>
+        </div>
+    </main>
+
+    <dialog id="panel-edit-dialog" class="shell-card" style="color: var(--shell-text); max-width: min(560px, 92vw);">
+        <h2 class="shell-card-title">Edit panel</h2>
+        <p class="shell-stat-sub shell-mono" id="panel-edit-id" style="margin: 4px 0 12px;"></p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="admin-field">
+                <label for="edit-panel-name">Name</label>
+                <input class="admin-input" id="edit-panel-name" type="text" maxlength="120">
+            </div>
+            <div class="admin-field">
+                <label for="edit-panel-room">Room</label>
+                <input class="admin-input" id="edit-panel-room" type="text" maxlength="120">
+            </div>
+            <div class="admin-field">
+                <label>Widgets (grid layout)</label>
+                <div class="admin-check-row" id="edit-panel-widgetlist" style="flex-direction: column; align-items: stretch;"></div>
+                <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                    <select class="admin-input" id="edit-widget-type" style="flex: 0 0 140px;" aria-label="Widget type">
+                        <option value="button">Run button (1x1)</option>
+                        <option value="clock">Clock</option>
+                        <option value="markdown">Markdown</option>
+                        <option value="html">HTML</option>
+                    </select>
+                    <select class="admin-input" id="edit-widget-preset" style="flex: 0 0 110px;" aria-label="Widget size"></select>
+                    <input class="admin-input shell-mono" id="edit-widget-variable" type="text" autocomplete="off"
+                        spellcheck="false" placeholder="variable_name" maxlength="128" style="flex: 1; min-width: 140px;" aria-label="Variable name">
+                    <select class="admin-input shell-mono" id="edit-widget-automation" style="flex: 1; min-width: 140px;" aria-label="Automation"></select>
+                    <button class="shell-btn shell-btn-secondary" id="edit-widget-add" type="button">Add</button>
+                </div>
+            </div>
+            <div class="admin-field">
+                <label>Allowed automations</label>
+                <div class="admin-check-row" id="edit-panel-automations" style="flex-direction: column; align-items: stretch;"></div>
+            </div>
+            <div class="admin-field">
+                <label>Paired devices (open this panel from the app)</label>
+                <div class="admin-check-row" id="edit-panel-devices" style="flex-direction: column; align-items: stretch;"></div>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="shell-btn" id="edit-panel-save" type="button">Save</button>
+                <button class="shell-btn shell-btn-secondary" id="edit-panel-close" type="button">Cancel</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script src="/js/shell.js"></script>
+    <script>
+        (function () {
+            ShellLogic.markActiveTab(document);
+
+            var allAutomations = [];
+            var allDevices = [];
+            var editingPanelId = null;
+
+            function checkedValues(container) {
+                return Array.prototype.map.call(
+                    container.querySelectorAll('input[type="checkbox"]:checked'),
+                    function (el) { return el.value; }
+                );
+            }
+
+            function formatWidgets(widgets) {
+                return (widgets || []).map(function (w) {
+                    if (!w || typeof w !== 'object') return '?';
+                    var text = (w.type || '?') + ' ' + (w.w || '?') + 'x' + (w.h || '?');
+                    if (w.variable) text += ':' + w.variable;
+                    if (w.automationId) text += ' #' + w.automationId;
+                    return text;
+                }).join(', ');
+            }
+
+            function panelUrl(panelId) {
+                return window.location.origin + '/panel/' + encodeURIComponent(panelId);
+            }
+
+            async function copyPanelUrl(panelId, btn) {
+                try {
+                    await navigator.clipboard.writeText(panelUrl(panelId));
+                    ShellLogic.showToast('Panel URL copied');
+                } catch (e) {
+                    ShellLogic.showToast('Copy failed, copy the URL manually');
+                }
+            }
+
+            async function api(path, options) {
+                var res = await fetch(path, Object.assign({ credentials: 'same-origin' }, options || {}));
+                if (res.status === 401) {
+                    window.location.replace(ShellLogic.buildLoginRedirect(window.location.pathname));
+                    throw new Error('unauthorized');
+                }
+                return res;
+            }
+
+            async function loadAutomations() {
+                try {
+                    var res = await api('/v1/dashboard/summary');
+                    if (!res.ok) return;
+                    var data = await res.json();
+                    allAutomations = Array.isArray(data.automations) ? data.automations : [];
+                } catch (e) { /* ignore */ }
+            }
+
+            async function loadDevices() {
+                try {
+                    var res = await api('/v1/devices');
+                    if (!res.ok) return;
+                    var data = await res.json();
+                    allDevices = Array.isArray(data.devices) ? data.devices : [];
+                } catch (e) { /* ignore */ }
+            }
+
+            async function loadPanels() {
+                var list = document.getElementById('panels-list');
+                var empty = document.getElementById('panels-empty');
+                try {
+                    var res = await api('/v1/panels');
+                    if (!res.ok) {
+                        ShellLogic.showToast('Could not load panels');
+                        return;
+                    }
+                    var data = await res.json();
+                    var panels = Array.isArray(data.panels) ? data.panels : [];
+                    list.innerHTML = '';
+                    empty.hidden = panels.length > 0;
+                    panels.forEach(renderPanelRow);
+                } catch (e) {
+                    if (e.message !== 'unauthorized') ShellLogic.showToast('Could not load panels');
+                }
+            }
+
+            function renderPanelRow(panel) {
+                var list = document.getElementById('panels-list');
+                var li = document.createElement('li');
+                li.className = 'shell-list-item';
+                li.style.alignItems = 'flex-start';
+
+                var main = document.createElement('div');
+                main.className = 'shell-list-item-main';
+                var title = document.createElement('p');
+                title.className = 'shell-list-item-title';
+                title.textContent = panel.room
+                    ? panel.name + ' (' + panel.room + ')'
+                    : panel.name;
+                var sub = document.createElement('p');
+                sub.className = 'shell-list-item-sub shell-mono';
+                var deviceCount = Array.isArray(panel.deviceIds) ? panel.deviceIds.length : 0;
+                sub.textContent = '/panel/' + panel.id
+                    + ' - ' + formatWidgets(panel.widgets)
+                    + ' - ' + panel.automationIds.length + ' automations'
+                    + ' - ' + deviceCount + ' devices';
+                main.appendChild(title);
+                main.appendChild(sub);
+                li.appendChild(main);
+
+                var actions = document.createElement('div');
+                actions.style.display = 'flex';
+                actions.style.gap = '8px';
+                actions.style.flexWrap = 'wrap';
+
+                var open = document.createElement('a');
+                open.className = 'shell-btn shell-btn-secondary';
+                open.href = '/panel/' + encodeURIComponent(panel.id);
+                open.textContent = 'Open';
+                actions.appendChild(open);
+
+                var edit = document.createElement('button');
+                edit.type = 'button';
+                edit.className = 'shell-btn shell-btn-secondary';
+                edit.textContent = 'Edit';
+                edit.addEventListener('click', function () { openEditor(panel); });
+                actions.appendChild(edit);
+
+                var copy = document.createElement('button');
+                copy.type = 'button';
+                copy.className = 'shell-btn shell-btn-secondary';
+                copy.textContent = 'Copy URL';
+                copy.addEventListener('click', function () { copyPanelUrl(panel.id, copy); });
+                actions.appendChild(copy);
+
+                var del = document.createElement('button');
+                del.type = 'button';
+                del.className = 'shell-btn shell-btn-secondary';
+                del.textContent = 'Delete';
+                del.addEventListener('click', function () { deletePanel(panel); });
+                actions.appendChild(del);
+
+                li.appendChild(actions);
+                list.appendChild(li);
+            }
+
+            document.getElementById('create-panel-btn').addEventListener('click', async function () {
+                var btn = this;
+                var name = document.getElementById('new-panel-name').value.trim();
+                var room = document.getElementById('new-panel-room').value.trim();
+                var widgets = checkedValues(document.getElementById('new-panel-widgets'));
+                if (!name) {
+                    ShellLogic.showToast('Enter a panel name');
+                    return;
+                }
+                btn.disabled = true;
+                try {
+                    var res = await api('/v1/panels', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: name, room: room, widgets: widgets }),
+                    });
+                    if (res.status === 201) {
+                        var data = await res.json();
+                        document.getElementById('new-panel-name').value = '';
+                        document.getElementById('new-panel-room').value = '';
+                        ShellLogic.showToast('Created ' + data.panel.name);
+                        loadPanels();
+                    } else {
+                        var err = await res.json().catch(function () { return {}; });
+                        ShellLogic.showToast('Create failed: ' + (err.error || res.status));
+                    }
+                } catch (e) {
+                    if (e.message !== 'unauthorized') ShellLogic.showToast('Create failed: network error');
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+
+            var WIDGET_PRESETS = {
+                button: [{ w: 1, h: 1 }],
+                clock: [{ w: 4, h: 2 }, { w: 2, h: 1 }],
+                markdown: [{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }],
+                html: [{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }],
+            };
+
+            var editingWidgets = [];
+
+            function presetIndexFor(widget) {
+                var presets = WIDGET_PRESETS[widget.type] || [];
+                for (var i = 0; i < presets.length; i++) {
+                    if (presets[i].w === widget.w && presets[i].h === widget.h) return i;
+                }
+                return 0;
+            }
+
+            function describeWidget(widget) {
+                var text = widget.type + ' ' + widget.w + 'x' + widget.h;
+                if (widget.variable) text += ': ' + widget.variable;
+                if (widget.automationId) text += ' #' + widget.automationId;
+                return text;
+            }
+
+            function renderWidgetList() {
+                var box = document.getElementById('edit-panel-widgetlist');
+                box.innerHTML = '';
+                if (!editingWidgets.length) {
+                    var none = document.createElement('p');
+                    none.className = 'shell-stat-sub';
+                    none.textContent = 'No widgets. Add clock, run buttons, or variable-backed content below.';
+                    box.appendChild(none);
+                    return;
+                }
+                editingWidgets.forEach(function (widget, index) {
+                    var row = document.createElement('div');
+                    row.className = 'shell-list-item';
+                    var main = document.createElement('div');
+                    main.className = 'shell-list-item-main';
+                    var title = document.createElement('p');
+                    title.className = 'shell-list-item-title shell-mono';
+                    title.textContent = describeWidget(widget);
+                    main.appendChild(title);
+                    row.appendChild(main);
+                    var presets = WIDGET_PRESETS[widget.type] || [];
+                    if (presets.length > 1) {
+                        var size = document.createElement('select');
+                        size.className = 'admin-input shell-mono';
+                        size.style.flex = '0 0 110px';
+                        size.setAttribute('aria-label', 'Widget size');
+                        presets.forEach(function (preset, presetIndex) {
+                            var option = document.createElement('option');
+                            option.value = String(presetIndex);
+                            option.textContent = preset.w + 'x' + preset.h;
+                            size.appendChild(option);
+                        });
+                        size.value = String(presetIndexFor(widget));
+                        size.addEventListener('change', function () {
+                            var chosen = presets[parseInt(size.value, 10)] || presets[0];
+                            widget.w = chosen.w;
+                            widget.h = chosen.h;
+                            renderWidgetList();
+                        });
+                        row.appendChild(size);
+                    }
+                    var remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.className = 'shell-btn shell-btn-secondary';
+                    remove.textContent = 'Remove';
+                    remove.setAttribute('aria-label', 'Remove widget ' + (index + 1));
+                    remove.addEventListener('click', function () {
+                        editingWidgets.splice(index, 1);
+                        renderWidgetList();
+                    });
+                    row.appendChild(remove);
+                    box.appendChild(row);
+                });
+            }
+
+            function fillWidgetPresetOptions() {
+                var type = document.getElementById('edit-widget-type').value;
+                var presetEl = document.getElementById('edit-widget-preset');
+                var presets = WIDGET_PRESETS[type] || [];
+                presetEl.innerHTML = '';
+                presets.forEach(function (preset, index) {
+                    var option = document.createElement('option');
+                    option.value = String(index);
+                    option.textContent = preset.w + 'x' + preset.h;
+                    presetEl.appendChild(option);
+                });
+            }
+
+            function fillWidgetAutomationOptions() {
+                var picker = document.getElementById('edit-widget-automation');
+                picker.innerHTML = '';
+                var empty = document.createElement('option');
+                empty.value = '';
+                empty.textContent = allAutomations.length ? 'Select automation' : 'No automations yet';
+                picker.appendChild(empty);
+                allAutomations.forEach(function (item) {
+                    var option = document.createElement('option');
+                    option.value = String(item.id);
+                    option.textContent = (item.title || item.type) + (item.runnable ? '' : ' (not runnable)');
+                    picker.appendChild(option);
+                });
+            }
+
+            document.getElementById('edit-widget-type').addEventListener('change', fillWidgetPresetOptions);
+
+            document.getElementById('edit-widget-add').addEventListener('click', function () {
+                var type = document.getElementById('edit-widget-type').value;
+                var presets = WIDGET_PRESETS[type] || [];
+                var presetEl = document.getElementById('edit-widget-preset');
+                var preset = presets[parseInt(presetEl.value, 10)] || presets[0] || { w: 1, h: 1 };
+                var widget = { type: type, x: 0, y: 0, w: preset.w, h: preset.h };
+                if (type === 'markdown' || type === 'html') {
+                    widget.variable = document.getElementById('edit-widget-variable').value.trim();
+                    if (!widget.variable) {
+                        ShellLogic.showToast('Enter a variable name');
+                        return;
+                    }
+                }
+                if (type === 'button') {
+                    widget.automationId = document.getElementById('edit-widget-automation').value;
+                    if (!widget.automationId) {
+                        ShellLogic.showToast('Select an automation');
+                        return;
+                    }
+                }
+                editingWidgets.push(widget);
+                document.getElementById('edit-widget-variable').value = '';
+                renderWidgetList();
+            });
+
+            function openEditor(panel) {
+                editingPanelId = panel.id;
+                document.getElementById('panel-edit-id').textContent = '/panel/' + panel.id;
+                document.getElementById('edit-panel-name').value = panel.name || '';
+                document.getElementById('edit-panel-room').value = panel.room || '';
+                editingWidgets = (panel.widgets || []).map(function (w) {
+                    return {
+                        id: w.id,
+                        type: w.type,
+                        x: w.x || 0,
+                        y: w.y || 0,
+                        w: w.w || 1,
+                        h: w.h || 1,
+                        automationId: w.automationId,
+                        variable: w.variable,
+                    };
+                });
+                fillWidgetPresetOptions();
+                fillWidgetAutomationOptions();
+                renderWidgetList();
+
+                var autoBox = document.getElementById('edit-panel-automations');
+                autoBox.innerHTML = '';
+                var allowed = new Set((panel.automationIds || []).map(String));
+                if (!allAutomations.length) {
+                    var none = document.createElement('p');
+                    none.className = 'shell-stat-sub';
+                    none.textContent = 'No trigger nodes in the graph yet. Add Triggers/Button nodes in Automate first.';
+                    autoBox.appendChild(none);
+                }
+                allAutomations.forEach(function (item) {
+                    var label = document.createElement('label');
+                    label.className = 'admin-check';
+                    var box = document.createElement('input');
+                    box.type = 'checkbox';
+                    box.value = String(item.id);
+                    box.checked = allowed.has(String(item.id));
+                    label.appendChild(box);
+                    label.appendChild(document.createTextNode((item.title || item.type) + ' (' + item.type + ')'));
+                    autoBox.appendChild(label);
+                });
+
+                var deviceBox = document.getElementById('edit-panel-devices');
+                deviceBox.innerHTML = '';
+                var granted = new Set((panel.deviceIds || []).map(String));
+                var approvedDevices = allDevices.filter(function (d) { return d && d.status === 'approved'; });
+                if (!approvedDevices.length) {
+                    var noDevices = document.createElement('p');
+                    noDevices.className = 'shell-stat-sub';
+                    noDevices.textContent = 'No approved devices. Pair the Android app first, then approve it under Automate settings.';
+                    deviceBox.appendChild(noDevices);
+                }
+                approvedDevices.forEach(function (device) {
+                    var label = document.createElement('label');
+                    label.className = 'admin-check';
+                    var box = document.createElement('input');
+                    box.type = 'checkbox';
+                    box.value = device.deviceId;
+                    box.checked = granted.has(String(device.deviceId));
+                    label.appendChild(box);
+                    label.appendChild(document.createTextNode(
+                        (device.name || device.deviceId) + ' (' + device.deviceId + ')'
+                    ));
+                    deviceBox.appendChild(label);
+                });
+                // Keep grants for devices not currently listed (e.g. removed) intact.
+                granted.forEach(function (deviceId) {
+                    if (approvedDevices.some(function (d) { return String(d.deviceId) === deviceId; })) return;
+                    var keep = document.createElement('input');
+                    keep.type = 'hidden';
+                    keep.value = deviceId;
+                    keep.setAttribute('data-kept-device', '');
+                    deviceBox.appendChild(keep);
+                });
+
+                var dialog = document.getElementById('panel-edit-dialog');
+                if (typeof dialog.showModal === 'function') dialog.showModal();
+            }
+
+            document.getElementById('edit-panel-close').addEventListener('click', function () {
+                document.getElementById('panel-edit-dialog').close();
+            });
+
+            document.getElementById('edit-panel-save').addEventListener('click', async function () {
+                if (!editingPanelId) return;
+                var btn = this;
+                btn.disabled = true;
+                var automationIds = Array.prototype.map.call(
+                    document.querySelectorAll('#edit-panel-automations input[type="checkbox"]:checked'),
+                    function (el) { return el.value; }
+                );
+                var deviceIds = Array.prototype.map.call(
+                    document.querySelectorAll('#edit-panel-devices input[type="checkbox"]:checked'),
+                    function (el) { return el.value; }
+                ).concat(Array.prototype.map.call(
+                    document.querySelectorAll('#edit-panel-devices input[data-kept-device]'),
+                    function (el) { return el.value; }
+                ));
+                try {
+                    var res = await api('/v1/panels/' + encodeURIComponent(editingPanelId), {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: document.getElementById('edit-panel-name').value,
+                            room: document.getElementById('edit-panel-room').value,
+                            widgets: editingWidgets,
+                            automationIds: automationIds,
+                            deviceIds: deviceIds,
+                        }),
+                    });
+                    if (res.ok) {
+                        document.getElementById('panel-edit-dialog').close();
+                        ShellLogic.showToast('Panel saved');
+                        loadPanels();
+                    } else {
+                        var err = await res.json().catch(function () { return {}; });
+                        ShellLogic.showToast('Save failed: ' + (err.error || res.status));
+                    }
+                } catch (e) {
+                    if (e.message !== 'unauthorized') ShellLogic.showToast('Save failed: network error');
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+
+            async function deletePanel(panel) {
+                if (!window.confirm('Delete panel "' + panel.name + '"? Wall surfaces using it stop working.')) return;
+                try {
+                    var res = await api('/v1/panels/' + encodeURIComponent(panel.id), { method: 'DELETE' });
+                    if (res.status === 204) {
+                        ShellLogic.showToast('Deleted ' + panel.name);
+                        loadPanels();
+                    } else {
+                        ShellLogic.showToast('Delete failed (' + res.status + ')');
+                    }
+                } catch (e) {
+                    if (e.message !== 'unauthorized') ShellLogic.showToast('Delete failed: network error');
+                }
+            }
+
+            (async function init() {
+                var ok = await ShellLogic.ensureSession();
+                if (!ok) return;
+                await loadAutomations();
+                await loadDevices();
+                await loadPanels();
+            })();
+        })();
+    </script>
+</body>
+
+</html>

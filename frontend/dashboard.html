@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#000000">
+    <meta name="author" content="strayfade">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:site_name" content="netsocket">
+    <meta property="og:title" content="Dashboard">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 18px;
+        }
+    </style>
+    <link rel="stylesheet" href="/css/shell.css">
+    <link rel="stylesheet" href="/vendor/gridstack.min.css">
+    <title>Dashboard - netsocket</title>
+</head>
+
+<body class="shell-page">
+    <div class="shell-bg" aria-hidden="true">
+        <div class="shell-bg-grid"></div>
+    </div>
+
+    <header class="shell-topbar">
+        <a class="shell-brand" href="/dashboard" aria-label="netsocket home">
+            <img src="/favicon.png" alt="">
+        </a>
+        <nav class="shell-tabs" aria-label="Primary">
+            <a class="shell-tab" data-shell-tab="dashboard" href="/dashboard">
+                <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
+                <span class="shell-tab-label">Dashboard</span>
+            </a>
+            <a class="shell-tab" data-shell-tab="automate" href="/automate">
+                <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
+                <span class="shell-tab-label">Automate</span>
+            </a>
+            <a class="shell-tab" data-shell-tab="panels" href="/panels">
+                <span class="material-symbols-outlined" aria-hidden="true">wall_art</span>
+                <span class="shell-tab-label">Panels</span>
+            </a>
+        </nav>
+        <span class="shell-topbar-spacer"></span>
+        <a class="shell-topbar-link" href="/logout">
+            <span class="shell-tab-label">Log Out</span>
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_outward</span>
+        </a>
+    </header>
+
+    <main class="shell-main">
+        <h1 class="shell-page-title">Dashboard</h1>
+        <p class="shell-page-subtitle">Home overview. Build automations in <a href="/automate" style="color: inherit;">Automate</a>.</p>
+
+        <div class="grid-stack" id="dashboard-widgets">
+            <div class="grid-stack-item" gs-x="0" gs-y="0" gs-w="4" gs-h="2">
+                <div class="grid-stack-item-content">
+                    <section class="shell-card" aria-label="Loading">
+                        <p class="shell-stat-sub shell-skeleton" style="margin: 0;">Loading widgets</p>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <div class="shell-grid" style="margin-top: 12px;">
+            <section class="shell-card shell-card-span-12" aria-label="Widget layout">
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <h2 class="shell-card-title" style="margin: 0;">Widgets</h2>
+                    <span style="flex: 1;"></span>
+                    <button class="shell-btn shell-btn-secondary" id="layout-edit-toggle" type="button">Edit layout</button>
+                </div>
+                <p class="shell-stat-sub" style="margin: 4px 0 12px;">Markdown and HTML widgets render a netsocket Variable. Set it from automations with the Variables/Set Variable node; values update live. In edit mode, drag widgets by their handle.</p>
+                <ul class="shell-list" id="layout-list"></ul>
+                <div class="admin-form-grid" style="margin-top: 12px;">
+                    <div class="admin-field">
+                        <label for="layout-kind">Type</label>
+                        <select class="admin-input" id="layout-kind">
+                            <option value="button">Run button (1x1)</option>
+                            <option value="clock">Clock (4x2 or 2x1)</option>
+                            <option value="markdown">Markdown</option>
+                            <option value="html">HTML (sandboxed)</option>
+                        </select>
+                    </div>
+                    <div class="admin-field">
+                        <label for="layout-preset">Size</label>
+                        <select class="admin-input" id="layout-preset"></select>
+                    </div>
+                    <div class="admin-field">
+                        <label for="layout-variable">Variable (markdown/HTML only)</label>
+                        <input class="admin-input shell-mono" id="layout-variable" type="text" autocomplete="off"
+                            spellcheck="false" placeholder="morning_briefing" maxlength="128">
+                    </div>
+                    <div class="admin-field">
+                        <label for="layout-automation">Automation (button only)</label>
+                        <select class="admin-input shell-mono" id="layout-automation"></select>
+                    </div>
+                    <div class="full">
+                        <button class="shell-btn" id="layout-add" type="button">Add widget</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="/js/agentMarkdown.js"></script>
+    <script src="/js/shell.js"></script>
+    <script src="/vendor/gridstack-all.js"></script>
+    <script src="/js/widgets.js"></script>
+    <script>
+        (function () {
+            ShellLogic.markActiveTab(document);
+
+            var liveVariables = {};
+            var liveCounts = {};
+            var liveAutomations = [];
+
+            function tickClock() {
+                var now = new Date();
+                var hh = String(now.getHours()).padStart(2, '0');
+                var mm = String(now.getMinutes()).padStart(2, '0');
+                var date = now.toLocaleDateString(undefined, {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                });
+                Array.prototype.forEach.call(document.querySelectorAll('[data-clock-time]'), function (el) {
+                    el.textContent = hh + ':' + mm;
+                    el.classList.remove('shell-skeleton');
+                });
+                Array.prototype.forEach.call(document.querySelectorAll('[data-clock-date]'), function (el) {
+                    el.textContent = date;
+                });
+            }
+            tickClock();
+            setInterval(tickClock, 15000);
+
+            function el(tag, className, text) {
+                var node = document.createElement(tag);
+                if (className) node.className = className;
+                if (text != null) node.textContent = text;
+                return node;
+            }
+
+            // Fixed size presets per widget type (mirror of server/manager/widgetSchema.js).
+            var WIDGET_PRESETS = {
+                button: [{ w: 1, h: 1 }],
+                clock: [{ w: 4, h: 2 }, { w: 2, h: 1 }],
+                markdown: [{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }],
+                html: [{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }],
+            };
+
+            var grid = null;
+            var lastLayoutKey = null;
+            var editingLayout = false;
+            var currentWidgets = [];
+
+            function setEditing(on) {
+                editingLayout = !!on;
+                var container = document.getElementById('dashboard-widgets');
+                var toggle = document.getElementById('layout-edit-toggle');
+                if (toggle) toggle.textContent = editingLayout ? 'Done' : 'Edit layout';
+                if (container) container.classList.toggle('editing', editingLayout);
+                if (grid && typeof grid.setStatic === 'function') {
+                    try { grid.setStatic(!editingLayout); } catch (_) { /* ignore */ }
+                }
+                if (!editingLayout && grid) saveGridPositions();
+            }
+
+            // Persist drag positions, keeping each widget's type and bindings.
+            function saveGridPositions() {
+                if (!grid || typeof grid.save !== 'function') return;
+                var saved = [];
+                try {
+                    saved = grid.save(false) || [];
+                } catch (_) {
+                    return;
+                }
+                var byId = {};
+                currentWidgets.forEach(function (w) { byId[w.id] = w; });
+                var next = [];
+                saved.forEach(function (node) {
+                    var prior = byId[node.id];
+                    if (!prior) return;
+                    next.push({
+                        id: prior.id,
+                        type: prior.type,
+                        x: node.x || 0,
+                        y: node.y || 0,
+                        w: node.w || prior.w,
+                        h: node.h || prior.h,
+                        automationId: prior.automationId,
+                        variable: prior.variable,
+                    });
+                });
+                // Preserve widgets GridStack did not report (should not happen).
+                currentWidgets.forEach(function (w) {
+                    if (!next.some(function (n) { return n.id === w.id; })) next.push(w);
+                });
+                saveLayout(next);
+            }
+
+            function widgetCtx() {
+                return {
+                    automations: liveAutomations,
+                    variables: liveVariables,
+                    onRun: runAutomation,
+                    renderMarkdown: window.renderAgentMarkdown
+                        ? window.renderAgentMarkdown.bind(window)
+                        : null,
+                };
+            }
+
+            function rebuildGrid(widgets) {
+                var container = document.getElementById('dashboard-widgets');
+                if (grid) {
+                    try { grid.destroy(false); } catch (_) { /* ignore */ }
+                    grid = null;
+                }
+                container.innerHTML = '';
+                widgets.forEach(function (widget) {
+                    var item = Widgets.createItem(widget, widgetCtx());
+                    if (item) container.appendChild(item);
+                });
+                tickClock();
+                if (window.GridStack) {
+                    grid = window.GridStack.init({
+                        column: 12,
+                        cellHeight: 80,
+                        margin: 12,
+                        staticGrid: !editingLayout,
+                        animate: false,
+                        float: false,
+                        draggable: { handle: '.widget-drag-handle' },
+                        disableResize: true,
+                        columnOpts: { breakpoints: [{ w: 640, c: 4 }] },
+                    }, container);
+                    if (editingLayout) container.classList.add('editing');
+                }
+            }
+
+            document.getElementById('layout-edit-toggle').addEventListener('click', function () {
+                setEditing(!editingLayout);
+            });
+
+            function renderWidgets(data) {
+                liveVariables = data.variables || {};
+                liveCounts = data.counts || {};
+                liveAutomations = Array.isArray(data.automations) ? data.automations : [];
+                var widgets = (data.layout && Array.isArray(data.layout.widgets)) ? data.layout.widgets : [];
+                if (!widgets.length) {
+                    widgets = [{ id: 'w1', type: 'clock', x: 0, y: 0, w: 4, h: 2 }];
+                }
+                currentWidgets = widgets;
+                var key = JSON.stringify(widgets);
+                if (key !== lastLayoutKey) {
+                    lastLayoutKey = key;
+                    rebuildGrid(widgets);
+                } else {
+                    Object.keys(liveVariables).forEach(function (name) {
+                        refreshVarContent(name, liveVariables[name]);
+                    });
+                }
+                fillAutomationPicker();
+                renderLayoutList(widgets);
+                maybeMigrationToast(data.layout);
+            }
+
+            function maybeMigrationToast(layout) {
+                var dropped = (layout && layout.droppedLegacy) || {};
+                var kinds = Object.keys(dropped).filter(function (k) { return dropped[k] > 0; });
+                if (!kinds.length) return;
+                try {
+                    if (window.localStorage.getItem('netsocket.layoutToast.v2')) return;
+                    window.localStorage.setItem('netsocket.layoutToast.v2', '1');
+                } catch (_) {
+                    return;
+                }
+                var parts = kinds.map(function (k) { return dropped[k] + ' ' + k; });
+                ShellLogic.showToast(
+                    'Widget system upgraded; removed ' + parts.join(', ')
+                    + ' legacy widget(s). Re-add them from the editor below.'
+                );
+            }
+
+            function describeWidget(widget) {
+                var text = widget.type + ' ' + widget.w + 'x' + widget.h;
+                if (widget.variable) text += ': ' + widget.variable;
+                if (widget.automationId) text += ' #' + widget.automationId;
+                return text;
+            }
+
+            function renderLayoutList(widgets) {
+                var list = document.getElementById('layout-list');
+                list.innerHTML = '';
+                widgets.forEach(function (widget, index) {
+                    var li = el('li', 'shell-list-item');
+                    var main = el('div', 'shell-list-item-main');
+                    main.appendChild(el('p', 'shell-list-item-title', describeWidget(widget)));
+                    li.appendChild(main);
+                    var btn = el('button', 'shell-btn shell-btn-secondary', 'Remove');
+                    btn.type = 'button';
+                    btn.setAttribute('aria-label', 'Remove widget ' + (index + 1));
+                    btn.addEventListener('click', function () {
+                        var next = widgets.filter(function (_, i) { return i !== index; });
+                        saveLayout(next);
+                    });
+                    li.appendChild(btn);
+                    list.appendChild(li);
+                });
+                if (!widgets.length) {
+                    list.appendChild(el('li', 'shell-list-item', 'No widgets. Add one below.'));
+                }
+            }
+
+            function fillPresetOptions() {
+                var type = document.getElementById('layout-kind').value;
+                var presetEl = document.getElementById('layout-preset');
+                var presets = WIDGET_PRESETS[type] || WIDGET_PRESETS.markdown;
+                presetEl.innerHTML = '';
+                presets.forEach(function (preset, index) {
+                    var option = document.createElement('option');
+                    option.value = String(index);
+                    option.textContent = preset.w + 'x' + preset.h;
+                    presetEl.appendChild(option);
+                });
+            }
+
+            function fillAutomationPicker() {
+                var picker = document.getElementById('layout-automation');
+                var current = picker.value;
+                picker.innerHTML = '';
+                var empty = document.createElement('option');
+                empty.value = '';
+                empty.textContent = liveAutomations.length ? 'Select automation' : 'No automations yet';
+                picker.appendChild(empty);
+                liveAutomations.forEach(function (item) {
+                    var option = document.createElement('option');
+                    option.value = String(item.id);
+                    option.textContent = (item.title || item.type)
+                        + (item.runnable ? '' : ' (not runnable)');
+                    picker.appendChild(option);
+                });
+                picker.value = current;
+            }
+
+            async function saveLayout(widgets) {
+                try {
+                    var res = await fetch('/v1/dashboard/layout', {
+                        method: 'PUT',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ widgets: widgets }),
+                    });
+                    if (res.ok) {
+                        ShellLogic.showToast('Layout saved');
+                        loadSummary();
+                    } else {
+                        var err = await res.json().catch(function () { return {}; });
+                        ShellLogic.showToast('Save failed: ' + (err.error || res.status));
+                    }
+                } catch (e) {
+                    ShellLogic.showToast('Save failed: network error');
+                }
+            }
+
+            document.getElementById('layout-kind').addEventListener('change', fillPresetOptions);
+            fillPresetOptions();
+
+            document.getElementById('layout-add').addEventListener('click', async function () {
+                try {
+                    var res = await fetch('/v1/dashboard/layout', { credentials: 'same-origin' });
+                    if (!res.ok) {
+                        ShellLogic.showToast('Could not load layout (' + res.status + ')');
+                        return;
+                    }
+                    var current = await res.json();
+                    var widgets = Array.isArray(current.widgets) ? current.widgets : [];
+                    var type = document.getElementById('layout-kind').value;
+                    var presets = WIDGET_PRESETS[type] || WIDGET_PRESETS.markdown;
+                    var presetEl = document.getElementById('layout-preset');
+                    var preset = presets[presetEl.selectedIndex] || presets[0];
+                    var widget = { type: type, x: 0, y: 0, w: preset.w, h: preset.h };
+                    if (type === 'markdown' || type === 'html') {
+                        widget.variable = document.getElementById('layout-variable').value.trim();
+                        if (!widget.variable) {
+                            ShellLogic.showToast('Enter a variable name');
+                            return;
+                        }
+                    }
+                    if (type === 'button') {
+                        widget.automationId = document.getElementById('layout-automation').value;
+                        if (!widget.automationId) {
+                            ShellLogic.showToast('Select an automation');
+                            return;
+                        }
+                    }
+                    widgets.push(widget);
+                    document.getElementById('layout-variable').value = '';
+                    saveLayout(widgets);
+                } catch (e) {
+                    ShellLogic.showToast('Could not update layout');
+                }
+            });
+
+            function refreshVarContent(name, value, variables) {
+                variables = variables || liveVariables;
+                variables[name] = value;
+                Array.prototype.forEach.call(document.querySelectorAll('[data-var-content="' + CSS.escape(name) + '"]'), function (node) {
+                    node.innerHTML = window.renderAgentMarkdown ? window.renderAgentMarkdown(value) : '';
+                });
+                Array.prototype.forEach.call(document.querySelectorAll('[data-var-frame="' + CSS.escape(name) + '"]'), function (frame) {
+                    frame.srcdoc = value;
+                });
+            }
+
+            async function runAutomation(item, btn) {
+                try {
+                    var res = await fetch('/v1/dashboard/run', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nodeId: item.id }),
+                    });
+                    if (res.ok) {
+                        ShellLogic.showToast('Started ' + (item.title || item.type));
+                    } else {
+                        ShellLogic.showToast('Run failed (' + res.status + ')');
+                    }
+                } catch (e) {
+                    ShellLogic.showToast('Run failed: network error');
+                } finally {
+                    btn.disabled = false;
+                }
+            }
+
+            var dashboardSocket = null;
+            var dashboardReconnectTimer = null;
+
+            function connectDashboardSocket() {
+                if (dashboardSocket) {
+                    try { dashboardSocket.close(); } catch (_) { /* ignore */ }
+                }
+                var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                var socket;
+                try {
+                    socket = new WebSocket(protocol + window.location.host + '/');
+                } catch (e) {
+                    return;
+                }
+                dashboardSocket = socket;
+                socket.onmessage = function (event) {
+                    var message;
+                    try {
+                        message = JSON.parse(event.data);
+                    } catch (_) {
+                        return;
+                    }
+                    if (message.broadcastPurpose === 'varsChanged' && message.broadcastData) {
+                        refreshVarContent(message.broadcastData.name, message.broadcastData.value);
+                    } else if (message.broadcastPurpose === 'pong') {
+                        return;
+                    }
+                };
+                socket.onopen = function () {
+                    try {
+                        socket.send(JSON.stringify({ broadcastPurpose: 'ping' }));
+                    } catch (_) { /* ignore */ }
+                };
+                socket.onclose = function () {
+                    dashboardSocket = null;
+                    if (dashboardReconnectTimer) clearTimeout(dashboardReconnectTimer);
+                    dashboardReconnectTimer = setTimeout(connectDashboardSocket, 2000);
+                };
+            }
+
+            async function loadSummary() {
+                var ok = await ShellLogic.ensureSession();
+                if (!ok) return;
+                connectDashboardSocket();
+                try {
+                    var res = await fetch('/v1/dashboard/summary', { credentials: 'same-origin' });
+                    if (res.status === 401) {
+                        window.location.replace(ShellLogic.buildLoginRedirect(window.location.pathname));
+                        return;
+                    }
+                    if (!res.ok) {
+                        ShellLogic.showToast('Could not load dashboard data');
+                        return;
+                    }
+                    var data = await res.json();
+                    lastSummary = data;
+                    renderWidgets(data);
+                } catch (e) {
+                    ShellLogic.showToast('Could not load dashboard data');
+                }
+            }
+
+            loadSummary();
+            setInterval(loadSummary, 60000);
+        })();
+    </script>
+</body>
+
+</html>

@@ -145,6 +145,30 @@ header a:hover {
     background-color: white;
 }
 
+/* The header uses the shared shell topbar (frontend/public/css/shell.css).
+   These guards keep legacy `header a` / `header img` rules from overriding
+   the shell tab and brand styles. */
+.shell-topbar .shell-brand:hover {
+    color: #ffffff;
+    background: none;
+}
+
+.shell-topbar .shell-brand img {
+    padding: 0;
+}
+
+.shell-topbar .shell-brand {
+    padding: 0;
+}
+
+.shell-topbar .shell-tab .material-symbols-outlined {
+    margin-left: 0;
+}
+
+.shell-topbar .shell-topbar-link .material-symbols-outlined {
+    margin-left: 0;
+}
+
 header a .material-symbols-outlined {
     margin-left: 5px;
 }
@@ -157,8 +181,12 @@ header .header-distance {
 .header-right {
     display: flex;
     align-items: center;
-    flex: 1;
+    flex: 0 0 auto;
     min-width: 0;
+}
+
+.header-right {
+    margin-left: auto;
 }
 
 .header-right {
@@ -166,16 +194,13 @@ header .header-distance {
 }
 
 .header-command {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     display: flex;
     align-items: center;
-    width: min(360px, 34vw);
-    max-width: calc(100vw - 520px);
+    flex: 1 1 auto;
+    min-width: 120px;
+    max-width: 480px;
     height: 28px;
-    margin: 0;
+    margin: 0 auto;
     padding: 0 10px;
     border-radius: 6px;
     background: #141414;
@@ -1765,6 +1790,17 @@ a:visited {
     font-weight: 500;
 }
 
+/* ── Narrow desktop: icon-only tabs and no node counts so the command box fits */
+@media (max-width: 1350px) {
+    .shell-topbar .shell-tab .shell-tab-label {
+        display: none;
+    }
+
+    header .node-count {
+        display: none;
+    }
+}
+
 /* ── Mobile / narrow viewport ───────────────────────────────────────────── */
 @media (max-width: 768px) {
     header {
@@ -1808,6 +1844,14 @@ a:visited {
 
     header a .header-link-label {
         display: none;
+    }
+
+    .shell-topbar .shell-tab .shell-tab-label {
+        display: none;
+    }
+
+    .shell-topbar .shell-tab {
+        padding: 8px 10px;
     }
 
     header a .material-symbols-outlined {
@@ -1933,4 +1977,14 @@ a:visited {
 
 .backup-close-footer:hover {
     color: #ccc;
+}
+
+/* ── Hidden scrollbars (editor page): scrolling still works ────────────── */
+* {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+    display: none;
 }

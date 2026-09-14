@@ -47,7 +47,7 @@ app.use(compression())
 const { getNodes, setNodes, populateNodes } = require('./manager/saveState')
 const settingsManager = require('./manager/settingsManager.js')
 const cronTriggerManager = require('./utils/cronTriggerManager')
-const { reloadVars, getVarsSnapshot, replaceVarsAndPersist } = require('./utils/vars.js')
+const { reloadVars, getVarsSnapshot, replaceVarsAndPersist, onVarsChanged } = require('./utils/vars.js')
 const { reloadMcpAgentMemory } = require('./utils/mcpAgentMemory.js')
 const nodePreferencesRegistry = require('./manager/nodePreferencesRegistry')
 require('./utils/mcpAgentSettings')
@@ -95,6 +95,26 @@ const broadcastDevicesChanged = () => {
         },
     })
 }
+
+// Push variable updates to session clients (dashboard + session kiosks).
+// Values are capped so a large variable cannot flood sockets.
+const MAX_WS_VAR_LENGTH = 16 * 1024
+const broadcastVarChange = (name, value) => {
+    const text = value == null ? '' : String(value)
+    const payload = JSON.stringify({
+        broadcastPurpose: 'varsChanged',
+        broadcastData: text.length <= MAX_WS_VAR_LENGTH
+            ? { name, value: text, truncated: false }
+            : { name, value: text.slice(0, MAX_WS_VAR_LENGTH), truncated: true },
+    })
+    connectedClients.forEach((client) => {
+        if (client.readyState !== WebSocket.OPEN) return
+        if (client.netsocketRole === 'editor' || client.netsocketRole === 'legacy') {
+            client.send(payload)
+        }
+    })
+}
+onVarsChanged(({ name, value }) => broadcastVarChange(name, value))
 
 const admitDeviceSocket = (socket) => {
     if (!connectedClients.includes(socket)) {
@@ -354,6 +374,9 @@ const handleTrustedMessage = async (socket, message) => {
             }
             break
         }
+        case 'getPanelGrants':
+            panelApi.handleDevicePanelGrants(socket, message)
+            break
         case 'getSubgraphs': {
             if (!isEditorOrLegacy) break
             const subgraphStore = require('./manager/subgraphStore')
@@ -651,8 +674,97 @@ app.get('/constructNodes.js', (req, res) => {
 })
 app.get("/dashboard", (req, res) => {
     res.setHeader('Cache-Control', 'no-store')
+    res.status(200).sendFile(path.join(__dirname, "../frontend/dashboard.html"))
+})
+app.get("/automate", (req, res) => {
+    res.setHeader('Cache-Control', 'no-store')
     res.status(200).sendFile(path.join(__dirname, "../frontend/editor.html"))
 })
+app.get("/panels", (req, res) => {
+    res.setHeader('Cache-Control', 'no-store')
+    res.status(200).sendFile(path.join(__dirname, "../frontend/panels.html"))
+})
+app.get('/v1/dashboard/summary', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    try {
+        const { buildDashboardSummary } = require('./manager/dashboardSummary.js')
+        const dashboardLayout = require('./manager/dashboardLayout.js')
+        const varList = getVarsSnapshot()
+        const summary = buildDashboardSummary({
+            graphRoot: getNodes(),
+            vars: varList,
+            subgraphs: require('./manager/subgraphStore').listDefinitions(),
+            devices: deviceRegistry.listDevices(),
+        })
+        summary.layout = dashboardLayout.getLayout()
+        summary.variables = {}
+        for (const name of dashboardLayout.boundVariableNames()) {
+            const entry = varList.find((v) => v && v.name === name)
+            summary.variables[name] = entry ? entry.value : ''
+        }
+        return res.status(200).json(summary)
+    } catch (e) {
+        log(`dashboard-summary: ${e}`, logColors.Error)
+        return res.sendStatus(500)
+    }
+})
+app.get('/v1/dashboard/layout', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    try {
+        return res.status(200).json(require('./manager/dashboardLayout.js').getLayout())
+    } catch (e) {
+        log(`dashboard-layout-get: ${e}`, logColors.Error)
+        return res.sendStatus(500)
+    }
+})
+app.put('/v1/dashboard/layout', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    try {
+        const widgets = req.body && Array.isArray(req.body.widgets) ? req.body.widgets : null
+        if (!widgets) return res.status(400).json({ error: 'invalid_layout' })
+        return res.status(200).json(require('./manager/dashboardLayout.js').replaceLayout(widgets))
+    } catch (e) {
+        const code = typeof e.message === 'string' && e.message ? e.message : 'invalid_layout'
+        const status = ['invalid_layout', 'invalid_widget', 'invalid_type', 'variable_required', 'automation_required', 'too_many_widgets'].includes(code) ? 400 : 500
+        if (status === 500) log(`dashboard-layout-put: ${e}`, logColors.Error)
+        return res.status(status).json({ error: code })
+    }
+})
+app.post('/v1/dashboard/run', async (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const nodeId = req.body?.nodeId ?? req.body?.id
+    if (nodeId == null || (typeof nodeId !== 'string' && typeof nodeId !== 'number')) {
+        return res.status(400).json({ error: 'nodeId_required' })
+    }
+    try {
+        const { RUNNABLE_TRIGGER_TYPES } = require('./manager/dashboardSummary.js')
+        const graphRoot = getNodes()
+        const nodes = Array.isArray(graphRoot?.nodes) ? graphRoot.nodes : []
+        const target = nodes.find((n) => n && String(n.id) === String(nodeId))
+        if (!target) return res.status(404).json({ error: 'unknown_node' })
+        if (!RUNNABLE_TRIGGER_TYPES.has(target.type)) {
+            return res.status(400).json({ error: 'not_runnable' })
+        }
+        const ok = await executeGraph(target)
+        return res.status(200).json({ ok: ok !== false })
+    } catch (e) {
+        log(`dashboard-run: ${e}`, logColors.Error)
+        return res.sendStatus(500)
+    }
+})
+
+// MARK: Panels (room touch surfaces; session-gated, device grants for native clients)
+const panelApi = require('./manager/panelApi.js')
+app.get('/panel/:panelId', requireUserSession, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store')
+    res.status(200).sendFile(path.join(__dirname, '../frontend/panel.html'))
+})
+app.get('/v1/panels', (req, res) => panelApi.handleListPanels(req, res))
+app.post('/v1/panels', (req, res) => panelApi.handleCreatePanel(req, res))
+app.get('/v1/panels/:panelId/config', (req, res) => panelApi.handleGetPanelConfig(req, res))
+app.patch('/v1/panels/:panelId', (req, res) => panelApi.handleUpdatePanel(req, res))
+app.delete('/v1/panels/:panelId', (req, res) => panelApi.handleDeletePanel(req, res))
+app.post('/v1/panels/:panelId/execute', (req, res) => panelApi.handlePanelExecute(req, res))
 app.use('/', express.static(path.join(__dirname, '../frontend/public')));
 app.get("/", (req, res) => {
     res.redirect(302, "/login");

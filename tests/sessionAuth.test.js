@@ -95,8 +95,12 @@ describe('sessionAuth', () => {
     describe('isProtectedPagePath', () => {
         it('matches protected assets case-insensitively', () => {
             assert.equal(isProtectedPagePath('/dashboard'), true);
+            assert.equal(isProtectedPagePath('/automate'), true);
+            assert.equal(isProtectedPagePath('/panels'), true);
             assert.equal(isProtectedPagePath('/LiteGraph.js'), true);
             assert.equal(isProtectedPagePath('/css/editor.css?cache=1'), true);
+            assert.equal(isProtectedPagePath('/css/shell.css'), true);
+            assert.equal(isProtectedPagePath('/js/shell.js'), true);
         });
 
         it('does not treat public paths as protected', () => {

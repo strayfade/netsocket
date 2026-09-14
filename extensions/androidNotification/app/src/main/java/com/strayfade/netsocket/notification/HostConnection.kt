@@ -219,6 +219,11 @@ object HostConnection {
         return request("reorderOtpAccounts", data = data, callback = callback)
     }
 
+    /** Panels this device is granted (approved devices only). */
+    fun getPanelGrants(callback: RequestCallback): Boolean {
+        return request("getPanelGrants", callback = callback)
+    }
+
     private fun localDeviceId(): String {
         val context = appContext ?: return ""
         return DeviceId.get(context)

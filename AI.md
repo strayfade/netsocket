@@ -4,7 +4,7 @@ This document defines how AI agents should plan, implement, and review changes i
 
 ## What this project is
 
-Netsocket is a self-hosted nodegraph editor and automation runtime. The server (`server/`) executes graphs, serves the frontend (`frontend/`), and persists user data under `DATA_DIR` (default: `data/`). Nodes are discovered from `server/nodes/` and registered at startup via `server/manager/nodeImporter.js`.
+Netsocket is a self-hosted home-automation hub and nodegraph runtime. The server (`server/`) executes graphs, serves the frontend (`frontend/`), and persists user data under `DATA_DIR` (default: `data/`). Nodes are discovered from `server/nodes/` and registered at startup via `server/manager/nodeImporter.js`. The primary UI is the Dashboard (`/dashboard`); the nodegraph editor lives under Automate (`/automate`); per-room touch surfaces live under Panels (`/panels`, `/panel/:id`).
 
 Stack: Node.js (CommonJS), Express, WebSockets, native `node:test` runner. License: GPLv3.
 
@@ -12,11 +12,20 @@ Stack: Node.js (CommonJS), Express, WebSockets, native `node:test` runner. Licen
 
 | Path | Purpose |
 |------|---------|
-| `server/index.js` | HTTP/WebSocket entry, auth routes, trigger endpoints |
-| `server/manager/` | Graph execution, persistence, settings, node import |
+| `server/index.js` | HTTP/WebSocket entry, auth routes, trigger endpoints, dashboard/panel routes |
+| `server/manager/` | Graph execution, persistence, settings, node import, dashboard summary |
+| `server/manager/widgetSchema.js` | Unified grid-widget schema (`button`/`clock`/`markdown`/`html` with fixed size presets), validation, flow layout, legacy migration |
+| `server/manager/panelStore.js` | Room panels (`panels.json`): grid widget layouts, automation allowlists, device grants (`deviceIds`) |
+| `server/manager/panelApi.js` | Panel HTTP handlers (all session-gated) + device grant-discovery WS, injectable deps for tests |
+| `server/manager/dashboardLayout.js` | Dashboard grid widget layout (`dashboard.json`, v2 schema with legacy migration) |
+| `server/utils/vars.js` | Global variables: debounced `vars.json` persistence plus `onVarsChanged` hooks that feed the `varsChanged` socket push |
+| `frontend/public/js/widgets.js` | Shared grid-widget renderer (UMD, unit-tested in `tests/widgets.test.js`) |
+| `frontend/public/vendor/gridstack-all.js` + `gridstack.min.css` | Vendored GridStack 13.3.0 (pinned in `package.json`; approved frontend dependency — do not upgrade casually) |
 | `server/nodes/` | Node modules (`NodeDefinition` + `NodeFunction`) |
 | `server/utils/` | Shared helpers (auth, parsing, triggers, integrations) |
-| `frontend/` | Static UI (`editor.html`, `index.html`, `public/`) |
+| `frontend/` | Static UI (`dashboard.html`, `editor.html`, `panels.html`, `index.html`, `public/`) |
+| `frontend/public/css/shell.css` | Shared Dashboard/Panels theme tokens (OLED-black, 8px radius, card/grid/tab primitives) |
+| `frontend/public/js/shell.js` | Shared tab/session/toast logic (UMD, unit-tested in `tests/shell.test.js`) |
 | `tests/` | Automated tests |
 | `extensions/` | Optional integrations (overlay, mirror, etc.) |
 | `NODES.md` | Node authoring reference and known edge cases |
@@ -63,7 +72,7 @@ Netsocket runs on users' machines and stores credentials, automation graphs, OAu
 
 ### Authentication and sessions
 
-- Protected pages and APIs must go through `server/utils/sessionAuth.js` (`requireUserSession`, `canAccessPrivateApi`, `canAccessWithSessionOrIntegrationSecret`).
+- Protected pages and APIs must go through `server/utils/sessionAuth.js` (`requireUserSession`, `canAccessPrivateApi`, `canAccessWithSessionOrIntegrationSecret`). New hub pages (`/dashboard`, `/automate`, `/panels`) and their assets (`/css/shell.css`, `/js/shell.js`) must be added to `PROTECTED_PAGE_PATHS`. Dashboard APIs (`/v1/dashboard/*`) are session-gated via `canAccessPrivateApi`; `POST /v1/dashboard/run` only executes allowlisted runnable trigger types (`RUNNABLE_TRIGGER_TYPES` in `server/manager/dashboardSummary.js`). All panel surfaces are session-gated: the kiosk page (`/panel/:panelId`, protected via `requireUserSession`), its data APIs (`/v1/panels/:id/config`, `/v1/panels/:id/execute`), and the admin APIs (`/v1/panels*`) all require a dashboard login session — anonymous callers get 401, unknown panel ids get 404 (not 401) to avoid an auth oracle. There are no per-panel tokens anywhere: no `?token=` URLs, no localStorage secrets, no Bearer headers. Wall tablets stay signed in (remember-me); disabling a panel means deleting it. Content widgets render bound Variable values only (never the full var store): markdown through the escaping `renderAgentMarkdown` renderer, raw HTML exclusively inside `<iframe sandbox="">` via `srcdoc` — no exceptions. Kiosk sockets use the session cookie (editor role) and only listen for `varsChanged` pushes (capped at 16KB per value). Paired Android devices (device role, approved) may use only the `getPanelGrants` purpose plus the pre-existing OTP/command ones — grant checks go through `verifyDeviceForPanel` in `panelStore.js`. The grant-discovery handler lives in `panelApi.js` (`handleDevicePanelGrants`) with injectable deps so `node:test` covers it; keep `DEVICE_PURPOSES` in `deviceAuth.js` in sync with any purpose you add. The Android app (`extensions/androidNotification`, Kotlin Views + ViewBinding, no Compose) renders granted panels in a session WebView (`PanelActivity`, listed on the Features screen; sign in once via Features → Open netsocket); verify Android changes with `./gradlew assembleDebug` or `build.bat` (Android SDK at `%LOCALAPPDATA%\Android\Sdk`, JDK 17 at `%LOCALAPPDATA%\Java\jdk-17`) and never commit `local.properties` or keystores.
 - `--skip-auth` is for local development only. Never weaken production auth paths or default to skipping auth.
 - Session cookies must stay `httpOnly`, `sameSite: 'lax'`, and respect `COOKIE_SECURE=1` behind HTTPS.
 - Use `safeRedirectPath` / `resolveRedirectTarget` patterns for redirects. Reject open redirects (`//`, absolute URLs, non-leading `/`).
@@ -118,9 +127,10 @@ After adding a node, smoke-test in the editor (linked and unlinked inputs, succe
 ## Code style and change discipline
 
 - **Minimize scope.** Only change what the task requires. Match the style of the file you edit (quote style, semicolons, indentation).
-- **CommonJS only** in server code (`require` / `module.exports`). Frontend logic modules that need tests may use a UMD wrapper like `loginLogic.js`.
+- **CommonJS only** in server code (`require` / `module.exports`). Frontend logic modules that need tests may use a UMD wrapper like `loginLogic.js` or `shell.js`.
+- **New pages reuse the shell theme.** Dashboard, Panels, and future hub pages must use `frontend/public/css/shell.css` tokens and the `shell-topbar`/`shell-tabs` nav (`Dashboard | Automate | Panels`). Touch/kiosk surfaces need 48px+ tap targets (64px+ for primary actions), no hover-only interactions.
 - **Reuse existing helpers** (`inputParser`, `sessionAuth`, `graphUtils`, `log`) instead of duplicating logic.
-- **Dependencies:** avoid new npm packages unless necessary. If added, update `package.json` and ensure CI still passes with `npm ci`.
+- **Dependencies:** avoid new npm packages unless necessary. If added, update `package.json` and ensure CI still passes with `npm ci`. Exception already approved: `gridstack` (pinned exact, vendored to `frontend/public/vendor/`) powers the dashboard/kiosk widget grids — keep the vendor copy in sync on any version change.
 - **Logging:** use `log(message, logColors.Error)` for errors; avoid logging sensitive values.
 - **Comments:** only where behavior is non-obvious. Prefer clear code over heavy documentation.
 - **Do not edit unrelated files** (README marketing copy, unrelated nodes, drive-by refactors).

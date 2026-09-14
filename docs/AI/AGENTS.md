@@ -3,7 +3,7 @@
 ## 1. Project Overview and Architecture
 
 ### What is Netsocket
-Netsocket is a self-hosted nodegraph editor and automation runtime. The server (`server/`) executes graphs, serves the frontend (`frontend/`), and persists user data under `DATA_DIR` (default: `data/`).
+Netsocket is a self-hosted home-automation hub and nodegraph runtime. The server (`server/`) executes graphs, serves the frontend (`frontend/`), and persists user data under `DATA_DIR` (default: `data/`). The primary UI is the Dashboard (`/dashboard`); the nodegraph editor lives under Automate (`/automate`); per-room touch surfaces live under Panels (`/panels`, `/panel/:id`).
 
 ### Architecture Overview
 - **Backend**: Node.js (CommonJS), Express, WebSockets, native `node:test` runner
@@ -19,7 +19,18 @@ Netsocket is a self-hosted nodegraph editor and automation runtime. The server (
 | `server/index.js` | HTTP/WebSocket entry, auth routes, trigger endpoints | Main entry |
 | `server/manager/` | Graph execution, persistence, settings, node import | Core runtime |
 | `server/nodes/` | Node modules (`NodeDefinition` + `NodeFunction`) | User nodes |
-| `frontend/` | Static UI (`editor.html`, `index.html`, `public/`) | Web interface |
+| `frontend/` | Static UI (`dashboard.html`, `editor.html`, `panels.html`, `index.html`, `public/`) | Web interface |
+| `frontend/public/css/shell.css` | Shared Dashboard/Panels theme tokens and tab/card primitives | Hub styling |
+| `frontend/public/js/shell.js` | Shared tab/session/toast logic (UMD, tested) | Hub logic |
+| `server/manager/dashboardSummary.js` | Dashboard counts + automation list + runnable allowlist | Hub backend |
+| `server/manager/widgetSchema.js` | Unified grid-widget schema, presets, validation, migration | Hub backend |
+| `server/manager/panelStore.js` | Room panels: grid layouts, automation allowlists, device grants | Panels |
+| `server/manager/panelApi.js` | Panel handlers (all session-gated) + device grant-discovery WS | Panels |
+| `extensions/androidNotification` | Android companion app; Panel feature renders granted panels in a WebView | Panels |
+| `server/manager/dashboardLayout.js` | Dashboard grid layout (v2 schema with legacy migration) | Hub backend |
+| `server/utils/vars.js` | Variables: debounced persistence + change hooks | Hub backend |
+| `frontend/public/js/widgets.js` | Shared grid-widget renderer (UMD, tested) | Hub frontend |
+| `frontend/public/vendor/gridstack-*` | Vendored GridStack 13.3.0 (pinned; approved dep, upgrade deliberately) | Hub frontend |
 | `tests/` | Automated tests | Testing |
 | `extensions/` | Optional integrations (overlay, mirror, etc.) | Extras |
 

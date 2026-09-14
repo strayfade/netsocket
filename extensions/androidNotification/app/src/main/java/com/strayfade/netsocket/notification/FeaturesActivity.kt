@@ -5,7 +5,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.strayfade.netsocket.notification.databinding.ActivityFeaturesBinding
 
-/** Features hub — Authenticator and Settings. */
+/** Features hub — Authenticator, Panel, Website, and Settings. */
 class FeaturesActivity : AppCompatActivity() {
     private lateinit var binding: ActivityFeaturesBinding
 
@@ -21,6 +21,9 @@ class FeaturesActivity : AppCompatActivity() {
         }
         binding.rowWebsite.setOnClickListener {
             startActivity(Intent(this, BrowserActivity::class.java))
+        }
+        binding.rowPanel.setOnClickListener {
+            startActivity(Intent(this, PanelActivity::class.java))
         }
         binding.rowSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#000000">
+    <meta name="author" content="strayfade">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:site_name" content="netsocket">
+    <meta property="og:title" content="Panel">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 18px;
+        }
+    </style>
+    <link rel="stylesheet" href="/css/shell.css">
+    <link rel="stylesheet" href="/vendor/gridstack.min.css">
+    <title>Panel - netsocket</title>
+</head>
+
+<body class="shell-page">
+    <div class="shell-bg" aria-hidden="true">
+        <div class="shell-bg-grid"></div>
+    </div>
+
+    <main class="kiosk-wrap">
+        <div id="panel-loading" class="shell-card">
+            <p class="shell-stat-sub shell-skeleton" style="margin: 0;">Loading panel</p>
+        </div>
+
+        <div id="panel-not-found" class="shell-card" hidden>
+            <h2 class="shell-card-title">Panel unavailable</h2>
+            <p class="shell-stat-sub" style="margin-top: 8px;">This panel does not exist or was deleted. Ask an admin to re-provision this surface from the Panels page.</p>
+        </div>
+
+        <div id="panel-login-required" class="shell-card" hidden>
+            <h2 class="shell-card-title">Sign in required</h2>
+            <p class="shell-stat-sub" style="margin: 8px 0 12px;">This kiosk signs in with your netsocket account. Sign in once and it stays signed in.</p>
+            <p style="margin: 0;"><a class="shell-btn" id="panel-login-link" href="/login">Sign in</a></p>
+        </div>
+
+        <div id="panel-content" hidden>
+            <div class="grid-stack" id="panel-grid"></div>
+            <p class="shell-empty" id="panel-empty" hidden>No widgets assigned to this panel yet.</p>
+        </div>
+    </main>
+
+    <script src="/js/agentMarkdown.js"></script>
+    <script src="/js/shell.js"></script>
+    <script src="/vendor/gridstack-all.js"></script>
+    <script src="/js/widgets.js"></script>
+    <script>
+        (function () {
+            var parts = window.location.pathname.split('/').filter(Boolean);
+            var panelId = parts.length >= 2 ? parts[1] : '';
+            document.getElementById('panel-login-link').href =
+                '/login?redirect=' + encodeURIComponent('/panel/' + encodeURIComponent(panelId));
+
+            function show(id) {
+                ['panel-loading', 'panel-not-found', 'panel-login-required'].forEach(function (other) {
+                    document.getElementById(other).hidden = other !== id;
+                });
+                if (id) document.getElementById('panel-content').hidden = true;
+            }
+
+            function tickClock() {
+                var now = new Date();
+                var hh = String(now.getHours()).padStart(2, '0');
+                var mm = String(now.getMinutes()).padStart(2, '0');
+                var date = now.toLocaleDateString(undefined, {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                });
+                Array.prototype.forEach.call(document.querySelectorAll('[data-clock-time]'), function (el) {
+                    el.textContent = hh + ':' + mm;
+                    el.classList.remove('shell-skeleton');
+                });
+                Array.prototype.forEach.call(document.querySelectorAll('[data-clock-date]'), function (el) {
+                    el.textContent = date;
+                });
+            }
+            tickClock();
+            setInterval(tickClock, 15000);
+
+            async function loadConfig() {
+                var ok = await ShellLogic.ensureSession();
+                if (!ok) return;
+                var res;
+                try {
+                    res = await fetch('/v1/panels/' + encodeURIComponent(panelId) + '/config', {
+                        credentials: 'same-origin',
+                    });
+                } catch (e) {
+                    ShellLogic.showToast('Network error loading panel');
+                    return;
+                }
+                if (res.status === 404) {
+                    show('panel-not-found');
+                    return;
+                }
+                if (res.status === 401) {
+                    show('panel-login-required');
+                    return;
+                }
+                if (!res.ok) {
+                    ShellLogic.showToast('Could not load panel');
+                    return;
+                }
+                var data = await res.json();
+                renderConfig(data);
+                connectPanelSocket();
+            }
+
+            var liveVariables = {};
+            var liveAutomations = [];
+            var grid = null;
+            var lastLayoutKey = null;
+
+            function widgetCtx() {
+                return {
+                    automations: liveAutomations,
+                    variables: liveVariables,
+                    onRun: runAutomation,
+                    renderMarkdown: window.renderAgentMarkdown
+                        ? window.renderAgentMarkdown.bind(window)
+                        : null,
+                };
+            }
+
+            function rebuildGrid(widgets) {
+                var container = document.getElementById('panel-grid');
+                if (grid) {
+                    try { grid.destroy(false); } catch (_) { /* ignore */ }
+                    grid = null;
+                }
+                container.innerHTML = '';
+                widgets.forEach(function (widget) {
+                    var item = Widgets.createItem(widget, widgetCtx());
+                    if (item) container.appendChild(item);
+                });
+                document.getElementById('panel-empty').hidden = widgets.length > 0;
+                tickClock();
+                if (window.GridStack) {
+                    grid = window.GridStack.init({
+                        column: 12,
+                        cellHeight: 80,
+                        margin: 12,
+                        staticGrid: true,
+                        animate: false,
+                        float: false,
+                        columnOpts: { breakpoints: [{ w: 640, c: 4 }] },
+                    }, container);
+                }
+            }
+
+            function renderConfig(data) {
+                var panel = data.panel || {};
+                document.getElementById('panel-loading').hidden = true;
+                document.getElementById('panel-not-found').hidden = true;
+                document.getElementById('panel-login-required').hidden = true;
+                document.getElementById('panel-content').hidden = false;
+                document.title = (panel.room || panel.name || 'Panel') + ' - netsocket';
+
+                var widgets = Array.isArray(panel.widgets) ? panel.widgets : [];
+                liveVariables = data.variables && typeof data.variables === 'object' ? data.variables : {};
+                liveAutomations = Array.isArray(data.automations) ? data.automations : [];
+                var key = JSON.stringify(widgets);
+                if (key !== lastLayoutKey) {
+                    lastLayoutKey = key;
+                    rebuildGrid(widgets);
+                } else {
+                    Object.keys(liveVariables).forEach(function (name) {
+                        refreshVarContent(name, liveVariables[name]);
+                    });
+                }
+            }
+
+            function refreshVarContent(name, value) {
+                liveVariables[name] = value;
+                Array.prototype.forEach.call(document.querySelectorAll('[data-var-content="' + CSS.escape(name) + '"]'), function (node) {
+                    node.innerHTML = window.renderAgentMarkdown ? window.renderAgentMarkdown(value) : '';
+                });
+                Array.prototype.forEach.call(document.querySelectorAll('[data-var-frame="' + CSS.escape(name) + '"]'), function (frame) {
+                    frame.srcdoc = value;
+                });
+            }
+
+            async function runAutomation(item, btn) {
+                try {
+                    var res = await fetch('/v1/panels/' + encodeURIComponent(panelId) + '/execute', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nodeId: item.id }),
+                    });
+                    if (res.ok) {
+                        ShellLogic.showToast('Started ' + (item.title || item.type));
+                    } else if (res.status === 401) {
+                        show('panel-login-required');
+                    } else if (res.status === 403) {
+                        ShellLogic.showToast('Not allowed on this panel');
+                    } else {
+                        ShellLogic.showToast('Run failed (' + res.status + ')');
+                    }
+                } catch (e) {
+                    ShellLogic.showToast('Run failed: network error');
+                } finally {
+                    btn.disabled = false;
+                }
+            }
+
+            var panelSocket = null;
+            var panelReconnectTimer = null;
+
+            function connectPanelSocket() {
+                if (!panelId) return;
+                if (panelSocket) {
+                    try { panelSocket.close(); } catch (_) { /* ignore */ }
+                }
+                // Session cookie authenticates the socket (editor role); the
+                // kiosk only listens for variable updates.
+                var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                var socket;
+                try {
+                    socket = new WebSocket(protocol + window.location.host + '/');
+                } catch (e) {
+                    return;
+                }
+                panelSocket = socket;
+                socket.onopen = function () {
+                    try {
+                        socket.send(JSON.stringify({ broadcastPurpose: 'ping' }));
+                    } catch (_) { /* ignore */ }
+                };
+                socket.onmessage = function (event) {
+                    var message;
+                    try {
+                        message = JSON.parse(event.data);
+                    } catch (_) {
+                        return;
+                    }
+                    if (message.broadcastPurpose === 'varsChanged' && message.broadcastData) {
+                        refreshVarContent(message.broadcastData.name, message.broadcastData.value);
+                    }
+                };
+                socket.onclose = function () {
+                    panelSocket = null;
+                    if (panelReconnectTimer) clearTimeout(panelReconnectTimer);
+                    panelReconnectTimer = setTimeout(connectPanelSocket, 2000);
+                };
+            }
+
+            if (!panelId) {
+                show('panel-not-found');
+            } else {
+                loadConfig();
+                setInterval(loadConfig, 60000);
+            }
+        })();
+    </script>
+</body>
+
+</html>

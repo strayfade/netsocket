@@ -20,6 +20,8 @@ const config = {
         subgraphs: path.join(dataDir, 'subgraphs.json'),
         devices: path.join(dataDir, 'devices.json'),
         serverIdentity: path.join(dataDir, 'server-identity.json'),
+        panels: path.join(dataDir, 'panels.json'),
+        dashboard: path.join(dataDir, 'dashboard.json'),
     }
 }
 

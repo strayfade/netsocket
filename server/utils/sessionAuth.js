@@ -235,6 +235,8 @@ const safeRedirectPath = (path) => {
 
 const PROTECTED_PAGE_PATHS = new Set([
     '/dashboard',
+    '/automate',
+    '/panels',
     '/constructnodes.js',
     '/createnode.js',
     '/litegraph-editor.css',
@@ -242,6 +244,10 @@ const PROTECTED_PAGE_PATHS = new Set([
     '/litegraph.js',
     '/netsocket-editor.css',
     '/css/editor.css',
+    '/css/shell.css',
+    '/js/shell.js',
+    '/js/widgets.js',
+    '/vendor/gridstack-all.js',
     '/inset.browser.js',
 ])
 

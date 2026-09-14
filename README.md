@@ -64,8 +64,8 @@ npm start
 ### Basic setup
 1. Navigate to [http://localhost:4675](http://localhost:4675).
 2. Create an account (if this is your first run).
-3. You should be redirected to `/dashboard`. This is the main page for creating automations.
-### Create your first automation
+3. You should be redirected to `/dashboard`. This is the home hub with stats and quick runs; open the **Automate** tab (`/automate`) to create automations.
+### Create your first automation (in the Automate tab)
   - Right-click the canvas to add a new node
   - Go to **Add Node > Triggers > Button** and add a Button node.
   - Right click again, go to **Add Node > Debugging > Print** to add a Print node.
@@ -75,6 +75,18 @@ npm start
 > [!TIP]
 > You may notice that on the inputs for the Print node, there is an input labeled "Text" which has the same name as the parameter we just set. This is intentional — a direct connection to the node will override any values set inside the Parameters panel. If the connection is disconnected, the Parameters panel value will be used.
   - Press the "button" section of the Button node, and you will see a "Hello, world!" printed to the **netsocket Log** at the bottom of the page. Hovering over this log will expand it to show more lines.
+### Widgets (grid layout)
+  Everything is a widget on a 12-column drag-drop grid (GridStack, vendored — no CDN needed):
+  - **Run button** (1x1) — runs one allowlisted automation. Add from the Dashboard editor or a panel's edit dialog.
+  - **Clock** (4x2 or 2x1).
+  - **Markdown / HTML** (2x2, 4x2, 4x3, 6x4) — bound to a Variable name. Store text with the **Variables/Set Variable** node (values persist across restarts and push live updates). Markdown is rendered safely; HTML is sandboxed with scripts blocked.
+  - On the **Dashboard**, press **Edit layout** and drag widgets by their handle; sizes come from fixed presets.
+  - Upgrading from older versions migrates existing layouts automatically (`stats`/`weather` widgets are dropped — you'll get a one-time toast listing what was removed).
+### Wall panels (touch surfaces)
+  - Open the **Panels** tab (`/panels`) and create a panel per room. There are no panel tokens: wall devices just stay signed in to your netsocket account.
+  - Open `/panel/<id>` on the wall device and sign in once (remember-me keeps it signed in).
+  - Assign **Triggers/Button** nodes to a panel to get one-tap run buttons with large touch targets.
+  - Android: open Features → Panel in the companion app (`extensions/androidNotification`). Sign in once via Features → Open netsocket; after approving the device and assigning it to a panel above, the phone acts as that wall panel.
 ### Controls
 - **Right-click** - add nodes
 - **Shift + Click** - multiselect nodes

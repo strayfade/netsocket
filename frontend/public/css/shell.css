@@ -1,0 +1,682 @@
+:root {
+    --shell-bg: #000000;
+    --shell-surface: #000000;
+    --shell-surface-raised: #141414;
+    --shell-border: #333333;
+    --shell-text: #ffffff;
+    --shell-muted: rgba(255, 255, 255, 0.6);
+    --shell-faint: rgba(255, 255, 255, 0.38);
+    --shell-accent: #ffffff;
+    --shell-input-bg: #111111;
+    --shell-radius: 8px;
+    --shell-font: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --shell-mono: 'Google Sans Code', 'Courier New', Courier, monospace;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body.shell-page {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--shell-font);
+    color: var(--shell-text);
+    background: var(--shell-bg);
+    -webkit-font-smoothing: antialiased;
+}
+
+.shell-bg {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.shell-bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+}
+
+.shell-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px;
+    height: 56px;
+    background: #000000;
+    border-bottom: 1px solid var(--shell-border);
+}
+
+.shell-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--shell-text);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+
+.shell-brand img {
+    width: 26px;
+    height: 26px;
+    display: block;
+}
+
+.shell-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.shell-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: var(--shell-radius);
+    color: var(--shell-muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid transparent;
+}
+
+.shell-tab:hover {
+    color: var(--shell-text);
+    background: var(--shell-surface-raised);
+}
+
+.shell-tab[aria-current="page"] {
+    color: #000000;
+    background: var(--shell-accent);
+}
+
+.shell-tab .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.shell-topbar-spacer {
+    margin-left: auto;
+}
+
+.shell-topbar-link {
+    color: var(--shell-text);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: var(--shell-radius);
+}
+
+.shell-topbar-link:hover {
+    color: #000000;
+    background: var(--shell-accent);
+}
+
+.shell-main {
+    position: relative;
+    z-index: 1;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+}
+
+.shell-page-title {
+    margin: 8px 0 4px;
+    font-size: 1.5rem;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+}
+
+.shell-page-subtitle {
+    margin: 0 0 20px;
+    color: var(--shell-muted);
+    font-size: 0.9rem;
+}
+
+.shell-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 12px;
+}
+
+.shell-card {
+    background: var(--shell-surface);
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius);
+    padding: 16px;
+    min-width: 0;
+}
+
+.shell-card-span-3 { grid-column: span 3; }
+.shell-card-span-4 { grid-column: span 4; }
+.shell-card-span-6 { grid-column: span 6; }
+.shell-card-span-8 { grid-column: span 8; }
+.shell-card-span-12 { grid-column: span 12; }
+
+.shell-card-title {
+    margin: 0 0 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--shell-muted);
+}
+
+.shell-stat-value {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+}
+
+.shell-stat-sub {
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    color: var(--shell-muted);
+}
+
+.shell-mono {
+    font-family: var(--shell-mono);
+}
+
+.shell-list {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shell-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius);
+    background: var(--shell-surface-raised);
+}
+
+.shell-list-item-main {
+    min-width: 0;
+    flex: 1;
+}
+
+.shell-list-item-title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shell-list-item-sub {
+    margin: 2px 0 0;
+    font-size: 0.75rem;
+    color: var(--shell-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shell-btn {
+    appearance: none;
+    border: 1px solid var(--shell-border);
+    background: var(--shell-accent);
+    color: #000000;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: var(--shell-radius);
+    cursor: pointer;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.shell-btn:hover {
+    filter: brightness(0.85);
+}
+
+.shell-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.shell-btn-secondary {
+    background: transparent;
+    color: var(--shell-text);
+}
+
+.shell-btn-secondary:hover {
+    background: var(--shell-surface-raised);
+    filter: none;
+}
+
+.shell-empty {
+    margin: 12px 0 0;
+    padding: 16px;
+    border: 1px dashed var(--shell-border);
+    border-radius: var(--shell-radius);
+    color: var(--shell-muted);
+    font-size: 0.85rem;
+}
+
+.shell-skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--shell-surface-raised);
+    border-radius: 6px;
+    min-height: 1.25em;
+    color: transparent !important;
+}
+
+.shell-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    animation: shell-shimmer 1.4s infinite;
+}
+
+@keyframes shell-shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shell-skeleton::after {
+        animation: none;
+    }
+}
+
+.shell-toast-region {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    pointer-events: none;
+}
+
+.shell-toast {
+    background: #ffffff;
+    color: #000000;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 10px 16px;
+    border-radius: var(--shell-radius);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    max-width: min(480px, 92vw);
+}
+
+.shell-clock-value {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 900px) {
+    .shell-card-span-3 { grid-column: span 6; }
+    .shell-card-span-4 { grid-column: span 6; }
+    .shell-card-span-6 { grid-column: span 12; }
+    .shell-card-span-8 { grid-column: span 12; }
+}
+
+.kiosk-wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.kiosk-clock-hero {
+    margin: 0;
+    font-size: clamp(3.5rem, 14vw, 7rem);
+    font-weight: 650;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.kiosk-date {
+    margin: 8px 0 0;
+    color: var(--shell-muted);
+    font-size: 1rem;
+}
+
+.kiosk-section-title {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--shell-muted);
+}
+
+.kiosk-btn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.kiosk-btn {
+    appearance: none;
+    border: 1px solid var(--shell-border);
+    background: var(--shell-surface-raised);
+    color: var(--shell-text);
+    font: inherit;
+    font-size: 1.15rem;
+    font-weight: 650;
+    padding: 20px 16px;
+    border-radius: var(--shell-radius);
+    cursor: pointer;
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+}
+
+.kiosk-btn:hover {
+    background: var(--shell-accent);
+    color: #000000;
+}
+
+.kiosk-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.kiosk-btn .material-symbols-outlined {
+    font-size: 24px;
+}
+
+.admin-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.admin-form-grid .full {
+    grid-column: span 2;
+}
+
+.admin-field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--shell-muted);
+    margin-bottom: 6px;
+}
+
+.admin-input {
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--shell-text);
+    background: var(--shell-input-bg);
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius);
+    padding: 0 12px;
+    min-height: 44px;
+    width: 100%;
+}
+
+.admin-input:focus {
+    outline: none;
+    border-color: var(--shell-accent);
+}
+
+.admin-check-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+}
+
+.admin-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    min-height: 44px;
+    cursor: pointer;
+}
+
+.admin-check input {
+    width: 20px;
+    height: 20px;
+    accent-color: #ffffff;
+}
+
+select.admin-input {
+    appearance: auto;
+}
+
+.shell-prose {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    overflow-wrap: break-word;
+}
+
+.shell-prose h1,
+.shell-prose h2,
+.shell-prose h3,
+.shell-prose h4 {
+    margin: 0.75em 0 0.4em;
+    letter-spacing: -0.02em;
+}
+
+.shell-prose h1 { font-size: 1.25rem; }
+.shell-prose h2 { font-size: 1.1rem; }
+.shell-prose h3 { font-size: 1rem; }
+.shell-prose h4 { font-size: 0.9rem; }
+
+.shell-prose p {
+    margin: 0.5em 0;
+}
+
+.shell-prose ul,
+.shell-prose ol {
+    margin: 0.5em 0;
+    padding-left: 1.4em;
+}
+
+.shell-prose code {
+    font-family: var(--shell-mono);
+    font-size: 0.85em;
+    background: var(--shell-surface-raised);
+    border: 1px solid var(--shell-border);
+    border-radius: 4px;
+    padding: 0 4px;
+}
+
+.shell-prose pre {
+    background: var(--shell-surface-raised);
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius);
+    padding: 12px;
+    overflow-x: auto;
+}
+
+.shell-prose pre code {
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.shell-prose a {
+    color: var(--shell-text);
+}
+
+.shell-widget-frame {
+    margin-top: 8px;
+    width: 100%;
+    height: 320px;
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius);
+    background: #ffffff;
+}
+
+/* ── Grid widgets (GridStack items) ─────────────────────────────────── */
+.grid-stack-item-content {
+    overflow: hidden;
+}
+
+.grid-stack-item-content > .shell-card {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.grid-stack-item-content .shell-card-title {
+    flex: 0 0 auto;
+}
+
+.grid-stack-item-content .shell-prose {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    margin-top: 8px;
+}
+
+.grid-stack-item-content .shell-widget-frame {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+}
+
+.widget-run-btn {
+    width: 100%;
+    height: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--shell-surface-raised);
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius);
+    color: var(--shell-text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.widget-run-btn:hover:not(:disabled) {
+    background: var(--shell-accent);
+    color: #000000;
+}
+
+.widget-run-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.widget-run-btn .material-symbols-outlined {
+    font-size: 28px;
+}
+
+.widget-clock {
+    overflow: hidden;
+    justify-content: center;
+}
+
+.widget-clock-compact .shell-clock-value {
+    font-size: 1.6rem;
+}
+
+.widget-clock-compact .shell-stat-sub {
+    font-size: 0.72rem;
+}
+
+.widget-drag-handle {
+    display: none;
+}
+
+.grid-stack.editing .widget-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-height: 44px;
+    margin: -4px -4px 8px;
+    border-radius: 6px;
+    color: var(--shell-faint);
+    cursor: grab;
+    touch-action: none;
+}
+
+.grid-stack.editing .widget-drag-handle:active {
+    cursor: grabbing;
+}
+
+.grid-stack.editing .grid-stack-item-content {
+    outline: 1px dashed var(--shell-border);
+    outline-offset: -1px;
+}
+
+@media (max-width: 640px) {
+    .shell-tabs .shell-tab-label {
+        display: none;
+    }
+    .shell-tab {
+        padding: 8px 10px;
+    }
+    .shell-topbar {
+        gap: 8px;
+        padding: 0 10px;
+    }
+    .shell-main {
+        padding: 16px 12px 56px;
+    }
+    .shell-btn {
+        min-height: 48px;
+    }
+}
+
+/* ── Hidden scrollbars (all shell pages): scrolling still works ────────── */
+* {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+    display: none;
+}
