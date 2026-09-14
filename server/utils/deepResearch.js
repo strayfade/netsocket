@@ -2,7 +2,9 @@
 
 const { generateText } = require('ai')
 const { log, logColors } = require('../log')
-const { resolveDefaultModel, getOllamaProvider, sanitizeAiOutput } = require('./languageModel')
+const { sanitizeAiOutput } = require('./languageModel')
+const providerManager = require('../manager/providerManager')
+const { getChatModel } = require('./providers')
 const {
     gatherSearchSourceContent,
     buildResearchContext,
@@ -40,14 +42,17 @@ async function deepResearch(question, options = {}) {
         return { answer: '', sources: [], error: 'Question is empty' }
     }
 
-    const modelName = resolveDefaultModel(options.model)
+    const resolved = providerManager.resolveProviderAndModel(options.providerId || options.provider, options.model)
+    const provider = resolved.provider
+    const modelName = resolved.modelId
     const silent = options.silent === true
 
     try {
-        const ollama = getOllamaProvider()
-        if (!ollama) {
-            return { answer: '', sources: [], error: 'Ollama is not configured' }
+        if (!provider) {
+            return { answer: '', sources: [], error: 'No AI provider configured' }
         }
+        let chatModel
+        try { chatModel = getChatModel(provider, modelName) } catch (e) { return { answer: '', sources: [], error: e.message } }
 
         if (!silent) {
             researchLog(`Starting research with model "${modelName}"`)
@@ -82,7 +87,7 @@ async function deepResearch(question, options = {}) {
 
         const researchContext = buildResearchContext(sources)
         const { text } = await generateText({
-            model: ollama(modelName),
+            model: chatModel,
             system: options.systemPrompt || SYNTHESIS_SYSTEM_PROMPT,
             prompt: `Question: ${userQuestion}\n\nSource material:\n${researchContext}`,
         })

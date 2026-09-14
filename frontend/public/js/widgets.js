@@ -48,6 +48,11 @@
         var icon = el(doc, 'span', 'material-symbols-outlined', 'play_arrow');
         icon.setAttribute('aria-hidden', 'true');
         btn.appendChild(icon);
+        if (widget && widget.showName) {
+            btn.classList.add('widget-run-btn--with-label');
+            var name = el(doc, 'span', 'widget-run-btn-label', label);
+            btn.appendChild(name);
+        }
         if (item.runnable && typeof ctx.onRun === 'function') {
             btn.addEventListener('click', function () {
                 btn.disabled = true;
@@ -64,12 +69,14 @@
         var compact = widget.w <= 2 && widget.h <= 1;
         var card = el(doc, 'section', 'shell-card widget-clock' + (compact ? ' widget-clock-compact' : ''));
         card.setAttribute('aria-label', 'Clock');
-        var time = el(doc, 'p', 'shell-clock-value shell-mono shell-skeleton', '--:--');
+        var time = el(doc, 'p', 'shell-clock-value shell-skeleton', '--:--');
         time.setAttribute('data-clock-time', '');
         card.appendChild(time);
-        var date = el(doc, 'p', 'shell-stat-sub', 'Loading date');
-        date.setAttribute('data-clock-date', '');
-        card.appendChild(date);
+        if (!compact) {
+            var date = el(doc, 'p', 'shell-stat-sub', 'Loading date');
+            date.setAttribute('data-clock-date', '');
+            card.appendChild(date);
+        }
         return card;
     }
 
@@ -138,6 +145,23 @@
         handle.setAttribute('aria-hidden', 'true');
         inner.appendChild(handle);
         inner.appendChild(content);
+        if (ctx && typeof ctx.onRemove === 'function') {
+            var del = el(doc, 'button', 'widget-delete-btn');
+            del.type = 'button';
+            del.setAttribute('aria-label', 'Remove widget');
+            del.title = 'Remove widget';
+            var delIcon = el(doc, 'span', 'material-symbols-outlined', 'delete');
+            delIcon.setAttribute('aria-hidden', 'true');
+            del.appendChild(delIcon);
+            (function (w) {
+                del.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    ctx.onRemove(w);
+                });
+            })(widget);
+            inner.appendChild(del);
+        }
         item.appendChild(inner);
         return item;
     }

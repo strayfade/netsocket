@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
@@ -22,14 +22,11 @@
         }
     </style>
     <link rel="stylesheet" href="/css/shell.css">
+    <link rel="stylesheet" href="/vendor/gridstack.min.css">
     <title>Panels - netsocket</title>
 </head>
 
 <body class="shell-page">
-    <div class="shell-bg" aria-hidden="true">
-        <div class="shell-bg-grid"></div>
-    </div>
-
     <header class="shell-topbar">
         <a class="shell-brand" href="/dashboard" aria-label="netsocket home">
             <img src="/favicon.png" alt="">
@@ -57,7 +54,6 @@
 
     <main class="shell-main">
         <h1 class="shell-page-title">Panels</h1>
-        <p class="shell-page-subtitle">Touch surfaces around the home. Wall devices stay signed in; native app surfaces use approved device grants.</p>
 
         <div class="shell-grid">
             <section class="shell-card shell-card-span-4" aria-label="Create panel">
@@ -72,14 +68,6 @@
                         <label for="new-panel-room">Room (optional)</label>
                         <input class="admin-input" id="new-panel-room" type="text" autocomplete="off"
                             placeholder="Kitchen" maxlength="120">
-                    </div>
-                    <div class="admin-field">
-                        <label>Widgets</label>
-                        <div class="admin-check-row" id="new-panel-widgets">
-                            <label class="admin-check"><input type="checkbox" value="clock" checked> Clock</label>
-                            <label class="admin-check"><input type="checkbox" value="automations" checked> Automations</label>
-                            <label class="admin-check"><input type="checkbox" value="weather"> Weather</label>
-                        </div>
                     </div>
                     <div>
                         <button class="shell-btn" id="create-panel-btn" type="button">Create panel</button>
@@ -97,51 +85,98 @@
         </div>
     </main>
 
-    <dialog id="panel-edit-dialog" class="shell-card" style="color: var(--shell-text); max-width: min(560px, 92vw);">
-        <h2 class="shell-card-title">Edit panel</h2>
+    <dialog id="panel-edit-dialog" class="shell-card" style="color: var(--shell-text);">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px;">
+            <h2 class="shell-card-title" style="margin: 0;">Edit panel</h2>
+            <button class="dialog-close-btn" id="edit-panel-close-top" type="button" aria-label="Close"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+        </div>
         <p class="shell-stat-sub shell-mono" id="panel-edit-id" style="margin: 4px 0 12px;"></p>
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div class="admin-field">
-                <label for="edit-panel-name">Name</label>
-                <input class="admin-input" id="edit-panel-name" type="text" maxlength="120">
-            </div>
-            <div class="admin-field">
-                <label for="edit-panel-room">Room</label>
-                <input class="admin-input" id="edit-panel-room" type="text" maxlength="120">
-            </div>
-            <div class="admin-field">
-                <label>Widgets (grid layout)</label>
-                <div class="admin-check-row" id="edit-panel-widgetlist" style="flex-direction: column; align-items: stretch;"></div>
-                <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
-                    <select class="admin-input" id="edit-widget-type" style="flex: 0 0 140px;" aria-label="Widget type">
-                        <option value="button">Run button (1x1)</option>
-                        <option value="clock">Clock</option>
-                        <option value="markdown">Markdown</option>
-                        <option value="html">HTML</option>
-                    </select>
-                    <select class="admin-input" id="edit-widget-preset" style="flex: 0 0 110px;" aria-label="Widget size"></select>
-                    <input class="admin-input shell-mono" id="edit-widget-variable" type="text" autocomplete="off"
-                        spellcheck="false" placeholder="variable_name" maxlength="128" style="flex: 1; min-width: 140px;" aria-label="Variable name">
-                    <select class="admin-input shell-mono" id="edit-widget-automation" style="flex: 1; min-width: 140px;" aria-label="Automation"></select>
-                    <button class="shell-btn shell-btn-secondary" id="edit-widget-add" type="button">Add</button>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="admin-field" style="margin: 0;">
+                    <label for="edit-panel-name">Name</label>
+                    <input class="admin-input" id="edit-panel-name" type="text" maxlength="120">
+                </div>
+                <div class="admin-field" style="margin: 0;">
+                    <label for="edit-panel-room">Room</label>
+                    <input class="admin-input" id="edit-panel-room" type="text" maxlength="120">
                 </div>
             </div>
-            <div class="admin-field">
-                <label>Allowed automations</label>
-                <div class="admin-check-row" id="edit-panel-automations" style="flex-direction: column; align-items: stretch;"></div>
+            <div class="admin-field" style="margin: 0;">
+                <label>Layout</label>
+                <div class="grid-stack" id="panel-edit-grid"></div>
+                <p class="shell-empty" id="panel-edit-grid-empty" hidden>No widgets. Add one below.</p>
+                <div class="dashboard-toolbar" style="margin: 12px 0 0;">
+                    <button class="shell-btn shell-btn-secondary" id="panel-layout-edit-toggle" type="button">Edit layout</button>
+                    <button class="shell-btn" id="panel-add-widget-open" type="button"><span class="material-symbols-outlined" aria-hidden="true">add</span> Add widget</button>
+                </div>
             </div>
             <div class="admin-field">
                 <label>Paired devices (open this panel from the app)</label>
                 <div class="admin-check-row" id="edit-panel-devices" style="flex-direction: column; align-items: stretch;"></div>
             </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button class="shell-btn" id="edit-panel-save" type="button">Save</button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
                 <button class="shell-btn shell-btn-secondary" id="edit-panel-close" type="button">Cancel</button>
+                <button class="shell-btn" id="edit-panel-save" type="button">Save</button>
             </div>
         </div>
     </dialog>
 
+    <dialog id="panel-add-widget-dialog" class="shell-card" aria-label="Add widget" aria-labelledby="panel-add-widget-title">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px;">
+            <h2 id="panel-add-widget-title" class="shell-card-title" style="margin: 0;">Add widget</h2>
+            <button class="dialog-close-btn" id="panel-dialog-cancel-top" type="button" aria-label="Close"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="admin-field">
+                <select class="admin-input" id="panel-dialog-kind" aria-label="Widget type">
+                    <option value="button">Run Button</option>
+                    <option value="clock">Clock</option>
+                    <option value="markdown">Markdown</option>
+                    <option value="html">HTML</option>
+                </select>
+            </div>
+            <div class="admin-field" id="panel-dialog-carousel-field">
+                <div class="widget-carousel">
+                    <div class="carousel-viewport">
+                        <div class="carousel-track" id="panel-dialog-preset-track" role="listbox" aria-label="Size variants"></div>
+                    </div>
+                </div>
+                <div class="carousel-controls">
+                    <button class="shell-btn shell-btn-secondary carousel-nav prev" id="panel-carousel-prev" type="button" aria-label="Previous size"><span class="material-symbols-outlined" aria-hidden="true">chevron_left</span></button>
+                    <span class="shell-stat-sub shell-mono carousel-size-label" id="panel-dialog-size-label">4×2</span>
+                    <button class="shell-btn shell-btn-secondary carousel-nav next" id="panel-carousel-next" type="button" aria-label="Next size"><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
+                </div>
+            </div>
+            <div id="panel-dialog-fields" style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="admin-field" id="panel-dialog-variable-field" hidden>
+                    <label for="panel-dialog-variable">Variable name</label>
+                    <input class="admin-input shell-mono" id="panel-dialog-variable" type="text" autocomplete="off" spellcheck="false" placeholder="morning_briefing" maxlength="128">
+                </div>
+                <div class="admin-field" id="panel-dialog-automation-field" hidden>
+                    <label for="panel-dialog-automation">Automation</label>
+                    <select class="admin-input shell-mono" id="panel-dialog-automation"></select>
+                    <p class="shell-stat-sub" style="margin-top:6px">An automation is a <span class="shell-mono">Triggers/Button</span> node in <a href="/automate" style="color:inherit;text-decoration:underline">Automate</a>. Set its <span class="shell-mono">Name</span> property to label it here.</p>
+                </div>
+                <div class="admin-field" id="panel-dialog-show-name-field" hidden>
+                    <label class="admin-check" for="panel-dialog-show-name" style="margin:0">
+                        <input type="checkbox" id="panel-dialog-show-name">
+                        Show name
+                    </label>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="shell-btn shell-btn-secondary" id="panel-dialog-cancel" type="button">Cancel</button>
+                <button class="shell-btn" id="panel-dialog-add" type="button">Add widget</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script src="/js/agentMarkdown.js"></script>
     <script src="/js/shell.js"></script>
+    <script src="/vendor/gridstack-all.js"></script>
+    <script src="/js/widgets.js"></script>
+    <script src="/js/widgetEditor.js"></script>
     <script>
         (function () {
             ShellLogic.markActiveTab(document);
@@ -149,13 +184,8 @@
             var allAutomations = [];
             var allDevices = [];
             var editingPanelId = null;
-
-            function checkedValues(container) {
-                return Array.prototype.map.call(
-                    container.querySelectorAll('input[type="checkbox"]:checked'),
-                    function (el) { return el.value; }
-                );
-            }
+            var editingWidgets = [];
+            var panelVariables = {};
 
             function formatWidgets(widgets) {
                 return (widgets || []).map(function (w) {
@@ -189,12 +219,69 @@
                 return res;
             }
 
+            async function patchPanelWidgets(nextWidgets) {
+                if (!editingPanelId) return;
+                try {
+                    var res = await api('/v1/panels/' + encodeURIComponent(editingPanelId), {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ widgets: nextWidgets }),
+                    });
+                    if (res.ok) {
+                        ShellLogic.showToast('Layout saved');
+                        loadPanels();
+                    } else {
+                        var err = await res.json().catch(function () { return {}; });
+                        ShellLogic.showToast('Save failed: ' + (err.error || res.status));
+                    }
+                } catch (e) {
+                    if (e.message !== 'unauthorized') ShellLogic.showToast('Save failed: network error');
+                }
+            }
+
+            WidgetEditor.tickClock();
+            setInterval(WidgetEditor.tickClock, 15000);
+
+            var editor = WidgetEditor.attach({
+                gridId: 'panel-edit-grid',
+                editToggleId: 'panel-layout-edit-toggle',
+                addOpenId: 'panel-add-widget-open',
+                dialogId: 'panel-add-widget-dialog',
+                kindId: 'panel-dialog-kind',
+                trackId: 'panel-dialog-preset-track',
+                sizeLabelId: 'panel-dialog-size-label',
+                prevId: 'panel-carousel-prev',
+                nextId: 'panel-carousel-next',
+                variableId: 'panel-dialog-variable',
+                variableFieldId: 'panel-dialog-variable-field',
+                automationId: 'panel-dialog-automation',
+                automationFieldId: 'panel-dialog-automation-field',
+                showNameId: 'panel-dialog-show-name',
+                showNameFieldId: 'panel-dialog-show-name-field',
+                cancelId: 'panel-dialog-cancel',
+                cancelTopId: 'panel-dialog-cancel-top',
+                addBtnId: 'panel-dialog-add',
+                getWidgets: function () { return editingWidgets; },
+                setWidgets: function (next) { editingWidgets = next; },
+                getLiveContext: function () { return { variables: panelVariables, automations: allAutomations }; },
+                onSave: patchPanelWidgets,
+                fetchAutomations: async function () {
+                    try {
+                        var res = await api('/v1/dashboard/summary');
+                        if (!res.ok) return;
+                        var data = await res.json();
+                        allAutomations = Array.isArray(data.automations) ? data.automations : allAutomations;
+                    } catch (_) { /* ignore */ }
+                }
+            });
+
             async function loadAutomations() {
                 try {
                     var res = await api('/v1/dashboard/summary');
                     if (!res.ok) return;
                     var data = await res.json();
                     allAutomations = Array.isArray(data.automations) ? data.automations : [];
+                    editor.fillAutomationPicker();
                 } catch (e) { /* ignore */ }
             }
 
@@ -244,7 +331,6 @@
                 var deviceCount = Array.isArray(panel.deviceIds) ? panel.deviceIds.length : 0;
                 sub.textContent = '/panel/' + panel.id
                     + ' - ' + formatWidgets(panel.widgets)
-                    + ' - ' + panel.automationIds.length + ' automations'
                     + ' - ' + deviceCount + ' devices';
                 main.appendChild(title);
                 main.appendChild(sub);
@@ -290,7 +376,6 @@
                 var btn = this;
                 var name = document.getElementById('new-panel-name').value.trim();
                 var room = document.getElementById('new-panel-room').value.trim();
-                var widgets = checkedValues(document.getElementById('new-panel-widgets'));
                 if (!name) {
                     ShellLogic.showToast('Enter a panel name');
                     return;
@@ -300,7 +385,7 @@
                     var res = await api('/v1/panels', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: name, room: room, widgets: widgets }),
+                        body: JSON.stringify({ name: name, room: room, widgets: [] }),
                     });
                     if (res.status === 201) {
                         var data = await res.json();
@@ -319,140 +404,6 @@
                 }
             });
 
-            var WIDGET_PRESETS = {
-                button: [{ w: 1, h: 1 }],
-                clock: [{ w: 4, h: 2 }, { w: 2, h: 1 }],
-                markdown: [{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }],
-                html: [{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }],
-            };
-
-            var editingWidgets = [];
-
-            function presetIndexFor(widget) {
-                var presets = WIDGET_PRESETS[widget.type] || [];
-                for (var i = 0; i < presets.length; i++) {
-                    if (presets[i].w === widget.w && presets[i].h === widget.h) return i;
-                }
-                return 0;
-            }
-
-            function describeWidget(widget) {
-                var text = widget.type + ' ' + widget.w + 'x' + widget.h;
-                if (widget.variable) text += ': ' + widget.variable;
-                if (widget.automationId) text += ' #' + widget.automationId;
-                return text;
-            }
-
-            function renderWidgetList() {
-                var box = document.getElementById('edit-panel-widgetlist');
-                box.innerHTML = '';
-                if (!editingWidgets.length) {
-                    var none = document.createElement('p');
-                    none.className = 'shell-stat-sub';
-                    none.textContent = 'No widgets. Add clock, run buttons, or variable-backed content below.';
-                    box.appendChild(none);
-                    return;
-                }
-                editingWidgets.forEach(function (widget, index) {
-                    var row = document.createElement('div');
-                    row.className = 'shell-list-item';
-                    var main = document.createElement('div');
-                    main.className = 'shell-list-item-main';
-                    var title = document.createElement('p');
-                    title.className = 'shell-list-item-title shell-mono';
-                    title.textContent = describeWidget(widget);
-                    main.appendChild(title);
-                    row.appendChild(main);
-                    var presets = WIDGET_PRESETS[widget.type] || [];
-                    if (presets.length > 1) {
-                        var size = document.createElement('select');
-                        size.className = 'admin-input shell-mono';
-                        size.style.flex = '0 0 110px';
-                        size.setAttribute('aria-label', 'Widget size');
-                        presets.forEach(function (preset, presetIndex) {
-                            var option = document.createElement('option');
-                            option.value = String(presetIndex);
-                            option.textContent = preset.w + 'x' + preset.h;
-                            size.appendChild(option);
-                        });
-                        size.value = String(presetIndexFor(widget));
-                        size.addEventListener('change', function () {
-                            var chosen = presets[parseInt(size.value, 10)] || presets[0];
-                            widget.w = chosen.w;
-                            widget.h = chosen.h;
-                            renderWidgetList();
-                        });
-                        row.appendChild(size);
-                    }
-                    var remove = document.createElement('button');
-                    remove.type = 'button';
-                    remove.className = 'shell-btn shell-btn-secondary';
-                    remove.textContent = 'Remove';
-                    remove.setAttribute('aria-label', 'Remove widget ' + (index + 1));
-                    remove.addEventListener('click', function () {
-                        editingWidgets.splice(index, 1);
-                        renderWidgetList();
-                    });
-                    row.appendChild(remove);
-                    box.appendChild(row);
-                });
-            }
-
-            function fillWidgetPresetOptions() {
-                var type = document.getElementById('edit-widget-type').value;
-                var presetEl = document.getElementById('edit-widget-preset');
-                var presets = WIDGET_PRESETS[type] || [];
-                presetEl.innerHTML = '';
-                presets.forEach(function (preset, index) {
-                    var option = document.createElement('option');
-                    option.value = String(index);
-                    option.textContent = preset.w + 'x' + preset.h;
-                    presetEl.appendChild(option);
-                });
-            }
-
-            function fillWidgetAutomationOptions() {
-                var picker = document.getElementById('edit-widget-automation');
-                picker.innerHTML = '';
-                var empty = document.createElement('option');
-                empty.value = '';
-                empty.textContent = allAutomations.length ? 'Select automation' : 'No automations yet';
-                picker.appendChild(empty);
-                allAutomations.forEach(function (item) {
-                    var option = document.createElement('option');
-                    option.value = String(item.id);
-                    option.textContent = (item.title || item.type) + (item.runnable ? '' : ' (not runnable)');
-                    picker.appendChild(option);
-                });
-            }
-
-            document.getElementById('edit-widget-type').addEventListener('change', fillWidgetPresetOptions);
-
-            document.getElementById('edit-widget-add').addEventListener('click', function () {
-                var type = document.getElementById('edit-widget-type').value;
-                var presets = WIDGET_PRESETS[type] || [];
-                var presetEl = document.getElementById('edit-widget-preset');
-                var preset = presets[parseInt(presetEl.value, 10)] || presets[0] || { w: 1, h: 1 };
-                var widget = { type: type, x: 0, y: 0, w: preset.w, h: preset.h };
-                if (type === 'markdown' || type === 'html') {
-                    widget.variable = document.getElementById('edit-widget-variable').value.trim();
-                    if (!widget.variable) {
-                        ShellLogic.showToast('Enter a variable name');
-                        return;
-                    }
-                }
-                if (type === 'button') {
-                    widget.automationId = document.getElementById('edit-widget-automation').value;
-                    if (!widget.automationId) {
-                        ShellLogic.showToast('Select an automation');
-                        return;
-                    }
-                }
-                editingWidgets.push(widget);
-                document.getElementById('edit-widget-variable').value = '';
-                renderWidgetList();
-            });
-
             function openEditor(panel) {
                 editingPanelId = panel.id;
                 document.getElementById('panel-edit-id').textContent = '/panel/' + panel.id;
@@ -468,33 +419,11 @@
                         h: w.h || 1,
                         automationId: w.automationId,
                         variable: w.variable,
+                        showName: w.showName === true,
                     };
                 });
-                fillWidgetPresetOptions();
-                fillWidgetAutomationOptions();
-                renderWidgetList();
-
-                var autoBox = document.getElementById('edit-panel-automations');
-                autoBox.innerHTML = '';
-                var allowed = new Set((panel.automationIds || []).map(String));
-                if (!allAutomations.length) {
-                    var none = document.createElement('p');
-                    none.className = 'shell-stat-sub';
-                    none.textContent = 'No trigger nodes in the graph yet. Add Triggers/Button nodes in Automate first.';
-                    autoBox.appendChild(none);
-                }
-                allAutomations.forEach(function (item) {
-                    var label = document.createElement('label');
-                    label.className = 'admin-check';
-                    var box = document.createElement('input');
-                    box.type = 'checkbox';
-                    box.value = String(item.id);
-                    box.checked = allowed.has(String(item.id));
-                    label.appendChild(box);
-                    label.appendChild(document.createTextNode((item.title || item.type) + ' (' + item.type + ')'));
-                    autoBox.appendChild(label);
-                });
-
+                panelVariables = {};
+                // Ensure grid shows even though dialog is still hidden (GridStack needs visible container; rebuild after showModal)
                 var deviceBox = document.getElementById('edit-panel-devices');
                 deviceBox.innerHTML = '';
                 var granted = new Set((panel.deviceIds || []).map(String));
@@ -518,7 +447,6 @@
                     ));
                     deviceBox.appendChild(label);
                 });
-                // Keep grants for devices not currently listed (e.g. removed) intact.
                 granted.forEach(function (deviceId) {
                     if (approvedDevices.some(function (d) { return String(d.deviceId) === deviceId; })) return;
                     var keep = document.createElement('input');
@@ -529,21 +457,37 @@
                 });
 
                 var dialog = document.getElementById('panel-edit-dialog');
-                if (typeof dialog.showModal === 'function') dialog.showModal();
+                if (typeof dialog.showModal === 'function') {
+                    try { dialog.showModal(); } catch (_) { dialog.setAttribute('open', ''); }
+                } else {
+                    dialog.setAttribute('open', '');
+                }
+                // Rebuild grid after dialog is visible so GridStack can measure
+                requestAnimationFrame(function () {
+                    editor.rebuild();
+                    // Ensure edit mode starts off
+                    if (editor.isEditing()) editor.setEditing(false);
+                });
             }
 
             document.getElementById('edit-panel-close').addEventListener('click', function () {
-                document.getElementById('panel-edit-dialog').close();
+                var d = document.getElementById('panel-edit-dialog');
+                if (typeof d.close === 'function') { try { d.close(); } catch (_) { d.removeAttribute('open'); } } else d.removeAttribute('open');
+            });
+            document.getElementById('edit-panel-close-top').addEventListener('click', function () {
+                var d = document.getElementById('panel-edit-dialog');
+                if (typeof d.close === 'function') { try { d.close(); } catch (_) { d.removeAttribute('open'); } } else d.removeAttribute('open');
+            });
+            document.getElementById('panel-edit-dialog').addEventListener('click', function (e) {
+                if (e.target === this) {
+                    if (typeof this.close === 'function') { try { this.close(); } catch (_) { this.removeAttribute('open'); } } else this.removeAttribute('open');
+                }
             });
 
             document.getElementById('edit-panel-save').addEventListener('click', async function () {
                 if (!editingPanelId) return;
                 var btn = this;
                 btn.disabled = true;
-                var automationIds = Array.prototype.map.call(
-                    document.querySelectorAll('#edit-panel-automations input[type="checkbox"]:checked'),
-                    function (el) { return el.value; }
-                );
                 var deviceIds = Array.prototype.map.call(
                     document.querySelectorAll('#edit-panel-devices input[type="checkbox"]:checked'),
                     function (el) { return el.value; }
@@ -551,6 +495,8 @@
                     document.querySelectorAll('#edit-panel-devices input[data-kept-device]'),
                     function (el) { return el.value; }
                 ));
+                // Ensure current grid positions are saved before saving metadata
+                if (editor.isEditing()) editor.setEditing(false);
                 try {
                     var res = await api('/v1/panels/' + encodeURIComponent(editingPanelId), {
                         method: 'PATCH',
@@ -558,8 +504,6 @@
                         body: JSON.stringify({
                             name: document.getElementById('edit-panel-name').value,
                             room: document.getElementById('edit-panel-room').value,
-                            widgets: editingWidgets,
-                            automationIds: automationIds,
                             deviceIds: deviceIds,
                         }),
                     });

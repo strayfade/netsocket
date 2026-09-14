@@ -22,6 +22,8 @@ const config = {
         serverIdentity: path.join(dataDir, 'server-identity.json'),
         panels: path.join(dataDir, 'panels.json'),
         dashboard: path.join(dataDir, 'dashboard.json'),
+        providers: path.join(dataDir, 'providers.json'),
+        providerKey: path.join(dataDir, 'provider-key.json'),
     }
 }
 

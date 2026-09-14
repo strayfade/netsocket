@@ -31,12 +31,10 @@ describe('panelStore', () => {
         } catch { /* ignore */ }
     });
 
-    it('creates a panel with a default clock widget', () => {
+    it('creates a blank panel with no widgets by default', () => {
         const { panel } = store.createPanel({ name: 'Kitchen', room: 'Kitchen' });
         assert.equal(panel.id, 'kitchen');
-        assert.deepEqual(panel.widgets, [
-            { id: 'w1', type: 'clock', x: 0, y: 0, w: 4, h: 2 },
-        ]);
+        assert.deepEqual(panel.widgets, []);
         assert.ok(!('tokenHash' in panel));
         assert.ok(!('token' in panel));
         assert.ok(!('deviceTokens' in panel));
@@ -47,7 +45,6 @@ describe('panelStore', () => {
         assert.throws(() => store.createPanel({ name: '  ' }), /name_required/);
         assert.throws(() => store.createPanel({ name: 'X', widgets: [{ type: 'stats', x: 0, y: 0, w: 1, h: 1 }] }), /invalid_type/);
         assert.throws(() => store.createPanel({ name: 'X', widgets: 'clock' }), /invalid_widgets/);
-        assert.throws(() => store.createPanel({ name: 'X', automationIds: '1' }), /invalid_automation_ids/);
         assert.throws(() => store.createPanel({ name: 'X', id: 'BAD ID!' }), /invalid_id/);
         assert.equal(store.listPanels().length, 0);
     });
@@ -55,7 +52,6 @@ describe('panelStore', () => {
     it('accepts positioned grid widgets', () => {
         const { panel } = store.createPanel({
             name: 'Kitchen',
-            automationIds: ['9'],
             widgets: [
                 { type: 'clock', x: 0, y: 0, w: 4, h: 2 },
                 { type: 'markdown', x: 4, y: 0, w: 4, h: 2, variable: ' briefing ' },
@@ -105,11 +101,13 @@ describe('panelStore', () => {
         delete require.cache[require.resolve('../server/manager/panelStore')];
         const reloaded = require('../server/manager/panelStore');
         const found = reloaded.getPanelPublic('old');
-        assert.deepEqual(found.widgets.map((w) => w.type), ['clock', 'button', 'button', 'markdown']);
+        // With allowlist removed, legacy 'automations' toggle expands to zero buttons (all automations are implicit now).
+        assert.deepEqual(found.widgets.map((w) => w.type), ['clock', 'markdown']);
         assert.deepEqual(
             found.widgets.filter((w) => w.type === 'button').map((w) => w.automationId),
-            ['3', '4']
+            []
         );
+        assert.deepEqual(found.automationIds, []);
         const mixed = reloaded.getPanelPublic('mixed');
         assert.deepEqual(mixed.widgets.map((w) => w.type), ['clock', 'clock', 'button']);
         reloaded.resetForTests();
@@ -137,7 +135,6 @@ describe('panelStore', () => {
             name: panel.name,
             room: panel.room,
             widgets: editingWidgets,
-            automationIds: [],
             deviceIds: ['13391fca-6e7a-e892-2202-e8254697f8ed'],
         });
         assert.deepEqual(updated.widgets.map((w) => w.type), ['html', 'clock']);
@@ -210,18 +207,18 @@ describe('panelStore', () => {
         assert.equal(second.panel.id, 'kitchen-2');
     });
 
-    it('updates allowlists and deletes panels', () => {
+    it('updates room/widgets and deletes panels', () => {
         const { panel } = store.createPanel({ name: 'Office' });
         const updated = store.updatePanel(panel.id, {
             room: 'Office',
             widgets: [{ type: 'clock', x: 0, y: 0, w: 4, h: 2 }],
-            automationIds: ['7', '8', '7'],
         });
         assert.equal(updated.room, 'Office');
         assert.deepEqual(updated.widgets, [
             { id: 'w1', type: 'clock', x: 0, y: 0, w: 4, h: 2 },
         ]);
-        assert.deepEqual(updated.automationIds, ['7', '8']);
+        // automationIds is deprecated; always []
+        assert.deepEqual(updated.automationIds, []);
         assert.throws(() => store.updatePanel(panel.id, { widgets: [{ type: 'nope', x: 0, y: 0, w: 1, h: 1 }] }), /invalid_type/);
         assert.equal(store.updatePanel('missing', { name: 'X' }), null);
 
@@ -231,11 +228,11 @@ describe('panelStore', () => {
     });
 
     it('persists panels across a simulated restart', () => {
-        const { panel } = store.createPanel({ name: 'Porch', automationIds: ['3'] });
+        const { panel } = store.createPanel({ name: 'Porch', widgets: [{ type: 'clock', x: 0, y: 0, w: 4, h: 2 }] });
         delete require.cache[require.resolve('../server/manager/panelStore')];
         const reloaded = require('../server/manager/panelStore');
         const found = reloaded.getPanelPublic(panel.id);
         assert.equal(found.name, 'Porch');
-        assert.deepEqual(found.automationIds, ['3']);
+        assert.deepEqual(found.automationIds, []);
     });
 });

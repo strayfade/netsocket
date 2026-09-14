@@ -97,8 +97,18 @@ const wrapNodeLifecycle = (Node) => {
     Node.prototype.onNodeCreated = function () {
         ensureNumberInputProperties(this)
         ensureBooleanInputProperties(this)
+        if (typeof window.ensureProviderModelProperties === 'function') {
+            try { window.ensureProviderModelProperties(this) } catch (_) {}
+        }
         if (previousOnNodeCreated) {
             previousOnNodeCreated.call(this)
+        }
+        // Async model list for provider default
+        if (this.properties && this.properties.Provider && typeof window.__netsocketFetchModels === 'function') {
+            window.__netsocketFetchModels(String(this.properties.Provider)).then(() => {
+                try { window.ensureProviderModelProperties(this) } catch (_) {}
+                if (this.setDirtyCanvas) this.setDirtyCanvas(true, true)
+            })
         }
     }
 
@@ -109,6 +119,9 @@ const wrapNodeLifecycle = (Node) => {
         }
         ensureNumberInputProperties(this)
         ensureBooleanInputProperties(this)
+        if (typeof window.ensureProviderModelProperties === 'function') {
+            try { window.ensureProviderModelProperties(this) } catch (_) {}
+        }
     }
 }
 

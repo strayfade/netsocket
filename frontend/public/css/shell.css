@@ -28,22 +28,6 @@ body.shell-page {
     -webkit-font-smoothing: antialiased;
 }
 
-.shell-bg {
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-}
-
-.shell-bg-grid {
-    position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-    background-size: 48px 48px;
-}
-
 .shell-topbar {
     position: sticky;
     top: 0;
@@ -340,6 +324,7 @@ body.shell-page {
 
 .shell-clock-value {
     margin: 0;
+    font-family: var(--shell-font);
     font-size: 2rem;
     font-weight: 650;
     letter-spacing: -0.03em;
@@ -489,10 +474,10 @@ select.admin-input {
 }
 
 .shell-prose {
-    margin-top: 8px;
     font-size: 0.9rem;
     line-height: 1.55;
     overflow-wrap: break-word;
+    padding: 0 20px;
 }
 
 .shell-prose h1,
@@ -546,7 +531,6 @@ select.admin-input {
 }
 
 .shell-widget-frame {
-    margin-top: 8px;
     width: 100%;
     height: 320px;
     border: 1px solid var(--shell-border);
@@ -554,8 +538,20 @@ select.admin-input {
     background: #ffffff;
 }
 
+.shell-card[data-widget-kind="html"] {
+    padding: 0;
+    overflow: hidden;
+}
+
+.shell-card[data-widget-kind="html"] .shell-widget-frame {
+    margin-top: 0;
+    border: none;
+    border-radius: 0;
+}
+
 /* ── Grid widgets (GridStack items) ─────────────────────────────────── */
 .grid-stack-item-content {
+    position: relative;
     overflow: hidden;
 }
 
@@ -575,7 +571,7 @@ select.admin-input {
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
-    margin-top: 8px;
+    padding: 0 20px;
 }
 
 .grid-stack-item-content .shell-widget-frame {
@@ -589,14 +585,18 @@ select.admin-input {
     height: 100%;
     min-height: 48px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: var(--shell-surface-raised);
+    gap: 6px;
+    background: #000;
     border: 1px solid var(--shell-border);
     border-radius: var(--shell-radius);
     color: var(--shell-text);
     font: inherit;
     cursor: pointer;
+    padding: 8px;
+    text-align: center;
 }
 
 .widget-run-btn:hover:not(:disabled) {
@@ -611,45 +611,302 @@ select.admin-input {
 
 .widget-run-btn .material-symbols-outlined {
     font-size: 28px;
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    color: #ffffff;
+}
+
+.widget-run-btn:hover:not(:disabled) .material-symbols-outlined {
+    color: #000000;
+}
+
+.widget-run-btn-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .widget-clock {
     overflow: hidden;
     justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.widget-clock .shell-clock-value,
+.widget-clock .shell-stat-sub,
+.widget-clock [data-clock-time],
+.widget-clock [data-clock-date] {
+    text-align: center;
+    width: 100%;
 }
 
 .widget-clock-compact .shell-clock-value {
+    font-family: var(--shell-font);
     font-size: 1.6rem;
 }
 
 .widget-clock-compact .shell-stat-sub {
+    font-family: var(--shell-font);
     font-size: 0.72rem;
 }
 
-.widget-drag-handle {
+.widget-clock-compact [data-clock-date] {
     display: none;
+}
+
+.widget-drag-handle,
+.widget-delete-btn {
+    display: none;
+}
+
+.widget-delete-btn {
+    appearance: none;
+    border: 1px solid var(--shell-border);
+    padding: 0;
+    font: inherit;
+}
+
+.widget-delete-btn .material-symbols-outlined {
+    font-size: 18px;
 }
 
 .grid-stack.editing .widget-drag-handle {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 auto;
-    min-height: 44px;
-    margin: -4px -4px 8px;
-    border-radius: 6px;
-    color: var(--shell-faint);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #000000;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
     cursor: grab;
     touch-action: none;
+    user-select: none;
 }
 
 .grid-stack.editing .widget-drag-handle:active {
     cursor: grabbing;
 }
 
+.grid-stack.editing .widget-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 3;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #000000;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+}
+
+.grid-stack.editing .widget-delete-btn:hover {
+    background: #ff3b30;
+    color: #ffffff;
+    border-color: #ff3b30;
+}
+
 .grid-stack.editing .grid-stack-item-content {
     outline: 1px dashed var(--shell-border);
     outline-offset: -1px;
+}
+
+.grid-stack.editing .grid-stack-item-content .shell-card,
+.grid-stack.editing .grid-stack-item-content .widget-run-btn {
+    opacity: 0.42;
+    filter: grayscale(0.55);
+}
+
+.grid-stack.editing {
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: var(--gs-column-width, calc(100% / 12)) var(--gs-cell-height, 80px);
+    background-position: 0 0;
+    border: 1px dashed rgba(255, 255, 255, 0.14);
+    border-radius: var(--shell-radius);
+    min-height: 160px;
+}
+
+/* ── Dashboard toolbar & Add widget dialog ──────────────────────────── */
+.dashboard-toolbar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 0 0 16px;
+}
+
+dialog#add-widget-dialog,
+dialog#panel-add-widget-dialog,
+dialog#panel-edit-dialog {
+    border: 1px solid var(--shell-border);
+    background: var(--shell-bg);
+    border-radius: var(--shell-radius);
+    color: var(--shell-text);
+    padding: 20px;
+    max-width: min(480px, 92vw);
+    width: 100%;
+    max-height: min(90vh, 720px);
+    overflow: auto;
+    margin: auto;
+}
+
+dialog#panel-edit-dialog {
+    max-width: min(960px, 96vw);
+    max-height: min(90vh, 820px);
+}
+
+dialog#add-widget-dialog::backdrop,
+dialog#panel-add-widget-dialog::backdrop,
+dialog#panel-edit-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+dialog#add-widget-dialog[open],
+dialog#panel-add-widget-dialog[open],
+dialog#panel-edit-dialog[open] {
+    display: block;
+}
+
+#panel-edit-grid {
+    min-height: 160px;
+}
+
+#panel-edit-grid-empty {
+    margin-top: 8px;
+}
+
+.dialog-close-btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--shell-muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: var(--shell-radius);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    min-width: 32px;
+}
+
+.dialog-close-btn:hover {
+    color: var(--shell-text);
+    background: var(--shell-surface-raised);
+}
+
+.dialog-close-btn .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.widget-carousel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.carousel-viewport {
+    flex: 1;
+    overflow: hidden;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.carousel-track {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 4px 0;
+    width: 100%;
+}
+
+.carousel-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.carousel-slide {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: default;
+    min-height: 0;
+    color: var(--shell-text);
+    font: inherit;
+    width: 100%;
+    max-width: 100%;
+}
+
+.carousel-slide .carousel-preview {
+    margin: 0 auto;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.carousel-slide .carousel-preview .shell-card,
+.carousel-slide .carousel-preview .widget-run-btn {
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+.carousel-nav {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 999px;
+    flex: 0 0 40px;
+    min-height: 40px;
+}
+
+.carousel-nav[hidden] {
+    display: none !important;
+}
+
+.carousel-size-label {
+    font-variant-numeric: tabular-nums;
+    min-width: 3ch;
+    text-align: center;
 }
 
 @media (max-width: 640px) {

@@ -7,6 +7,8 @@ class NodeDefinition {
         this.addInput("", LiteGraph.EVENT);
         this.addInput("Prompt", "string");
         this.addInput("System Prompt", "string");
+        this.addInput("Provider", "string");
+        this.addProperty("Provider", "");
         this.addInput("Model", "string");
         this.addProperty("Model", "");
         this.addOutput("", LiteGraph.EVENT);
@@ -21,7 +23,8 @@ NodeDefinition.prototype.portMeta = {
 		"": {"description":"Execution trigger for graph flows; not supplied in standalone MCP calls.","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
 		Prompt: {"description":"Main prompt sent to the model.","structure":"Natural-language prompt text.","required":true},
 		"System Prompt": {"description":"System instructions for the model.","structure":"System/instruction prompt text.","required":true},
-		Model: {"description":"Language model name or ID. Leave empty to use the Ollama default model setting.","structure":"Model identifier string (provider-specific).","required":false},
+		Provider: {"description":"AI provider ID. Leave empty to use the default provider.","structure":"Provider identifier string; use AI Providers settings to manage providers.","required":false},
+		Model: {"description":"Language model name or ID. Leave empty to use the default model for the selected provider.","structure":"Model identifier string (provider-specific).","required":false},
 	},
 	outputs: {
 		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
@@ -33,8 +36,9 @@ NodeDefinition.prototype.icon = "network_intelligence"
 const NodeFunction = async (node, params, behaviors) => {
     params["Prompt"] = string(params["Prompt"])
     params["System Prompt"] = string(params["System Prompt"])
+    params["Provider"] = string(params["Provider"])
     params["Model"] = string(params["Model"])
-    let output = await askAI(params["Prompt"], params["System Prompt"], params["Model"])
+    let output = await askAI(params["Prompt"], params["System Prompt"], params["Model"], params["Provider"])
     await behaviors.populateNextNodeLinks([null, output]);
     await behaviors.triggerNodeGroup(behaviors.getOutputNodeGroups()[0]);
     return true

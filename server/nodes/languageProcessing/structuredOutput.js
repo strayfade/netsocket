@@ -10,6 +10,8 @@ class NodeDefinition {
         this.addProperty("Schema", "{\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\"}},\"required\":[\"answer\"]}");
         this.addInput("System Prompt", "string");
         this.addProperty("System Prompt", "");
+        this.addInput("Provider", "string");
+        this.addProperty("Provider", "");
         this.addInput("Model", "string");
         this.addProperty("Model", "");
         this.addOutput("", LiteGraph.EVENT);
@@ -25,7 +27,8 @@ NodeDefinition.prototype.portMeta = {
 		Prompt: {"description":"Main prompt sent to the model.","structure":"Natural-language prompt text.","required":true},
 		Schema: {"description":"Schema used for validation or structured output.","structure":"JSON Schema document as a string.","required":false},
 		"System Prompt": {"description":"System instructions for the model.","structure":"System/instruction prompt text.","required":true},
-		Model: {"description":"Language model name or ID. Leave empty to use the Ollama default model setting.","structure":"Model identifier string (provider-specific).","required":false},
+		Provider: {"description":"AI provider ID. Leave empty to use the default provider.","structure":"Provider identifier string; use AI Providers settings to manage providers.","required":false},
+		Model: {"description":"Language model name or ID. Leave empty to use the default model for the selected provider.","structure":"Model identifier string (provider-specific).","required":false},
 	},
 	outputs: {
 		"": {"description":"Event fired when the node completes (graph flows only).","structure":"Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.","mcpOmit":true},
@@ -41,7 +44,8 @@ const NodeFunction = async (node, params, behaviors) => {
         string(params.Prompt),
         string(params.Schema),
         string(params["System Prompt"]),
-        string(params.Model)
+        string(params.Model),
+        string(params.Provider)
     )
 
     const objectText = result.object != null ? JSON.stringify(result.object) : ""

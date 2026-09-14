@@ -27,10 +27,6 @@
 </head>
 
 <body class="shell-page">
-    <div class="shell-bg" aria-hidden="true">
-        <div class="shell-bg-grid"></div>
-    </div>
-
     <main class="kiosk-wrap">
         <div id="panel-loading" class="shell-card">
             <p class="shell-stat-sub shell-skeleton" style="margin: 0;">Loading panel</p>
@@ -73,13 +69,16 @@
 
             function tickClock() {
                 var now = new Date();
-                var hh = String(now.getHours()).padStart(2, '0');
+                var h = now.getHours();
+                h = h % 12;
+                if (h === 0) h = 12;
                 var mm = String(now.getMinutes()).padStart(2, '0');
+                var time = h + ':' + mm;
                 var date = now.toLocaleDateString(undefined, {
-                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                    year: 'numeric', month: 'long', day: 'numeric'
                 });
                 Array.prototype.forEach.call(document.querySelectorAll('[data-clock-time]'), function (el) {
-                    el.textContent = hh + ':' + mm;
+                    el.textContent = time;
                     el.classList.remove('shell-skeleton');
                 });
                 Array.prototype.forEach.call(document.querySelectorAll('[data-clock-date]'), function (el) {
@@ -201,7 +200,7 @@
                         body: JSON.stringify({ nodeId: item.id }),
                     });
                     if (res.ok) {
-                        ShellLogic.showToast('Started ' + (item.title || item.type));
+                        // Silent success — no toast
                     } else if (res.status === 401) {
                         show('panel-login-required');
                     } else if (res.status === 403) {

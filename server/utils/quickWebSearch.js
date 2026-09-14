@@ -2,7 +2,9 @@
 
 const { generateText, stepCountIs, tool, jsonSchema } = require('ai')
 const { log, logColors } = require('../log')
-const { resolveDefaultModel, getOllamaProvider, sanitizeAiOutput } = require('./languageModel')
+const { sanitizeAiOutput } = require('./languageModel')
+const providerManager = require('../manager/providerManager')
+const { getChatModel } = require('./providers')
 const {
     webSearch,
     readWebPage,
@@ -107,7 +109,9 @@ async function quickWebSearch(query, options = {}) {
         return { response: '', error: 'Query is empty' }
     }
 
-    const modelName = resolveDefaultModel(options.model)
+    const resolved = providerManager.resolveProviderAndModel(options.providerId || options.provider, options.model)
+    const provider = resolved.provider
+    const modelName = resolved.modelId
     const silent = options.silent === true
     const maxResults = Number(options.maxResults) > 0
         ? Math.min(Number(options.maxResults), 5)
@@ -117,10 +121,16 @@ async function quickWebSearch(query, options = {}) {
         : DEFAULT_MAX_STEPS
 
     try {
-        const ollama = getOllamaProvider()
-        if (!ollama) {
-            return { response: '', error: 'Ollama is not configured' }
+        const hasStub = typeof options.generateTextFn === 'function'
+        if (!provider && !hasStub) {
+            return { response: '', error: 'No AI provider configured' }
         }
+        let chatModel = null
+        if (provider) {
+            try { chatModel = getChatModel(provider, modelName) } catch (e) { if (!hasStub) return { response: '', error: e.message } }
+        }
+        // If stub present and no real model, provide a dummy placeholder for logging
+        if (!chatModel && hasStub) chatModel = { __stub: true, modelId: modelName }
 
         if (!silent) {
             searchLog(`Starting quick search with model "${modelName}"`)
@@ -168,14 +178,15 @@ async function quickWebSearch(query, options = {}) {
 
         if (options.generateTextFn) {
             const result = await options.generateTextFn({
-                model: ollama(modelName),
+                model: chatModel || modelName,
                 system: systemPrompt,
                 prompt,
             })
             text = result.text
         } else {
+            if (!chatModel) return { response: '', error: 'No AI provider configured' }
             const result = await generateText({
-                model: ollama(modelName),
+                model: chatModel,
                 system: systemPrompt,
                 prompt,
                 tools,

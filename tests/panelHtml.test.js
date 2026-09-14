@@ -59,16 +59,26 @@ describe('panel pages', () => {
             'panels-list',
             'panels-empty',
             'panel-edit-dialog',
-            'edit-panel-widgetlist',
-            'edit-widget-type',
-            'edit-widget-preset',
-            'edit-widget-variable',
-            'edit-widget-automation',
-            'edit-widget-add',
+            'panel-edit-grid',
+            'panel-edit-grid-empty',
+            'panel-layout-edit-toggle',
+            'panel-add-widget-open',
+            'panel-add-widget-dialog',
+            'panel-dialog-kind',
+            'panel-dialog-preset-track',
+            'panel-dialog-size-label',
+            'panel-dialog-variable',
+            'panel-dialog-automation',
+            'panel-dialog-add',
+            'edit-panel-name',
+            'edit-panel-room',
             'edit-panel-devices',
         ]) {
             assert.match(html, new RegExp(`id="${id}"`));
         }
+        assert.doesNotMatch(html, /id="edit-panel-widgetlist"/);
+        assert.doesNotMatch(html, /id="edit-widget-type"/);
+        assert.doesNotMatch(html, /id="edit-panel-automations"/);
         assert.doesNotMatch(html, /edit-panel-widgets/);
         assert.doesNotMatch(html, /edit-panel-bindings/);
         assert.doesNotMatch(html, /panel-token-card/);
@@ -79,5 +89,10 @@ describe('panel pages', () => {
         assert.match(html, /deviceIds/);
         assert.match(html, /\/v1\/panels/);
         assert.match(html, /ensureSession/);
+        assert.match(html, /<script src="\/js\/widgetEditor\.js"><\/script>/);
+        assert.match(html, /<script src="\/js\/widgets\.js"><\/script>/);
+        assert.match(html, /<link rel="stylesheet" href="\/vendor\/gridstack\.min\.css">/);
+        assert.match(html, /WidgetEditor\.attach/);
+        assert.match(html, /panel-edit-grid/);
     });
 });

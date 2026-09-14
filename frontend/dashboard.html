@@ -27,10 +27,6 @@
 </head>
 
 <body class="shell-page">
-    <div class="shell-bg" aria-hidden="true">
-        <div class="shell-bg-grid"></div>
-    </div>
-
     <header class="shell-topbar">
         <a class="shell-brand" href="/dashboard" aria-label="netsocket home">
             <img src="/favicon.png" alt="">
@@ -58,7 +54,6 @@
 
     <main class="shell-main">
         <h1 class="shell-page-title">Dashboard</h1>
-        <p class="shell-page-subtitle">Home overview. Build automations in <a href="/automate" style="color: inherit;">Automate</a>.</p>
 
         <div class="grid-stack" id="dashboard-widgets">
             <div class="grid-stack-item" gs-x="0" gs-y="0" gs-w="4" gs-h="2">
@@ -70,50 +65,67 @@
             </div>
         </div>
 
-        <div class="shell-grid" style="margin-top: 12px;">
-            <section class="shell-card shell-card-span-12" aria-label="Widget layout">
-                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                    <h2 class="shell-card-title" style="margin: 0;">Widgets</h2>
-                    <span style="flex: 1;"></span>
-                    <button class="shell-btn shell-btn-secondary" id="layout-edit-toggle" type="button">Edit layout</button>
-                </div>
-                <p class="shell-stat-sub" style="margin: 4px 0 12px;">Markdown and HTML widgets render a netsocket Variable. Set it from automations with the Variables/Set Variable node; values update live. In edit mode, drag widgets by their handle.</p>
-                <ul class="shell-list" id="layout-list"></ul>
-                <div class="admin-form-grid" style="margin-top: 12px;">
-                    <div class="admin-field">
-                        <label for="layout-kind">Type</label>
-                        <select class="admin-input" id="layout-kind">
-                            <option value="button">Run button (1x1)</option>
-                            <option value="clock">Clock (4x2 or 2x1)</option>
-                            <option value="markdown">Markdown</option>
-                            <option value="html">HTML (sandboxed)</option>
-                        </select>
-                    </div>
-                    <div class="admin-field">
-                        <label for="layout-preset">Size</label>
-                        <select class="admin-input" id="layout-preset"></select>
-                    </div>
-                    <div class="admin-field">
-                        <label for="layout-variable">Variable (markdown/HTML only)</label>
-                        <input class="admin-input shell-mono" id="layout-variable" type="text" autocomplete="off"
-                            spellcheck="false" placeholder="morning_briefing" maxlength="128">
-                    </div>
-                    <div class="admin-field">
-                        <label for="layout-automation">Automation (button only)</label>
-                        <select class="admin-input shell-mono" id="layout-automation"></select>
-                    </div>
-                    <div class="full">
-                        <button class="shell-btn" id="layout-add" type="button">Add widget</button>
-                    </div>
-                </div>
-            </section>
+        <div class="dashboard-toolbar">
+            <button class="shell-btn shell-btn-secondary" id="layout-edit-toggle" type="button">Edit layout</button>
+            <button class="shell-btn" id="add-widget-open" type="button"><span class="material-symbols-outlined" aria-hidden="true">add</span> Add widget</button>
         </div>
+
+        <dialog id="add-widget-dialog" class="shell-card" aria-label="Add widget" aria-labelledby="add-widget-title">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px;">
+                <h2 id="add-widget-title" class="shell-card-title" style="margin: 0;">Add widget</h2>
+                <button class="dialog-close-btn" id="dialog-cancel-top" type="button" aria-label="Close"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="admin-field">
+                    <select class="admin-input" id="dialog-kind" aria-label="Widget type">
+                        <option value="button">Run Button</option>
+                        <option value="clock">Clock</option>
+                        <option value="markdown">Markdown</option>
+                        <option value="html">HTML</option>
+                    </select>
+                </div>
+                <div class="admin-field" id="dialog-carousel-field">
+                    <div class="widget-carousel">
+                        <div class="carousel-viewport">
+                            <div class="carousel-track" id="dialog-preset-track" role="listbox" aria-label="Size variants"></div>
+                        </div>
+                    </div>
+                    <div class="carousel-controls">
+                        <button class="shell-btn shell-btn-secondary carousel-nav prev" id="carousel-prev" type="button" aria-label="Previous size"><span class="material-symbols-outlined" aria-hidden="true">chevron_left</span></button>
+                        <span class="shell-stat-sub shell-mono carousel-size-label" id="dialog-size-label">4×2</span>
+                        <button class="shell-btn shell-btn-secondary carousel-nav next" id="carousel-next" type="button" aria-label="Next size"><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
+                    </div>
+                </div>
+                <div id="dialog-fields" style="display: flex; flex-direction: column; gap: 12px;">
+                    <div class="admin-field" id="dialog-variable-field" hidden>
+                        <label for="dialog-variable">Variable name</label>
+                        <input class="admin-input shell-mono" id="dialog-variable" type="text" autocomplete="off" spellcheck="false" placeholder="morning_briefing" maxlength="128">
+                    </div>
+                    <div class="admin-field" id="dialog-automation-field" hidden>
+                        <label for="dialog-automation">Automation</label>
+                        <select class="admin-input shell-mono" id="dialog-automation"></select>
+                        <p class="shell-stat-sub" style="margin-top:6px">An automation is a <span class="shell-mono">Triggers/Button</span> node in <a href="/automate" style="color:inherit;text-decoration:underline">Automate</a>. Set its <span class="shell-mono">Name</span> property to label it here.</p>
+                    </div>
+                    <div class="admin-field" id="dialog-show-name-field" hidden>
+                        <label class="admin-check" for="dialog-show-name" style="margin:0">
+                            <input type="checkbox" id="dialog-show-name">
+                            Show name
+                        </label>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button class="shell-btn shell-btn-secondary" id="dialog-cancel" type="button">Cancel</button>
+                    <button class="shell-btn" id="dialog-add" type="button">Add widget</button>
+                </div>
+            </div>
+        </dialog>
     </main>
 
     <script src="/js/agentMarkdown.js"></script>
     <script src="/js/shell.js"></script>
     <script src="/vendor/gridstack-all.js"></script>
     <script src="/js/widgets.js"></script>
+    <script src="/js/widgetEditor.js"></script>
     <script>
         (function () {
             ShellLogic.markActiveTab(document);
@@ -121,233 +133,12 @@
             var liveVariables = {};
             var liveCounts = {};
             var liveAutomations = [];
-
-            function tickClock() {
-                var now = new Date();
-                var hh = String(now.getHours()).padStart(2, '0');
-                var mm = String(now.getMinutes()).padStart(2, '0');
-                var date = now.toLocaleDateString(undefined, {
-                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                });
-                Array.prototype.forEach.call(document.querySelectorAll('[data-clock-time]'), function (el) {
-                    el.textContent = hh + ':' + mm;
-                    el.classList.remove('shell-skeleton');
-                });
-                Array.prototype.forEach.call(document.querySelectorAll('[data-clock-date]'), function (el) {
-                    el.textContent = date;
-                });
-            }
-            tickClock();
-            setInterval(tickClock, 15000);
-
-            function el(tag, className, text) {
-                var node = document.createElement(tag);
-                if (className) node.className = className;
-                if (text != null) node.textContent = text;
-                return node;
-            }
-
-            // Fixed size presets per widget type (mirror of server/manager/widgetSchema.js).
-            var WIDGET_PRESETS = {
-                button: [{ w: 1, h: 1 }],
-                clock: [{ w: 4, h: 2 }, { w: 2, h: 1 }],
-                markdown: [{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }],
-                html: [{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }],
-            };
-
-            var grid = null;
-            var lastLayoutKey = null;
-            var editingLayout = false;
             var currentWidgets = [];
+            var lastLayoutKey = null;
+            var lastSummary = null;
 
-            function setEditing(on) {
-                editingLayout = !!on;
-                var container = document.getElementById('dashboard-widgets');
-                var toggle = document.getElementById('layout-edit-toggle');
-                if (toggle) toggle.textContent = editingLayout ? 'Done' : 'Edit layout';
-                if (container) container.classList.toggle('editing', editingLayout);
-                if (grid && typeof grid.setStatic === 'function') {
-                    try { grid.setStatic(!editingLayout); } catch (_) { /* ignore */ }
-                }
-                if (!editingLayout && grid) saveGridPositions();
-            }
-
-            // Persist drag positions, keeping each widget's type and bindings.
-            function saveGridPositions() {
-                if (!grid || typeof grid.save !== 'function') return;
-                var saved = [];
-                try {
-                    saved = grid.save(false) || [];
-                } catch (_) {
-                    return;
-                }
-                var byId = {};
-                currentWidgets.forEach(function (w) { byId[w.id] = w; });
-                var next = [];
-                saved.forEach(function (node) {
-                    var prior = byId[node.id];
-                    if (!prior) return;
-                    next.push({
-                        id: prior.id,
-                        type: prior.type,
-                        x: node.x || 0,
-                        y: node.y || 0,
-                        w: node.w || prior.w,
-                        h: node.h || prior.h,
-                        automationId: prior.automationId,
-                        variable: prior.variable,
-                    });
-                });
-                // Preserve widgets GridStack did not report (should not happen).
-                currentWidgets.forEach(function (w) {
-                    if (!next.some(function (n) { return n.id === w.id; })) next.push(w);
-                });
-                saveLayout(next);
-            }
-
-            function widgetCtx() {
-                return {
-                    automations: liveAutomations,
-                    variables: liveVariables,
-                    onRun: runAutomation,
-                    renderMarkdown: window.renderAgentMarkdown
-                        ? window.renderAgentMarkdown.bind(window)
-                        : null,
-                };
-            }
-
-            function rebuildGrid(widgets) {
-                var container = document.getElementById('dashboard-widgets');
-                if (grid) {
-                    try { grid.destroy(false); } catch (_) { /* ignore */ }
-                    grid = null;
-                }
-                container.innerHTML = '';
-                widgets.forEach(function (widget) {
-                    var item = Widgets.createItem(widget, widgetCtx());
-                    if (item) container.appendChild(item);
-                });
-                tickClock();
-                if (window.GridStack) {
-                    grid = window.GridStack.init({
-                        column: 12,
-                        cellHeight: 80,
-                        margin: 12,
-                        staticGrid: !editingLayout,
-                        animate: false,
-                        float: false,
-                        draggable: { handle: '.widget-drag-handle' },
-                        disableResize: true,
-                        columnOpts: { breakpoints: [{ w: 640, c: 4 }] },
-                    }, container);
-                    if (editingLayout) container.classList.add('editing');
-                }
-            }
-
-            document.getElementById('layout-edit-toggle').addEventListener('click', function () {
-                setEditing(!editingLayout);
-            });
-
-            function renderWidgets(data) {
-                liveVariables = data.variables || {};
-                liveCounts = data.counts || {};
-                liveAutomations = Array.isArray(data.automations) ? data.automations : [];
-                var widgets = (data.layout && Array.isArray(data.layout.widgets)) ? data.layout.widgets : [];
-                if (!widgets.length) {
-                    widgets = [{ id: 'w1', type: 'clock', x: 0, y: 0, w: 4, h: 2 }];
-                }
-                currentWidgets = widgets;
-                var key = JSON.stringify(widgets);
-                if (key !== lastLayoutKey) {
-                    lastLayoutKey = key;
-                    rebuildGrid(widgets);
-                } else {
-                    Object.keys(liveVariables).forEach(function (name) {
-                        refreshVarContent(name, liveVariables[name]);
-                    });
-                }
-                fillAutomationPicker();
-                renderLayoutList(widgets);
-                maybeMigrationToast(data.layout);
-            }
-
-            function maybeMigrationToast(layout) {
-                var dropped = (layout && layout.droppedLegacy) || {};
-                var kinds = Object.keys(dropped).filter(function (k) { return dropped[k] > 0; });
-                if (!kinds.length) return;
-                try {
-                    if (window.localStorage.getItem('netsocket.layoutToast.v2')) return;
-                    window.localStorage.setItem('netsocket.layoutToast.v2', '1');
-                } catch (_) {
-                    return;
-                }
-                var parts = kinds.map(function (k) { return dropped[k] + ' ' + k; });
-                ShellLogic.showToast(
-                    'Widget system upgraded; removed ' + parts.join(', ')
-                    + ' legacy widget(s). Re-add them from the editor below.'
-                );
-            }
-
-            function describeWidget(widget) {
-                var text = widget.type + ' ' + widget.w + 'x' + widget.h;
-                if (widget.variable) text += ': ' + widget.variable;
-                if (widget.automationId) text += ' #' + widget.automationId;
-                return text;
-            }
-
-            function renderLayoutList(widgets) {
-                var list = document.getElementById('layout-list');
-                list.innerHTML = '';
-                widgets.forEach(function (widget, index) {
-                    var li = el('li', 'shell-list-item');
-                    var main = el('div', 'shell-list-item-main');
-                    main.appendChild(el('p', 'shell-list-item-title', describeWidget(widget)));
-                    li.appendChild(main);
-                    var btn = el('button', 'shell-btn shell-btn-secondary', 'Remove');
-                    btn.type = 'button';
-                    btn.setAttribute('aria-label', 'Remove widget ' + (index + 1));
-                    btn.addEventListener('click', function () {
-                        var next = widgets.filter(function (_, i) { return i !== index; });
-                        saveLayout(next);
-                    });
-                    li.appendChild(btn);
-                    list.appendChild(li);
-                });
-                if (!widgets.length) {
-                    list.appendChild(el('li', 'shell-list-item', 'No widgets. Add one below.'));
-                }
-            }
-
-            function fillPresetOptions() {
-                var type = document.getElementById('layout-kind').value;
-                var presetEl = document.getElementById('layout-preset');
-                var presets = WIDGET_PRESETS[type] || WIDGET_PRESETS.markdown;
-                presetEl.innerHTML = '';
-                presets.forEach(function (preset, index) {
-                    var option = document.createElement('option');
-                    option.value = String(index);
-                    option.textContent = preset.w + 'x' + preset.h;
-                    presetEl.appendChild(option);
-                });
-            }
-
-            function fillAutomationPicker() {
-                var picker = document.getElementById('layout-automation');
-                var current = picker.value;
-                picker.innerHTML = '';
-                var empty = document.createElement('option');
-                empty.value = '';
-                empty.textContent = liveAutomations.length ? 'Select automation' : 'No automations yet';
-                picker.appendChild(empty);
-                liveAutomations.forEach(function (item) {
-                    var option = document.createElement('option');
-                    option.value = String(item.id);
-                    option.textContent = (item.title || item.type)
-                        + (item.runnable ? '' : ' (not runnable)');
-                    picker.appendChild(option);
-                });
-                picker.value = current;
-            }
+            WidgetEditor.tickClock();
+            setInterval(WidgetEditor.tickClock, 15000);
 
             async function saveLayout(widgets) {
                 try {
@@ -369,44 +160,23 @@
                 }
             }
 
-            document.getElementById('layout-kind').addEventListener('change', fillPresetOptions);
-            fillPresetOptions();
-
-            document.getElementById('layout-add').addEventListener('click', async function () {
+            async function runAutomation(item, btn) {
                 try {
-                    var res = await fetch('/v1/dashboard/layout', { credentials: 'same-origin' });
+                    var res = await fetch('/v1/dashboard/run', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nodeId: item.id }),
+                    });
                     if (!res.ok) {
-                        ShellLogic.showToast('Could not load layout (' + res.status + ')');
-                        return;
+                        ShellLogic.showToast('Run failed (' + res.status + ')');
                     }
-                    var current = await res.json();
-                    var widgets = Array.isArray(current.widgets) ? current.widgets : [];
-                    var type = document.getElementById('layout-kind').value;
-                    var presets = WIDGET_PRESETS[type] || WIDGET_PRESETS.markdown;
-                    var presetEl = document.getElementById('layout-preset');
-                    var preset = presets[presetEl.selectedIndex] || presets[0];
-                    var widget = { type: type, x: 0, y: 0, w: preset.w, h: preset.h };
-                    if (type === 'markdown' || type === 'html') {
-                        widget.variable = document.getElementById('layout-variable').value.trim();
-                        if (!widget.variable) {
-                            ShellLogic.showToast('Enter a variable name');
-                            return;
-                        }
-                    }
-                    if (type === 'button') {
-                        widget.automationId = document.getElementById('layout-automation').value;
-                        if (!widget.automationId) {
-                            ShellLogic.showToast('Select an automation');
-                            return;
-                        }
-                    }
-                    widgets.push(widget);
-                    document.getElementById('layout-variable').value = '';
-                    saveLayout(widgets);
                 } catch (e) {
-                    ShellLogic.showToast('Could not update layout');
+                    ShellLogic.showToast('Run failed: network error');
+                } finally {
+                    if (btn) btn.disabled = false;
                 }
-            });
+            }
 
             function refreshVarContent(name, value, variables) {
                 variables = variables || liveVariables;
@@ -419,24 +189,77 @@
                 });
             }
 
-            async function runAutomation(item, btn) {
+            function maybeMigrationToast(layout) {
+                var dropped = (layout && layout.droppedLegacy) || {};
+                var kinds = Object.keys(dropped).filter(function (k) { return dropped[k] > 0; });
+                if (!kinds.length) return;
                 try {
-                    var res = await fetch('/v1/dashboard/run', {
-                        method: 'POST',
-                        credentials: 'same-origin',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ nodeId: item.id }),
-                    });
-                    if (res.ok) {
-                        ShellLogic.showToast('Started ' + (item.title || item.type));
-                    } else {
-                        ShellLogic.showToast('Run failed (' + res.status + ')');
-                    }
-                } catch (e) {
-                    ShellLogic.showToast('Run failed: network error');
-                } finally {
-                    btn.disabled = false;
+                    if (window.localStorage.getItem('netsocket.layoutToast.v2')) return;
+                    window.localStorage.setItem('netsocket.layoutToast.v2', '1');
+                } catch (_) {
+                    return;
                 }
+                var parts = kinds.map(function (k) { return dropped[k] + ' ' + k; });
+                ShellLogic.showToast(
+                    'Widget system upgraded; removed ' + parts.join(', ')
+                    + ' legacy widget(s). Re-add them from the editor below.'
+                );
+            }
+
+            var editor = WidgetEditor.attach({
+                gridId: 'dashboard-widgets',
+                editToggleId: 'layout-edit-toggle',
+                addOpenId: 'add-widget-open',
+                dialogId: 'add-widget-dialog',
+                kindId: 'dialog-kind',
+                trackId: 'dialog-preset-track',
+                sizeLabelId: 'dialog-size-label',
+                prevId: 'carousel-prev',
+                nextId: 'carousel-next',
+                variableId: 'dialog-variable',
+                variableFieldId: 'dialog-variable-field',
+                automationId: 'dialog-automation',
+                automationFieldId: 'dialog-automation-field',
+                showNameId: 'dialog-show-name',
+                showNameFieldId: 'dialog-show-name-field',
+                cancelId: 'dialog-cancel',
+                cancelTopId: 'dialog-cancel-top',
+                addBtnId: 'dialog-add',
+                getWidgets: function () { return currentWidgets; },
+                setWidgets: function (next) { currentWidgets = next; },
+                getLiveContext: function () { return { variables: liveVariables, automations: liveAutomations, onRun: runAutomation }; },
+                onSave: function (next) { saveLayout(next); },
+                fetchAutomations: async function () {
+                    try {
+                        var res = await fetch('/v1/dashboard/summary', { credentials: 'same-origin' });
+                        if (!res.ok) return;
+                        var data = await res.json();
+                        liveAutomations = Array.isArray(data.automations) ? data.automations : liveAutomations;
+                        liveVariables = data.variables || liveVariables;
+                    } catch (_) { /* ignore */ }
+                }
+            });
+
+            function renderWidgets(data) {
+                liveVariables = data.variables || {};
+                liveCounts = data.counts || {};
+                liveAutomations = Array.isArray(data.automations) ? data.automations : [];
+                var widgets = (data.layout && Array.isArray(data.layout.widgets)) ? data.layout.widgets : [];
+                if (!widgets.length) {
+                    widgets = [{ id: 'w1', type: 'clock', x: 0, y: 0, w: 4, h: 2 }];
+                }
+                currentWidgets = widgets;
+                var key = JSON.stringify(widgets);
+                if (key !== lastLayoutKey) {
+                    lastLayoutKey = key;
+                    editor.rebuild();
+                } else {
+                    Object.keys(liveVariables).forEach(function (name) {
+                        refreshVarContent(name, liveVariables[name]);
+                    });
+                }
+                editor.fillAutomationPicker();
+                maybeMigrationToast(data.layout);
             }
 
             var dashboardSocket = null;

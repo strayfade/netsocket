@@ -2,13 +2,15 @@
 
 const { generateObject, jsonSchema } = require('ai')
 const { log, logColors } = require('../log')
-const { resolveDefaultModel, getOllamaProvider } = require('./languageModel')
+const { resolveDefaultModel } = require('./languageModel')
+const providerManager = require('../manager/providerManager')
+const { getChatModel } = require('./providers')
 
 const defaultSystemPrompt = `You are a structured data extraction assistant.
 Return data that exactly matches the requested JSON schema.
 Do not include explanations or markdown.`
 
-const askAIStructured = async (prompt, schemaInput, systemPrompt, model) => {
+const askAIStructured = async (prompt, schemaInput, systemPrompt, model, providerId) => {
     let schemaObject
     try {
         schemaObject = typeof schemaInput === 'string'
@@ -23,14 +25,18 @@ const askAIStructured = async (prompt, schemaInput, systemPrompt, model) => {
         return { ok: false, object: null, error: 'Schema must be a JSON object' }
     }
 
-    const provider = getOllamaProvider()
+    const resolved = providerManager.resolveProviderAndModel(providerId, model)
+    const provider = resolved.provider
+    const modelId = resolved.modelId || resolveDefaultModel(model)
     if (!provider) {
-        return { ok: false, object: null, error: 'Ollama provider is not available' }
+        return { ok: false, object: null, error: 'No AI provider configured' }
     }
+    let chatModel
+    try { chatModel = getChatModel(provider, modelId) } catch (e) { return { ok: false, object: null, error: e.message } }
 
     try {
         const { object } = await generateObject({
-            model: provider(resolveDefaultModel(model)),
+            model: chatModel,
             schema: jsonSchema(schemaObject),
             prompt: String(prompt || ''),
             system: String(systemPrompt || defaultSystemPrompt),

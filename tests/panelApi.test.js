@@ -111,7 +111,7 @@ describe('panelApi', () => {
     });
 
     it('serves config to sessions and rejects anonymous callers', () => {
-        store.createPanel({ name: 'Kitchen', automationIds: ['1'] });
+        store.createPanel({ name: 'Kitchen' });
 
         const ok = mockRes();
         panelApi.handleGetPanelConfig(
@@ -152,8 +152,8 @@ describe('panelApi', () => {
         assert.deepEqual(res.body.variables, { briefing: '# Morning' });
     });
 
-    it('executes only allowlisted runnable nodes', async () => {
-        const { panel } = store.createPanel({ name: 'Kitchen', automationIds: ['1', '2'] });
+    it('executes any runnable node; rejects non-runnable and validates input', async () => {
+        const { panel } = store.createPanel({ name: 'Kitchen' });
         assert.ok(panel);
         let executed = null;
         const deps = {
@@ -199,12 +199,12 @@ describe('panelApi', () => {
             math,
             deps
         );
-        assert.equal(math.statusCode, 403);
-        assert.equal(math.body.error, 'not_allowed');
+        assert.equal(math.statusCode, 400);
+        assert.equal(math.body.error, 'not_runnable');
     });
 
     it('rejects anonymous execute calls', async () => {
-        store.createPanel({ name: 'Kitchen', automationIds: ['1'] });
+        store.createPanel({ name: 'Kitchen' });
         const res = mockRes();
         await panelApi.handlePanelExecute(
             reqWith({ params: { panelId: 'kitchen' }, body: { nodeId: 1 } }),
@@ -219,8 +219,8 @@ describe('panelApi', () => {
         assert.equal(res.statusCode, 401);
     });
 
-    it('returns 404 when an allowlisted node no longer exists', async () => {
-        store.createPanel({ name: 'Kitchen', automationIds: ['999'] });
+    it('returns 404 when a runnable node no longer exists', async () => {
+        store.createPanel({ name: 'Kitchen' });
         const res = mockRes();
         await panelApi.handlePanelExecute(
             reqWith({ params: { panelId: 'kitchen' }, body: { nodeId: '999' } }),

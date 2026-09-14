@@ -63,9 +63,15 @@ const load = () => {
         delete panel.tokenHash
         delete panel.deviceTokens
         delete panel.revoked
+        // All automations are now allowed on every panel; drop legacy allowlist.
+        if (panel.automationIds !== undefined) {
+            if (Array.isArray(panel.automationIds) && panel.automationIds.length) migrated = true
+            panel.automationIds = []
+        } else {
+            panel.automationIds = []
+        }
         try {
-            const aids = Array.isArray(panel.automationIds) ? panel.automationIds : []
-            const next = normalizeWidgets(panel.widgets, aids)
+            const next = normalizeWidgets(panel.widgets, [])
             if (JSON.stringify(next) !== JSON.stringify(panel.widgets)) migrated = true
             panel.widgets = next
         } catch {
@@ -179,11 +185,11 @@ const isNewShape = (value) => Array.isArray(value)
  * Normalize a panel widget list to the grid schema. New-shape arrays are
  * validated as-is; legacy arrays are migrated (needs the panel's
  * automationIds to expand the automations toggle into buttons).
- * Null/undefined yields the default single clock.
+ * Null/undefined yields a blank panel (no widgets).
  */
 const normalizeWidgets = (value, automationIds = []) => {
     if (value == null) {
-        return [{ id: 'w1', type: 'clock', x: 0, y: 0, ...DEFAULT_CLOCK_SIZE }]
+        return []
     }
     if (!Array.isArray(value)) return null
     if (value.length && !isNewShape(value)) {
@@ -262,11 +268,10 @@ const uniqueIdFor = (base) => {
     return candidate
 }
 
-const createPanel = ({ id, name, room, widgets, automationIds, deviceIds } = {}) => {
+const createPanel = ({ id, name, room, widgets, deviceIds } = {}) => {
     const cleanName = normalizeName(name)
     if (!cleanName) throw new Error('name_required')
-    const cleanAutomationIds = normalizeAutomationIds(automationIds)
-    if (!cleanAutomationIds) throw new Error('invalid_automation_ids')
+    const cleanAutomationIds = []
     const cleanWidgets = normalizeWidgets(widgets, cleanAutomationIds)
     if (!cleanWidgets) throw new Error('invalid_widgets')
     const cleanDeviceIds = normalizeDeviceIds(deviceIds)
@@ -292,7 +297,7 @@ const createPanel = ({ id, name, room, widgets, automationIds, deviceIds } = {})
     return { panel: publicPanelView(panel) }
 }
 
-const updatePanel = (panelId, { name, room, widgets, automationIds, deviceIds } = {}) => {
+const updatePanel = (panelId, { name, room, widgets, deviceIds } = {}) => {
     const panel = getPanel(panelId)
     if (!panel) return null
     if (name !== undefined) {
@@ -304,13 +309,10 @@ const updatePanel = (panelId, { name, room, widgets, automationIds, deviceIds } 
         panel.room = room == null || room === '' ? '' : (normalizeName(room) || '')
         if (room != null && String(room).trim() !== '' && !panel.room) throw new Error('invalid_room')
     }
-    if (automationIds !== undefined) {
-        const cleanAutomationIds = normalizeAutomationIds(automationIds)
-        if (!cleanAutomationIds) throw new Error('invalid_automation_ids')
-        panel.automationIds = cleanAutomationIds
-    }
+    // automationIds is deprecated; ignore any value and keep [].
+    panel.automationIds = []
     if (widgets !== undefined) {
-        const cleanWidgets = normalizeWidgets(widgets, panel.automationIds)
+        const cleanWidgets = normalizeWidgets(widgets, [])
         if (!cleanWidgets) throw new Error('invalid_widgets')
         panel.widgets = cleanWidgets
     }

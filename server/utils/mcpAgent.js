@@ -2,8 +2,10 @@
 
 const { generateText, stepCountIs } = require('ai')
 const { log, logColors } = require('../log')
-const { getOllamaProvider, sanitizeAiOutput } = require('./languageModel')
+const { sanitizeAiOutput } = require('./languageModel')
 const { resolveMcpAgentModel, MCP_AGENT_DEFAULT_MODEL } = require('./mcpAgentSettings')
+const providerManager = require('../manager/providerManager')
+const { getChatModel } = require('./providers')
 const { createNetsocketMcpTools, LOG_PREFIX } = require('./netsocketMcpTools')
 const { stripThinkingTags } = require('./deepResearch')
 const {
@@ -487,6 +489,10 @@ async function runMcpAgent(options = {}) {
     }
 
     const modelName = resolveMcpAgentModel(options.model)
+    const resolvedProvider = options.providerId ? providerManager.getProviderById(options.providerId) : providerManager.getDefaultProvider()
+    // If options.model came from legacy override, modelName already resolved; prefer explicit providerId if given
+    let providerRow = resolvedProvider
+    if (!providerRow) providerRow = providerManager.getDefaultProvider()
     const maxSteps = Math.max(1, Math.min(50, Number(options.maxSteps) || DEFAULT_MAX_STEPS))
     const customSystemPrompt = String(options.systemPrompt || '').trim()
     const silent = options.silent === true
@@ -499,10 +505,11 @@ async function runMcpAgent(options = {}) {
         ? `${ASSISTANT_PERSONA}\n\n${customSystemPrompt}\n\n${hintPrompt}`
         : `${DEFAULT_SYSTEM_PROMPT}\n\n${hintPrompt}`
 
-    const provider = getOllamaProvider()
-    if (!provider) {
-        return { response: '', error: 'Ollama is not configured', steps: [] }
+    if (!providerRow) {
+        return { response: '', error: 'No AI provider configured', steps: [] }
     }
+    let chatModel
+    try { chatModel = getChatModel(providerRow, modelName) } catch (e) { return { response: '', error: e.message, steps: [] } }
 
     try {
         const history = await getSessionMessages(sessionKey)
@@ -546,7 +553,7 @@ async function runMcpAgent(options = {}) {
                 : createNetsocketMcpTools({ silent })
 
             const result = await generateText({
-                model: provider(modelName),
+                model: chatModel,
                 system: systemPrompt,
                 messages: conversation,
                 ...(tools ? { tools } : {}),
@@ -571,7 +578,7 @@ async function runMcpAgent(options = {}) {
                 && allSteps.length < maxSteps
             ) {
                 const synthesisResult = await generateText({
-                    model: provider(modelName),
+                    model: chatModel,
                     system: systemPrompt,
                     messages: [
                         ...conversation,

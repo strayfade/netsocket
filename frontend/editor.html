@@ -65,8 +65,6 @@
                 </a>
             </nav>
             <div class="header-left">
-                <span class="node-count"><span id="node-count">0 nodes</span> <span id="node-count-visible">(0
-                        visible)</span></span>
                 <span class="editor-history-controls" role="group" aria-label="Graph undo and redo">
                     <button type="button" id="editor-undo" class="header-toolbar-btn" disabled title="Undo (Ctrl+Z)">
                         <span class="material-symbols-outlined" aria-hidden="true">undo</span>
@@ -83,10 +81,6 @@
                     </button>
                 </span>
             </div>
-            <form class="header-command" id="agent-command-form" autocomplete="off">
-                <input type="text" id="agent-command-input" placeholder="Ask or command…" spellcheck="false"
-                    aria-label="Agent command">
-            </form>
             <div class="header-right">
                 <a class="shell-topbar-link" href="#" id="open-backup" title="Move your graph and settings to another machine"
                     aria-label="Backup">
@@ -412,19 +406,8 @@
             animateViewportTo(targetOffsetX, targetOffsetY, scale);
         };
 
-        // Update node counts in the header: total nodes and visible nodes
-        const updateNodeCounts = () => {
-            const total = graph && graph._nodes ? graph._nodes.length : 0;
-            const visible = canvas && canvas.visible_nodes ? canvas.visible_nodes.length : 0;
-            const totalEl = document.getElementById("node-count");
-            const visibleEl = document.getElementById("node-count-visible");
-            if (totalEl) totalEl.textContent = `${total} nodes`;
-            if (visibleEl) visibleEl.textContent = `(${visible} visible)`;
-        }
-
-        // Call update on each canvas render (fires when moving/zooming the graph)
+        // Keep viewport save on each canvas render (fires when moving/zooming the graph)
         canvas.onRender = () => {
-            updateNodeCounts();
             scheduleViewportSave();
         }
 
@@ -524,13 +507,6 @@
         };
         updateKeybindsBar(canvas.selected_nodes);
 
-        // Also update counts immediately
-        updateNodeCounts();
-        // Update counts when nodes are added/removed from the graph
-        if (graph) {
-            graph.onNodeAdded = () => updateNodeCounts();
-            graph.onNodeRemoved = () => updateNodeCounts();
-        }
         // Only show the banner after a drop, never on cold boot before the
         // first connection attempt.
         let hasConnectedOnce = false
@@ -632,11 +608,6 @@
             try {
                 graph.configure(cloneGraphData(snap));
                 graph.start();
-                try {
-                    updateNodeCounts();
-                } catch (e) {
-                    /* ignore */
-                }
             } finally {
                 graphReconfiguring = false;
             }
@@ -869,8 +840,6 @@
                             graph.configure(parsedMessage.broadcastData);
                             graph.start();
                             graphLoaded = true;
-                            // update header counts after loading the graph
-                            try { updateNodeCounts(); } catch (e) { /* ignore */ }
                             resetHistoryToCurrentGraph();
                             // Restore the saved pan/zoom once on first load. Skip on later
                             // setNodes (e.g. collaborative updates) so we don't yank the view
@@ -999,7 +968,6 @@
             getCanvas: () => canvas,
             sendWsRequest,
             enqueuePersistGraphChange,
-            updateNodeCounts,
             loadGraph,
             isGraphBusy: () => graphReconfiguring || !graphLoaded,
             viewport: {
@@ -1012,40 +980,6 @@
             },
         };
     </script>
-    <div id="agent-sidebar-root" class="agent-sidebar-root" hidden aria-hidden="true">
-        <div id="agent-backdrop" class="agent-backdrop" aria-hidden="true"></div>
-        <aside id="agent-sidebar" class="agent-sidebar" role="complementary" aria-labelledby="agent-sidebar-title">
-            <header class="agent-sidebar-header">
-                <button type="button" id="agent-sidebar-close" class="agent-sidebar-close" title="Close"
-                    aria-label="Close agent panel">
-                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
-                </button>
-                <div class="agent-sidebar-heading">
-                    <span class="material-symbols-outlined agent-sidebar-logo" aria-hidden="true">smart_toy</span>
-                    <h2 id="agent-sidebar-title">Agent</h2>
-                </div>
-                <div class="agent-sidebar-actions">
-                    <button type="button" id="agent-sidebar-copy" class="agent-sidebar-copy" title="Copy chat"
-                        disabled aria-label="Copy chat to clipboard">
-                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
-                    </button>
-                    <span id="agent-sidebar-status" class="agent-sidebar-status" role="status"></span>
-                </div>
-            </header>
-            <div class="agent-sidebar-body">
-                <div id="agent-command-display" class="agent-command-display"></div>
-                <div id="agent-timeline" class="agent-timeline"></div>
-                <div id="agent-final-response" class="agent-final-response" hidden></div>
-            </div>
-            <footer class="agent-sidebar-footer">
-                <div id="agent-queue" class="agent-queue" hidden aria-live="polite"></div>
-                <form id="agent-followup-form" class="agent-followup-form" autocomplete="off">
-                    <input type="text" id="agent-followup-input" placeholder="Follow up…" spellcheck="false"
-                        aria-label="Agent follow-up command">
-                </form>
-            </footer>
-        </aside>
-    </div>
     <!-- Settings modal (sidebar + panels built from server preference registry) -->
     <div id="backup-modal" class="backup-modal-root" hidden aria-hidden="true">
         <div id="backup-backdrop" class="settings-backdrop" aria-hidden="true"></div>
@@ -1206,15 +1140,6 @@
             const tabsContainerEl = document.getElementById('settings-tabs-container')
             const panelsScrollEl = document.getElementById('settings-panels-scroll')
 
-            const appendDescription = (field, pref) => {
-                const raw = pref.description
-                if (raw == null || !String(raw).trim()) return
-                const wrap = document.createElement('div')
-                wrap.className = 'settings-field-description'
-                wrap.innerHTML = String(raw)
-                field.appendChild(wrap)
-            }
-
             const buildFieldRow = (pref) => {
                 const field = document.createElement('div')
                 field.className = 'settings-field'
@@ -1229,7 +1154,6 @@
                     title.className = 'settings-label-block'
                     title.textContent = pref.displayName
                     field.appendChild(title)
-                    appendDescription(field, pref)
                     const row = document.createElement('div')
                     row.className = 'settings-field-row'
                     const control = document.createElement('input')
@@ -1247,22 +1171,24 @@
                     title.className = 'settings-label-block'
                     title.textContent = pref.displayName
                     field.appendChild(title)
-                    appendDescription(field, pref)
 
                     const row = document.createElement('label')
                     row.className = 'settings-field-row'
+                    row.style.cursor = 'pointer'
                     const cb = document.createElement('input')
                     cb.type = 'checkbox'
                     cb.checked = pref.value === true || pref.value === 'true'
                     const span = document.createElement('span')
                     span.textContent = 'Enabled'
+                    span.style.fontSize = '13px'
+                    span.style.color = '#ddd'
                     row.appendChild(cb)
                     row.appendChild(span)
                     field.appendChild(row)
 
                     const btnRow = document.createElement('div')
                     btnRow.className = 'settings-field-row'
-                    btnRow.style.marginTop = '8px'
+                    btnRow.style.marginTop = '10px'
                     const saveBtn = document.createElement('button')
                     saveBtn.type = 'button'
                     saveBtn.textContent = 'Save'
@@ -1288,7 +1214,6 @@
                 lab.className = 'settings-label-block'
                 lab.textContent = pref.displayName
                 field.appendChild(lab)
-                appendDescription(field, pref)
 
                 const row = document.createElement('div')
                 row.className = 'settings-field-row'
@@ -1340,6 +1265,34 @@
                 const tabs = []
                 let devicesPanelEl = null
 
+                const iconForCategory = (cat) => {
+                    const map = {
+                        'Devices': 'devices',
+                        'AI Providers': 'smart_toy',
+                        'Rendering': 'tune',
+                        'Email': 'mail',
+                        'Google': 'cloud',
+                        'Philips Hue': 'lightbulb',
+                        'Authenticator': 'key',
+                        'Debug': 'bug_report',
+                        'Webhook': 'webhook',
+                        'MCP': 'extension',
+                        'Triggers': 'bolt',
+                        'Notifiers': 'notifications',
+                    }
+                    if (map[cat]) return map[cat]
+                    const lower = String(cat).toLowerCase()
+                    if (lower.includes('hue')) return 'lightbulb'
+                    if (lower.includes('mail') || lower.includes('email')) return 'mail'
+                    if (lower.includes('google')) return 'cloud'
+                    if (lower.includes('auth')) return 'key'
+                    if (lower.includes('debug')) return 'bug_report'
+                    if (lower.includes('webhook')) return 'webhook'
+                    if (lower.includes('mcp')) return 'extension'
+                    return 'settings'
+                }
+                const tabWithIcon = (label) => `<span class="material-symbols-outlined" aria-hidden="true">${iconForCategory(label)}</span> ${label}`
+
                 const showTab = (index) => {
                     tabs.forEach((t, i) => t.classList.toggle('settings-tab-active', i === index))
                     panels.forEach((p, i) => { p.style.display = i === index ? '' : 'none' })
@@ -1377,11 +1330,6 @@
                 const renderDevicesPanel = (devices) => {
                     if (!devicesPanelEl) return
                     devicesPanelEl.innerHTML = ''
-
-                    const intro = document.createElement('div')
-                    intro.className = 'settings-field-description'
-                    intro.innerHTML = '<p>Overlay and Android clients request access with a unique device key. Approve them here to establish an encrypted session — no shared secret required.</p>'
-                    devicesPanelEl.appendChild(intro)
 
                     const groups = [
                         { key: 'pending', title: 'Pending approval', empty: 'No devices waiting for approval.' },
@@ -1495,7 +1443,7 @@
                 {
                     const tab = document.createElement('div')
                     tab.className = 'settings-tab settings-tab-active'
-                    tab.textContent = 'Devices'
+                    tab.innerHTML = tabWithIcon('Devices')
                     tab.addEventListener('click', () => showTab(0))
                     tabsContainerEl.appendChild(tab)
                     tabs.push(tab)
@@ -1508,12 +1456,219 @@
                     renderDevicesPanel(devicesList || [])
                 }
 
-                // Rendering quality (client-side; not part of server preference registry)
+                // AI Providers (server-managed; not part of generic preference registry)
+                let aiProvidersPanelEl = null
+                let aiProvidersData = []
+                const fetchProviders = async () => {
+                    try {
+                        const res = await fetch('/v1/providers', { credentials: 'same-origin' })
+                        if (!res.ok) return []
+                        const j = await res.json()
+                        return Array.isArray(j.providers) ? j.providers : []
+                    } catch { return [] }
+                }
+                const fetchModelsForProvider = async (providerId) => {
+                    try {
+                        const res = await fetch('/v1/providers/' + encodeURIComponent(providerId) + '/models', { credentials: 'same-origin' })
+                        if (!res.ok) throw new Error('HTTP ' + res.status)
+                        const j = await res.json()
+                        return Array.isArray(j.models) ? j.models.map(m => m.id) : []
+                    } catch (e) { return [] }
+                }
+                const kindIcon = (k) => k === 'ollama' ? 'smart_toy' : 'cloud'
+                const kindLabel = (k) => k === 'ollama' ? 'Ollama' : 'OpenAI'
+                const renderAIProvidersPanel = async () => {
+                    if (!aiProvidersPanelEl) return
+                    aiProvidersPanelEl.innerHTML = ''
+                    let providers = []
+                    try { providers = await fetchProviders(); aiProvidersData = providers; if (window.__netsocketProviders) window.__netsocketProviders = providers } catch {}
+                    if (!providers.length) {
+                        const empty = document.createElement('div')
+                        empty.className = 'provider-empty'
+                        empty.innerHTML = '<div class="provider-empty-icon"><span class="material-symbols-outlined">cloud_off</span></div><p>No providers configured yet.</p><p>Add an Ollama or OpenAI-compatible provider below to enable AI nodes.</p>'
+                        aiProvidersPanelEl.appendChild(empty)
+                    } else {
+                        for (const p of providers) {
+                            const card = document.createElement('div')
+                            card.className = 'provider-card' + (p.isDefault ? ' provider-card-default' : '')
+                            const top = document.createElement('div')
+                            top.className = 'provider-card-top'
+                            const title = document.createElement('div')
+                            title.className = 'provider-card-title'
+                            title.textContent = p.name
+                            title.title = p.name
+                            const badges = document.createElement('div')
+                            badges.className = 'provider-badges'
+                            const kindBadge = document.createElement('span')
+                            kindBadge.className = 'provider-badge provider-badge-kind-' + (p.kind === 'ollama' ? 'ollama' : 'openai')
+                            kindBadge.textContent = kindLabel(p.kind)
+                            badges.appendChild(kindBadge)
+                            if (p.isDefault) {
+                                const defBadge = document.createElement('span')
+                                defBadge.className = 'provider-badge provider-badge-default'
+                                defBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size:11px;vertical-align:-2px">star</span> default'
+                                badges.appendChild(defBadge)
+                            }
+                            if (p.hasApiKey) {
+                                const tok = document.createElement('span')
+                                tok.className = 'provider-badge provider-badge-token'
+                                tok.innerHTML = '<span class="material-symbols-outlined" style="font-size:11px">key</span> token'
+                                badges.appendChild(tok)
+                            }
+                            top.appendChild(title); top.appendChild(badges); card.appendChild(top)
+                            const meta = document.createElement('div')
+                            meta.className = 'provider-card-meta'
+                            const baseItem = document.createElement('div'); baseItem.className='provider-card-meta-item'
+                            baseItem.innerHTML = '<span><span class="material-symbols-outlined">link</span> Base URL</span><code title="' + (p.baseUrl||'') + '">' + (p.baseUrl || '<span class="is-empty">—</span>') + '</code>'
+                            const modelItem = document.createElement('div'); modelItem.className='provider-card-meta-item'
+                            const modelVal = p.defaultModel ? p.defaultModel : '<span class="is-empty">none</span>'
+                            modelItem.innerHTML = '<span><span class="material-symbols-outlined">model_training</span> Default model</span><code title="' + (p.defaultModel||'') + '">' + modelVal + '</code>'
+                            meta.appendChild(baseItem); meta.appendChild(modelItem)
+                            card.appendChild(meta)
+                            const actions = document.createElement('div')
+                            actions.className = 'provider-card-actions'
+                            if (!p.isDefault) {
+                                const defBtn = document.createElement('button'); defBtn.type='button'; defBtn.className='btn-primary'
+                                defBtn.innerHTML='<span class="material-symbols-outlined">star</span> Make default'
+                                defBtn.addEventListener('click', async () => {
+                                    defBtn.disabled=true
+                                    const res = await fetch('/v1/providers/' + encodeURIComponent(p.id), { method:'PATCH', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ isDefault: true }) })
+                                    if (!res.ok) { window.alert('Failed to set default'); defBtn.disabled=false; return }
+                                    await renderAIProvidersPanel(); if (window.__netsocketProvidersFetch) window.__netsocketProvidersFetch()
+                                })
+                                actions.appendChild(defBtn)
+                            }
+                            const editBtn = document.createElement('button'); editBtn.type='button'
+                            editBtn.innerHTML='<span class="material-symbols-outlined">edit</span> Edit'
+                            editBtn.addEventListener('click', () => window.openProviderForm(p))
+                            actions.appendChild(editBtn)
+                            const modelsBtn = document.createElement('button'); modelsBtn.type='button'; modelsBtn.className='btn-muted'
+                            modelsBtn.innerHTML='<span class="material-symbols-outlined">list</span> Models'
+                            modelsBtn.addEventListener('click', async () => {
+                                modelsBtn.disabled = true; const orig = modelsBtn.innerHTML; modelsBtn.innerHTML='<span class="material-symbols-outlined">progress_activity</span> Loading…'
+                                const models = await fetchModelsForProvider(p.id)
+                                modelsBtn.disabled = false; modelsBtn.innerHTML=orig
+                                if (!models.length) window.alert('No models returned or provider unreachable.\nCheck base URL and token.')
+                                else window.alert('Models for ' + p.name + ' (' + models.length + '):\n' + models.join('\n'))
+                            })
+                            actions.appendChild(modelsBtn)
+                            const delBtn = document.createElement('button'); delBtn.type='button'; delBtn.className='btn-danger'
+                            delBtn.innerHTML='<span class="material-symbols-outlined">delete</span> Remove'
+                            delBtn.addEventListener('click', async () => {
+                                if (!window.confirm('Remove provider "' + p.name + '"?\nAI nodes using it will fall back to the default provider.')) return
+                                const res = await fetch('/v1/providers/' + encodeURIComponent(p.id), { method:'DELETE', credentials:'same-origin' })
+                                if (!res.ok) { window.alert('Failed to delete'); return }
+                                await renderAIProvidersPanel(); if (window.__netsocketProvidersFetch) window.__netsocketProvidersFetch()
+                            })
+                            actions.appendChild(delBtn)
+                            card.appendChild(actions)
+                            aiProvidersPanelEl.appendChild(card)
+                        }
+                    }
+                    const formCard = document.createElement('div')
+                    formCard.className = 'provider-form-card'
+                    const head = document.createElement('div'); head.className='provider-form-head'
+                    head.innerHTML = '<p class="provider-form-title"><span id="ai-provider-form-title">Add provider</span></p>'
+                    formCard.appendChild(head)
+                    const grid = document.createElement('div'); grid.className='provider-form-grid'
+                    const mkField = (label, icon, type, id, placeholder) => {
+                        const wrap = document.createElement('div'); wrap.className='provider-form-field'
+                        const lab = document.createElement('label'); lab.htmlFor=id; lab.innerHTML='<span class="material-symbols-outlined">'+icon+'</span> '+label
+                        let inp
+                        if (type === 'select') {
+                            inp = document.createElement('select'); inp.id=id; inp.innerHTML='<option value="ollama">Ollama</option><option value="openai-compatible">OpenAI-compatible</option>'
+                        } else {
+                            inp = document.createElement('input'); inp.type=type; inp.id=id; inp.placeholder=placeholder||''
+                        }
+                        wrap.appendChild(lab); wrap.appendChild(inp); grid.appendChild(wrap); return inp
+                    }
+                    const nameInp = mkField('Name', 'label', 'text', 'ai-prov-name', 'Local Ollama')
+                    const kindSel = mkField('Kind', 'category', 'select', 'ai-prov-kind', '')
+                    const baseWrap = document.createElement('div'); baseWrap.className='provider-form-field span-2'
+                    baseWrap.innerHTML='<label for="ai-prov-base"><span class="material-symbols-outlined">link</span> Base URL</label>'
+                    const baseInp = document.createElement('input'); baseInp.type='text'; baseInp.id='ai-prov-base'; baseInp.placeholder='http://127.0.0.1:11434'
+                    baseWrap.appendChild(baseInp); grid.appendChild(baseWrap)
+                    const tokenWrap = document.createElement('div'); tokenWrap.className='provider-form-field span-2'
+                    tokenWrap.innerHTML='<label for="ai-prov-token"><span class="material-symbols-outlined">key</span> Bearer token / API key <span style="font-weight:400;color:#666">- optional</span></label>'
+                    const tokenRow = document.createElement('div'); tokenRow.className='provider-form-token-row'
+                    const tokenInp = document.createElement('input'); tokenInp.type='password'; tokenInp.id='ai-prov-token'; tokenInp.placeholder='leave blank to keep existing'
+                    const toggleBtn = document.createElement('button'); toggleBtn.type='button'; toggleBtn.className='provider-form-token-toggle'; toggleBtn.innerHTML='<span class="material-symbols-outlined">visibility</span>'; toggleBtn.title='Show/hide'
+                    toggleBtn.addEventListener('click', () => {
+                        const isPwd = tokenInp.type === 'password'
+                        tokenInp.type = isPwd ? 'text' : 'password'
+                        toggleBtn.innerHTML = isPwd ? '<span class="material-symbols-outlined">visibility_off</span>' : '<span class="material-symbols-outlined">visibility</span>'
+                    })
+                    tokenRow.appendChild(tokenInp); tokenRow.appendChild(toggleBtn); tokenWrap.appendChild(tokenRow); grid.appendChild(tokenWrap)
+                    const modelInp = mkField('Default model', 'model_training', 'text', 'ai-prov-model', 'gemma4:e2b')
+                    const checkLabel = document.createElement('label'); checkLabel.className='provider-form-check span-2'; checkLabel.htmlFor='ai-prov-default'
+                    checkLabel.innerHTML='<input type="checkbox" id="ai-prov-default"><span>Set as <strong>default provider</strong> - new AI nodes use its default model</span>'
+                    const isDefCb = checkLabel.querySelector('input')
+                    grid.appendChild(checkLabel)
+                    formCard.appendChild(grid)
+                    let editingId = null
+                    const statusEl = document.createElement('div'); statusEl.className='provider-form-status'
+                    const setStatus = (msg, kind) => {
+                        statusEl.textContent = msg; statusEl.className='provider-form-status is-visible is-' + (kind||'info')
+                        if (!msg) statusEl.className='provider-form-status'
+                    }
+                    const resetForm = () => { editingId=null; document.getElementById('ai-provider-form-title').textContent='Add provider'; submitBtn.innerHTML='Add provider'; cancelBtn.style.display='none'; nameInp.value=''; kindSel.value='ollama'; baseInp.value=''; tokenInp.value=''; tokenInp.type='password'; toggleBtn.innerHTML='<span class="material-symbols-outlined">visibility</span>'; modelInp.value=''; isDefCb.checked=false; setStatus('','') }
+                    window.openProviderForm = (p) => {
+                        editingId = p.id; document.getElementById('ai-provider-form-title').textContent='Edit ' + p.name; submitBtn.innerHTML='<span class="material-symbols-outlined">save</span> Save changes'; cancelBtn.style.display=''; nameInp.value=p.name; kindSel.value=p.kind; baseInp.value=p.baseUrl; tokenInp.value=''; modelInp.value=p.defaultModel||''; isDefCb.checked=!!p.isDefault; setStatus('Leave token blank to keep current.','info')
+                        formCard.scrollIntoView({behavior:'smooth', block:'nearest'})
+                    }
+                    const actionsRow = document.createElement('div'); actionsRow.className='provider-form-actions'
+                    const submitBtn = document.createElement('button'); submitBtn.type='button'; submitBtn.className='btn-primary'; submitBtn.innerHTML='Add provider'
+                    const cancelBtn = document.createElement('button'); cancelBtn.type='button'; cancelBtn.className='btn-ghost'; cancelBtn.textContent='Cancel'; cancelBtn.style.display='none'
+                    cancelBtn.addEventListener('click', resetForm)
+                    submitBtn.addEventListener('click', async () => {
+                        const payload = { name: nameInp.value.trim(), kind: kindSel.value, baseUrl: baseInp.value.trim(), defaultModel: modelInp.value.trim(), isDefault: isDefCb.checked }
+                        if (tokenInp.value) payload.apiKey = tokenInp.value
+                        else if (editingId) { } else payload.apiKey = ''
+                        if (!payload.name || !payload.baseUrl) { setStatus('Name and Base URL are required.','error'); return }
+                        submitBtn.disabled = true; setStatus(editingId ? 'Saving...' : 'Creating...','info')
+                        try {
+                            let res
+                            if (editingId) {
+                                const body = { name: payload.name, kind: payload.kind, baseUrl: payload.baseUrl, defaultModel: payload.defaultModel, isDefault: payload.isDefault }
+                                if (payload.apiKey !== undefined) body.apiKey = payload.apiKey
+                                res = await fetch('/v1/providers/' + encodeURIComponent(editingId), { method:'PATCH', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
+                            } else {
+                                res = await fetch('/v1/providers', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+                            }
+                            if (!res.ok) { const j = await res.json().catch(()=>({})); setStatus('Failed: ' + (j.error || res.statusText),'error'); submitBtn.disabled=false; return }
+                            setStatus(editingId ? 'Saved.' : 'Provider added.','success'); if (window.__netsocketProvidersFetch) window.__netsocketProvidersFetch()
+                            resetForm(); await renderAIProvidersPanel()
+                        } catch (e) { setStatus('Error: ' + e.message,'error') } finally { submitBtn.disabled=false }
+                    })
+                    kindSel.addEventListener('change', () => {
+                        if (kindSel.value === 'ollama' && !baseInp.value) baseInp.placeholder='http://127.0.0.1:11434'
+                        else if (kindSel.value === 'openai-compatible' && !baseInp.value) baseInp.placeholder='https://api.openai.com/v1'
+                    })
+                    actionsRow.appendChild(submitBtn); actionsRow.appendChild(cancelBtn); formCard.appendChild(actionsRow); formCard.appendChild(statusEl)
+                    aiProvidersPanelEl.appendChild(formCard)
+                }
                 {
                     const tabIndex = tabs.length
                     const tab = document.createElement('div')
                     tab.className = 'settings-tab'
-                    tab.textContent = 'Rendering'
+                    tab.innerHTML = tabWithIcon('AI Providers')
+                    tab.addEventListener('click', () => showTab(tabIndex))
+                    tabsContainerEl.appendChild(tab)
+                    tabs.push(tab)
+                    const aiPanel = document.createElement('div')
+                    aiPanel.className = 'settings-panel'
+                    aiPanel.style.display = 'none'
+                    aiProvidersPanelEl = aiPanel
+                    panelsScrollEl.appendChild(aiPanel)
+                    panels.push(aiPanel)
+                    renderAIProvidersPanel()
+                }
+// Rendering quality (client-side; not part of server preference registry)
+                {
+                    const tabIndex = tabs.length
+                    const tab = document.createElement('div')
+                    tab.className = 'settings-tab'
+                    tab.innerHTML = '<span class="material-symbols-outlined">tune</span> Rendering'
                     tab.addEventListener('click', () => showTab(tabIndex))
                     tabsContainerEl.appendChild(tab)
                     tabs.push(tab)
@@ -1522,23 +1677,12 @@
                     panel.className = 'settings-panel'
                     panel.style.display = 'none'
 
-                    const intro = document.createElement('div')
-                    intro.className = 'settings-field-description'
-                    intro.innerHTML = '<p>Control how the node graph is drawn. Lower presets disable expensive Canvas2D effects (shadows, gradients, glass) so pan and zoom stay smooth.</p>'
-                    panel.appendChild(intro)
-
                     const field = document.createElement('div')
                     field.className = 'settings-field'
                     const title = document.createElement('div')
                     title.className = 'settings-label-block'
                     title.textContent = 'Quality preset'
                     field.appendChild(title)
-
-                    const desc = document.createElement('div')
-                    desc.className = 'settings-field-description'
-                    const descText = document.createElement('p')
-                    desc.appendChild(descText)
-                    field.appendChild(desc)
 
                     const row = document.createElement('div')
                     row.className = 'settings-field-row settings-quality-presets'
@@ -1553,10 +1697,6 @@
                         row.querySelectorAll('.settings-quality-btn').forEach((btn) => {
                             btn.classList.toggle('settings-quality-btn-active', btn.dataset.quality === current)
                         })
-                        const preset = presets[current]
-                        descText.textContent = preset && preset.description
-                            ? preset.description
-                            : ''
                     }
 
                     for (const key of order) {
@@ -1588,12 +1728,9 @@
                     fpsTitle.className = 'settings-label-block'
                     fpsTitle.textContent = 'Show framerate'
                     fpsField.appendChild(fpsTitle)
-                    const fpsDesc = document.createElement('div')
-                    fpsDesc.className = 'settings-field-description'
-                    fpsDesc.innerHTML = '<p>Display a live FPS counter in the top-left of the graph canvas. Keeps the canvas redrawing every frame while enabled.</p>'
-                    fpsField.appendChild(fpsDesc)
                     const fpsRow = document.createElement('label')
                     fpsRow.className = 'settings-field-row'
+                    fpsRow.style.cursor = 'pointer'
                     const fpsCb = document.createElement('input')
                     fpsCb.type = 'checkbox'
                     fpsCb.checked = typeof window.getNetsocketShowFps === 'function'
@@ -1601,6 +1738,8 @@
                         : false
                     const fpsSpan = document.createElement('span')
                     fpsSpan.textContent = 'Enabled'
+                    fpsSpan.style.fontSize = '13px'
+                    fpsSpan.style.color = '#ddd'
                     fpsRow.appendChild(fpsCb)
                     fpsRow.appendChild(fpsSpan)
                     fpsField.appendChild(fpsRow)
@@ -1617,12 +1756,9 @@
                     keybindsTitle.className = 'settings-label-block'
                     keybindsTitle.textContent = 'Selection hotkeys bar'
                     keybindsField.appendChild(keybindsTitle)
-                    const keybindsDesc = document.createElement('div')
-                    keybindsDesc.className = 'settings-field-description'
-                    keybindsDesc.innerHTML = '<p>Show the node-count summary and shortcut hints under the header when one or more nodes are selected.</p>'
-                    keybindsField.appendChild(keybindsDesc)
                     const keybindsRow = document.createElement('label')
                     keybindsRow.className = 'settings-field-row'
+                    keybindsRow.style.cursor = 'pointer'
                     const keybindsCb = document.createElement('input')
                     keybindsCb.type = 'checkbox'
                     keybindsCb.checked = typeof window.getNetsocketShowSelectionKeybinds === 'function'
@@ -1630,6 +1766,8 @@
                         : true
                     const keybindsSpan = document.createElement('span')
                     keybindsSpan.textContent = 'Enabled'
+                    keybindsSpan.style.fontSize = '13px'
+                    keybindsSpan.style.color = '#ddd'
                     keybindsRow.appendChild(keybindsCb)
                     keybindsRow.appendChild(keybindsSpan)
                     keybindsField.appendChild(keybindsRow)
@@ -1646,10 +1784,6 @@
                     resTitle.className = 'settings-label-block'
                     resTitle.textContent = 'Render resolution'
                     resField.appendChild(resTitle)
-                    const resDesc = document.createElement('div')
-                    resDesc.className = 'settings-field-description'
-                    resDesc.innerHTML = '<p>Draw the graph at a percentage of the display size, then upscale. Lower values fill fewer pixels and usually raise FPS; text and edges look softer.</p>'
-                    resField.appendChild(resDesc)
 
                     const resRow = document.createElement('div')
                     resRow.className = 'settings-field-row settings-render-resolution'
@@ -1709,7 +1843,7 @@
                     const tabIndex = categoryBase + idx
                     const tab = document.createElement('div')
                     tab.className = 'settings-tab'
-                    tab.textContent = cat
+                    tab.innerHTML = tabWithIcon(cat)
                     tab.addEventListener('click', () => showTab(tabIndex))
                     tabsContainerEl.appendChild(tab)
                     tabs.push(tab)
@@ -1763,475 +1897,11 @@
             if (settingsBackdrop) settingsBackdrop.addEventListener('click', closeSettingsModal)
         })
     </script>
-    <script src="/js/agentMarkdown.js"></script>
     <script src="/js/shell.js"></script>
     <script>
         if (window.ShellLogic) ShellLogic.markActiveTab(document);
     </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const agentForm = document.getElementById('agent-command-form')
-            const agentInput = document.getElementById('agent-command-input')
-            const agentRoot = document.getElementById('agent-sidebar-root')
-            const agentBackdrop = document.getElementById('agent-backdrop')
-            const agentCloseBtn = document.getElementById('agent-sidebar-close')
-            const agentCopyBtn = document.getElementById('agent-sidebar-copy')
-            const agentStatus = document.getElementById('agent-sidebar-status')
-            const agentCommandDisplay = document.getElementById('agent-command-display')
-            const agentTimeline = document.getElementById('agent-timeline')
-            const agentFinalResponse = document.getElementById('agent-final-response')
-            const agentFollowupForm = document.getElementById('agent-followup-form')
-            const agentFollowupInput = document.getElementById('agent-followup-input')
-            const agentQueueEl = document.getElementById('agent-queue')
-
-            if (!agentForm || !agentInput || !agentRoot) return
-
-            let agentRunId = 0
-            let lastAgentChat = null
-            let agentBusy = false
-            let agentQueue = []
-            let agentStatusBase = ''
-            let agentStatusKind = ''
-
-            const setCopyEnabled = (enabled) => {
-                if (agentCopyBtn) agentCopyBtn.disabled = !enabled
-            }
-
-            const formatAgentChatPlaintext = (command, data = {}) => {
-                const lines = [String(command || '').trim(), '']
-
-                const steps = Array.isArray(data.steps) ? data.steps : []
-                steps.forEach((step) => {
-                    if (step.thinking) {
-                        lines.push('Thinking:', step.thinking, '')
-                    }
-
-                    if (step.text) {
-                        lines.push(step.text, '')
-                    }
-
-                    ;(step.toolCalls || []).forEach((call) => {
-                        lines.push(agentRanLine(call))
-                        lines.push(`Tool: ${call.toolName || 'unknown'}`)
-                        if (call.input != null) {
-                            lines.push('Input:', formatJson(call.input), '')
-                        }
-                        if (call.output != null) {
-                            lines.push('Output:', formatJson(call.output), '')
-                        }
-                    })
-                })
-
-                if (data.response) {
-                    lines.push(data.response, '')
-                }
-
-                if (data.error) {
-                    lines.push('Error:', data.error, '')
-                }
-
-                return lines.join('\n').trimEnd()
-            }
-
-            const copyAgentChat = async () => {
-                if (!lastAgentChat) return
-                const text = formatAgentChatPlaintext(lastAgentChat.command, lastAgentChat.data)
-                if (!text) return
-
-                try {
-                    await navigator.clipboard.writeText(text)
-                    const prevStatus = agentStatus?.textContent || ''
-                    setAgentStatus('Copied', '')
-                    window.setTimeout(() => {
-                        if (agentStatus?.textContent === 'Copied') {
-                            setAgentStatus(prevStatus)
-                        }
-                    }, 1500)
-                } catch {
-                    setAgentStatus('Copy failed', 'is-error')
-                }
-            }
-
-            const TOOL_ICONS = {
-                list_nodes: 'search',
-                get_node_info: 'info',
-                execute_node: 'play_arrow',
-            }
-
-            const formatJson = (value) => {
-                if (value == null) return ''
-                try {
-                    return JSON.stringify(value, null, 2)
-                } catch {
-                    return String(value)
-                }
-            }
-
-            const truncateJson = (text, max = 4000) => {
-                if (!text || text.length <= max) return text
-                return `${text.slice(0, max)}\n… (truncated)`
-            }
-
-            const setAgentMarkdownContent = (el, text) => {
-                if (!el) return
-                const value = String(text || '')
-                if (typeof window.renderAgentMarkdown === 'function') {
-                    el.classList.add('agent-markdown')
-                    el.innerHTML = window.renderAgentMarkdown(value)
-                } else {
-                    el.classList.remove('agent-markdown')
-                    el.textContent = value
-                }
-            }
-
-            const openAgentSidebar = () => {
-                agentRoot.hidden = false
-                agentRoot.setAttribute('aria-hidden', 'false')
-                requestAnimationFrame(() => agentRoot.classList.add('is-open'))
-            }
-
-            const closeAgentSidebar = () => {
-                agentRoot.classList.remove('is-open')
-                window.setTimeout(() => {
-                    if (!agentRoot.classList.contains('is-open')) {
-                        agentRoot.hidden = true
-                        agentRoot.setAttribute('aria-hidden', 'true')
-                    }
-                }, 260)
-            }
-
-            const setAgentStatus = (text, kind = '') => {
-                agentStatusBase = text || ''
-                agentStatusKind = kind || ''
-                if (!agentStatus) return
-                const suffix = agentBusy && agentQueue.length
-                    ? ` (${agentQueue.length} queued)`
-                    : ''
-                agentStatus.textContent = agentStatusBase + suffix
-                agentStatus.classList.remove('is-running', 'is-error')
-                if (agentStatusKind) agentStatus.classList.add(agentStatusKind)
-            }
-
-            const refreshAgentStatus = () => {
-                setAgentStatus(agentStatusBase, agentStatusKind)
-            }
-
-            const updateQueueUi = () => {
-                if (!agentQueueEl) return
-                if (!agentQueue.length) {
-                    agentQueueEl.hidden = true
-                    agentQueueEl.innerHTML = ''
-                    return
-                }
-                agentQueueEl.hidden = false
-                agentQueueEl.innerHTML = ''
-                const label = document.createElement('div')
-                label.className = 'agent-queue-label'
-                label.textContent = agentQueue.length === 1 ? 'Queued' : `${agentQueue.length} queued`
-                agentQueueEl.appendChild(label)
-                agentQueue.forEach((command) => {
-                    const item = document.createElement('div')
-                    item.className = 'agent-queue-item'
-                    item.textContent = command
-                    agentQueueEl.appendChild(item)
-                })
-            }
-
-            const submitAgentCommand = (command) => {
-                const trimmed = String(command || '').trim()
-                if (!trimmed) return
-
-                openAgentSidebar()
-
-                if (agentBusy) {
-                    agentQueue.push(trimmed)
-                    updateQueueUi()
-                    refreshAgentStatus()
-                    return
-                }
-
-                runAgentCommand(trimmed)
-            }
-
-            const drainAgentQueue = () => {
-                if (agentBusy || !agentQueue.length) return
-                const next = agentQueue.shift()
-                updateQueueUi()
-                runAgentCommand(next)
-            }
-
-            const renderLoading = () => {
-                lastAgentChat = null
-                setCopyEnabled(false)
-                agentTimeline.innerHTML = ''
-                const loading = document.createElement('div')
-                loading.className = 'agent-loading'
-                loading.innerHTML = '<span class="agent-loading-spinner" aria-hidden="true"></span><span>Running agent…</span>'
-                agentTimeline.appendChild(loading)
-                agentFinalResponse.hidden = true
-                agentFinalResponse.innerHTML = ''
-            }
-
-            const agentRanAction = (call) => {
-                const tool = call?.toolName || 'tool'
-                const input = call?.input || {}
-                if (tool === 'list_nodes') {
-                    if (input.query) return `list_nodes for "${input.query}"`
-                    if (input.category) return `list_nodes in ${input.category}`
-                    return 'list_nodes'
-                }
-                if (tool === 'get_node_info' && input.nodeType) {
-                    return `get_node_info for ${input.nodeType}`
-                }
-                if (tool === 'execute_node' && input.nodeType) {
-                    return `execute_node on ${input.nodeType}`
-                }
-                return tool
-            }
-
-            const agentRanLine = (call) => `Agent ran ${agentRanAction(call)}`
-
-            const renderToolCall = (call) => {
-                const card = document.createElement('article')
-                card.className = 'agent-tool-call'
-                card.dataset.tool = call.toolName || 'unknown'
-
-                const header = document.createElement('button')
-                header.type = 'button'
-                header.className = 'agent-tool-header'
-                header.setAttribute('aria-expanded', 'false')
-
-                const icon = document.createElement('span')
-                icon.className = 'material-symbols-outlined agent-tool-icon'
-                icon.textContent = TOOL_ICONS[call.toolName] || 'build'
-                icon.setAttribute('aria-hidden', 'true')
-
-                const title = document.createElement('span')
-                title.className = 'agent-tool-title'
-                const prefix = document.createElement('span')
-                prefix.className = 'agent-tool-ran-prefix'
-                prefix.textContent = 'Agent ran'
-                const action = document.createElement('span')
-                action.className = 'agent-tool-ran-action'
-                action.textContent = ` ${agentRanAction(call)}`
-                title.appendChild(prefix)
-                title.appendChild(action)
-
-                const chevron = document.createElement('span')
-                chevron.className = 'material-symbols-outlined agent-tool-chevron'
-                chevron.textContent = 'expand_more'
-                chevron.setAttribute('aria-hidden', 'true')
-
-                header.appendChild(icon)
-                header.appendChild(title)
-                header.appendChild(chevron)
-                card.appendChild(header)
-
-                const body = document.createElement('div')
-                body.className = 'agent-tool-body'
-                body.hidden = true
-
-                if (call.input != null) {
-                    const inputSection = document.createElement('div')
-                    inputSection.className = 'agent-tool-section'
-                    const inputLabel = document.createElement('span')
-                    inputLabel.className = 'agent-tool-section-label'
-                    inputLabel.textContent = 'Input'
-                    const inputPre = document.createElement('pre')
-                    inputPre.className = 'agent-tool-json'
-                    inputPre.textContent = truncateJson(formatJson(call.input))
-                    inputSection.appendChild(inputLabel)
-                    inputSection.appendChild(inputPre)
-                    body.appendChild(inputSection)
-                }
-
-                if (call.output != null) {
-                    const outputSection = document.createElement('div')
-                    outputSection.className = 'agent-tool-section'
-                    const outputLabel = document.createElement('span')
-                    outputLabel.className = 'agent-tool-section-label'
-                    outputLabel.textContent = 'Output'
-                    const outputPre = document.createElement('pre')
-                    outputPre.className = 'agent-tool-json'
-                    outputPre.textContent = truncateJson(formatJson(call.output))
-                    outputSection.appendChild(outputLabel)
-                    outputSection.appendChild(outputPre)
-                    body.appendChild(outputSection)
-                }
-
-                header.addEventListener('click', () => {
-                    const expanded = card.classList.toggle('is-expanded')
-                    body.hidden = !expanded
-                    header.setAttribute('aria-expanded', expanded ? 'true' : 'false')
-                })
-
-                card.appendChild(body)
-                return card
-            }
-
-            const renderAgentResult = (command, data) => {
-                lastAgentChat = { command, data: data || {} }
-                setCopyEnabled(true)
-                agentCommandDisplay.textContent = command
-                agentTimeline.innerHTML = ''
-
-                const steps = Array.isArray(data?.steps) ? data.steps : []
-                if (!steps.length) {
-                    const empty = document.createElement('p')
-                    empty.style.cssText = 'font-size:12px;color:#666;margin:0;'
-                    empty.textContent = data?.mode === 'chat'
-                        ? 'Direct response — no tools used.'
-                        : 'No intermediate steps recorded.'
-                    agentTimeline.appendChild(empty)
-                }
-
-                steps.forEach((step) => {
-                    const stepEl = document.createElement('section')
-                    stepEl.className = 'agent-step'
-
-                    if (step.thinking) {
-                        const thinking = document.createElement('div')
-                        thinking.className = 'agent-thinking'
-                        const thinkingLabel = document.createElement('div')
-                        thinkingLabel.className = 'agent-thinking-label'
-                        thinkingLabel.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">psychology</span> Thinking'
-                        const thinkingText = document.createElement('div')
-                        thinkingText.textContent = step.thinking
-                        thinking.appendChild(thinkingLabel)
-                        thinking.appendChild(thinkingText)
-                        stepEl.appendChild(thinking)
-                    }
-
-                    if (step.text) {
-                        const text = document.createElement('div')
-                        text.className = 'agent-step-text'
-                        setAgentMarkdownContent(text, step.text)
-                        stepEl.appendChild(text)
-                    }
-
-                    ;(step.toolCalls || []).forEach((call) => {
-                        stepEl.appendChild(renderToolCall(call))
-                    })
-
-                    agentTimeline.appendChild(stepEl)
-                })
-
-                if (data?.response) {
-                    agentFinalResponse.hidden = false
-                    agentFinalResponse.innerHTML = `<div class="agent-final-response-text"></div>`
-                    setAgentMarkdownContent(
-                        agentFinalResponse.querySelector('.agent-final-response-text'),
-                        data.response
-                    )
-                } else {
-                    agentFinalResponse.hidden = true
-                    agentFinalResponse.innerHTML = ''
-                }
-
-                if (data?.error) {
-                    const err = document.createElement('div')
-                    err.className = 'agent-error-banner'
-                    err.textContent = data.error
-                    agentTimeline.appendChild(err)
-                }
-            }
-
-            const runAgentCommand = async (command) => {
-                const trimmed = String(command || '').trim()
-                if (!trimmed) return
-
-                agentBusy = true
-                const runId = ++agentRunId
-                agentCommandDisplay.textContent = trimmed
-                renderLoading()
-                setAgentStatus('Running…', 'is-running')
-                agentInput.value = ''
-                if (agentFollowupInput) agentFollowupInput.value = ''
-
-                try {
-                    const res = await fetch('/v1/mcp-agent', {
-                        method: 'POST',
-                        credentials: 'same-origin',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ command: trimmed, memoryKey: 'dashboard' }),
-                    })
-
-                    if (runId !== agentRunId) return
-
-                    if (!res.ok) {
-                        const errText = res.status === 401
-                            ? 'Session expired — sign in again.'
-                            : `Request failed (${res.status})`
-                        lastAgentChat = { command: trimmed, data: { error: errText } }
-                        setCopyEnabled(true)
-                        setAgentStatus('Error', 'is-error')
-                        agentTimeline.innerHTML = ''
-                        const err = document.createElement('div')
-                        err.className = 'agent-error-banner'
-                        err.textContent = errText
-                        agentTimeline.appendChild(err)
-                        return
-                    }
-
-                    const data = await res.json()
-                    renderAgentResult(trimmed, data)
-                    setAgentStatus(data.error ? 'Incomplete' : 'Done', data.error ? 'is-error' : '')
-                } catch (e) {
-                    if (runId !== agentRunId) return
-                    const errText = e?.message || 'Network error'
-                    lastAgentChat = { command: trimmed, data: { error: errText } }
-                    setCopyEnabled(true)
-                    setAgentStatus('Error', 'is-error')
-                    agentTimeline.innerHTML = ''
-                    const err = document.createElement('div')
-                    err.className = 'agent-error-banner'
-                    err.textContent = errText
-                    agentTimeline.appendChild(err)
-                } finally {
-                    if (runId === agentRunId) {
-                        agentBusy = false
-                        updateQueueUi()
-                        if (agentQueue.length > 0) {
-                            drainAgentQueue()
-                        } else if (agentRoot.classList.contains('is-open') && agentFollowupInput) {
-                            agentFollowupInput.focus()
-                        } else {
-                            agentInput.focus()
-                        }
-                    }
-                }
-            }
-
-            agentForm.addEventListener('submit', (e) => {
-                e.preventDefault()
-                submitAgentCommand(agentInput.value)
-                agentInput.value = ''
-            })
-
-            if (agentFollowupForm) {
-                agentFollowupForm.addEventListener('submit', (e) => {
-                    e.preventDefault()
-                    submitAgentCommand(agentFollowupInput?.value)
-                    if (agentFollowupInput) agentFollowupInput.value = ''
-                })
-            }
-
-            if (agentCloseBtn) agentCloseBtn.addEventListener('click', closeAgentSidebar)
-            if (agentCopyBtn) agentCopyBtn.addEventListener('click', copyAgentChat)
-            if (agentBackdrop) agentBackdrop.addEventListener('click', closeAgentSidebar)
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && agentRoot.classList.contains('is-open')) {
-                    closeAgentSidebar()
-                }
-                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                    e.preventDefault()
-                    agentInput.focus()
-                    agentInput.select()
-                }
-            })
-        })
-    </script>
+    <script type="text/javascript" src="aiProviders.js"></script>
     <script type="text/javascript" src="createNode.js"></script>
     <script type="text/javascript" src="constructNodes.js"></script>
     <script type="text/javascript" src="subgraphEditor.js"></script>

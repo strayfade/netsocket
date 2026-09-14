@@ -1,94 +1,57 @@
-const { config } = require('../config')
+'use strict'
+
 const { log, logColors } = require('../log')
-const settingsManager = require('../manager/settingsManager')
+const providerManager = require('../manager/providerManager')
+const { getChatModel } = require('./providers')
+const { generateText } = require('ai')
+
+const DEFAULT_MODEL = providerManager.DEFAULT_MODEL || 'gemma4:e2b'
 const OLLAMA_DEFAULT_MODEL_SETTING = 'ollama.defaultModel'
-const DEFAULT_MODEL = 'gemma4:e2b'
 
-require('../manager/nodePreferencesRegistry').addPref(
-    'Ollama',
-    'ollama.ip',
-    'Host (IP or hostname)',
-    'text',
-    '127.0.0.1',
-    '<p>Hostname or IP where <strong>Ollama</strong> is listening (port <code>11434</code> is assumed). Examples: <code>127.0.0.1</code> or <code>my-server.local</code>.</p>'
-)
-require('../manager/nodePreferencesRegistry').addPref(
-    'Ollama',
-    OLLAMA_DEFAULT_MODEL_SETTING,
-    'Default model',
-    'text',
-    DEFAULT_MODEL,
-    '<p>Ollama model used by default for language-model nodes, <code>askAI</code>, and MCP agents (unless overridden). Example: <code>gemma4:e2b</code> or <code>qwen3.5:9b-mxfp8</code>.</p>'
-)
-
-const { createOllama } = require('ollama-ai-provider-v2');
+// Keep legacy pref registrations for describe but mark deprecated; actual storage moved to providers
+// They will be auto-migrated on boot by providerManager.
+try {
+    require('../manager/nodePreferencesRegistry').addPref(
+        'Ollama',
+        'ollama.ip',
+        'Host (IP or hostname) - deprecated, use AI Providers',
+        'text',
+        '127.0.0.1',
+        '<p>Deprecated: use <strong>AI Providers</strong> settings. This field is kept only for migration.</p>'
+    )
+} catch (_) {}
+try {
+    require('../manager/nodePreferencesRegistry').addPref(
+        'Ollama',
+        OLLAMA_DEFAULT_MODEL_SETTING,
+        'Default model - deprecated, use AI Providers',
+        'text',
+        DEFAULT_MODEL,
+        '<p>Deprecated: use <strong>AI Providers</strong> settings.</p>'
+    )
+} catch (_) {}
 
 function resolveDefaultModel(override) {
     const explicit = String(override || '').trim()
-    if (explicit) {
-        return explicit
-    }
-    const stored = settingsManager.getStoredValue(OLLAMA_DEFAULT_MODEL_SETTING)
-    if (stored !== undefined) {
-        const trimmed = String(stored).trim()
-        if (trimmed) {
-            return trimmed
+    if (explicit) return explicit
+    const def = providerManager.getDefaultProvider()
+    if (def && def.defaultModel) return String(def.defaultModel).trim() || DEFAULT_MODEL
+    // fallback to legacy setting if provider not yet loaded
+    try {
+        const settingsManager = require('../manager/settingsManager')
+        const stored = settingsManager.getStoredValue(OLLAMA_DEFAULT_MODEL_SETTING)
+        if (stored !== undefined) {
+            const trimmed = String(stored).trim()
+            if (trimmed) return trimmed
         }
-    }
+    } catch (_) {}
     return DEFAULT_MODEL
 }
 
-// Keep models resident in Ollama memory; omitting keep_alive resets the timer to ~5m per request.
-const OLLAMA_KEEP_ALIVE = -1
-
-const createOllamaFetch = (baseFetch = globalThis.fetch) => {
-    return async (url, options = {}) => {
-        const urlStr = typeof url === 'string'
-            ? url
-            : url instanceof URL
-                ? url.href
-                : url.url
-
-        if (urlStr.includes('/chat') || urlStr.includes('/generate')) {
-            const body = options.body
-            if (typeof body === 'string') {
-                try {
-                    const parsed = JSON.parse(body)
-                    if (parsed.keep_alive === undefined) {
-                        parsed.keep_alive = OLLAMA_KEEP_ALIVE
-                    }
-                    options = { ...options, body: JSON.stringify(parsed) }
-                } catch (_) { /* leave body unchanged */ }
-            }
-        }
-
-        return baseFetch(url, options)
-    }
+function resolveProviderAndModel(overrideProviderId, overrideModel) {
+    return providerManager.resolveProviderAndModel(overrideProviderId, overrideModel)
 }
 
-let ollama
-let ollamaInitialized = false
-const initOllama = () => {
-    if (ollamaInitialized) return
-    try {
-        const ollamaHost = settingsManager.getSetting('ollama.ip') || '127.0.0.1'
-        const baseURL = `http://${ollamaHost}:11434/api`
-        ollama = createOllama({
-            baseURL,
-            fetch: createOllamaFetch()
-        })
-        ollamaInitialized = true
-    }
-    catch (e) {
-        log(`Failed to initialize Ollama client: ${e.message}`, logColors.Error)
-    }
-}
-const reinitOllama = () => {
-    ollamaInitialized = false
-    ollama = undefined
-    initOllama()
-}
-const { generateText } = require('ai')
 const defaultSystemPrompt = `You are an intelligent robot that is able to 
     perform a user's instructions efficiently and exactly as requested. 
     You may receive input in many different forms of text, but you will 
@@ -101,93 +64,80 @@ const defaultSystemPrompt = `You are an intelligent robot that is able to
     codeblocks! Do not use any form of markdown syntax. Only respond using JSON if 
     requested. Otherwise, respond using plaintext answers.`
 let currentConversation = [{
-    role: "system",
+    role: 'system',
     content: defaultSystemPrompt
-}];
+}]
 function sanitizeAiOutput(input) {
-    if (typeof input !== "string") {
-        return "";
-    }
-
-    // Normalize fancy Unicode quotes to ASCII
+    if (typeof input !== 'string') return ''
     const quoteMap = {
-        "\u201C": '"', // “
-        "\u201D": '"', // ”
-        "\u201E": '"', // „
-        "\u00AB": '"', // «
-        "\u00BB": '"', // »
-        "\u2018": "'", // ‘
-        "\u2019": "'", // ’
-        "\u2032": "'", // ′
-        "\u2033": '"'  // ″
-    };
-
-    let normalized = "";
-    for (let i = 0; i < input.length; i++) {
-        normalized += quoteMap[input[i]] ?? input[i];
+        '\u201C': '"',
+        '\u201D': '"',
+        '\u201E': '"',
+        '\u00AB': '"',
+        '\u00BB': '"',
+        '\u2018': "'",
+        '\u2019': "'",
+        '\u2032': "'",
+        '\u2033': '"'
     }
-
-    // Strip remaining non-ASCII (except LF and CR)
-    let result = "";
+    let normalized = ''
+    for (let i = 0; i < input.length; i++) normalized += quoteMap[input[i]] ?? input[i]
+    let result = ''
     for (let i = 0; i < normalized.length; i++) {
-        const code = normalized.charCodeAt(i);
-        if (code <= 127 && code !== 10 && code !== 13) {
-            result += normalized[i];
-        }
+        const code = normalized.charCodeAt(i)
+        if (code <= 127 && code !== 10 && code !== 13) result += normalized[i]
     }
-
-    return result;
+    return result
 }
 
-const askAI = async (userText, systemPrompt, model) => {
-
+const askAI = async (userText, systemPrompt, model, providerId) => {
     try {
-
-        initOllama()
-
-        if (!userText)
-            userText = ""
-        if (!systemPrompt)
-            systemPrompt = defaultSystemPrompt
-        model = resolveDefaultModel(model)
-        currentConversation = [{
-            role: "system",
-            content: systemPrompt
-        }];
-
-        currentConversation.push({ role: 'user', content: userText });
-
-        // Send to Ollama model
-        let { text } = await generateText({
-            model: ollama(model),
-            messages: currentConversation
-        });
-
-        if (text.includes("</think>"))
-            text = text.substr(text.indexOf("</think>"))
-
-        currentConversation.push({ role: 'assistant', content: text });
-
+        if (!userText) userText = ''
+        if (!systemPrompt) systemPrompt = defaultSystemPrompt
+        const resolved = resolveProviderAndModel(providerId, model)
+        const provider = resolved.provider
+        const modelId = resolved.modelId
+        if (!provider) {
+            log('No AI provider configured', logColors.Error)
+            return ['', '']
+        }
+        let chatModel
+        try {
+            chatModel = getChatModel(provider, modelId)
+        } catch (e) {
+            log(`Failed to build chat model: ${e.message}`, logColors.Error)
+            return ['', '']
+        }
+        currentConversation = [{ role: 'system', content: systemPrompt }]
+        currentConversation.push({ role: 'user', content: userText })
+        let { text } = await generateText({ model: chatModel, messages: currentConversation })
+        if (text && text.includes('</think>')) text = text.substr(text.indexOf('</think>') + '</think>'.length)
+        currentConversation.push({ role: 'assistant', content: text })
         const newText = sanitizeAiOutput(text)
-        //log(`> ${userText}`)
-        //log(`< ${text}`)
-
         return Buffer.from(newText, 'latin1').toString('utf8'), Buffer.from(text, 'latin1').toString('utf8')
     } catch (e) {
         log(`Failed to ask AI: ${e.message}`, logColors.Error)
-        return "", ""
+        return ['', '']
     }
 }
 
+// Legacy compat shims
+const reinitOllama = () => { /* no-op, providers are resolved per call */ }
 const getOllamaProvider = () => {
-    initOllama()
-    return ollama
+    const def = providerManager.getDefaultProvider()
+    if (!def) return null
+    // Return a function compatible with old call sites: ollama(modelName) -> chatModel
+    return (modelName) => {
+        const { provider, modelId } = resolveProviderAndModel(null, modelName)
+        return getChatModel(provider, modelId)
+    }
 }
 
 module.exports = {
     DEFAULT_MODEL,
     OLLAMA_DEFAULT_MODEL_SETTING,
     resolveDefaultModel,
+    resolveProviderAndModel,
     askAI,
     reinitOllama,
     getOllamaProvider,

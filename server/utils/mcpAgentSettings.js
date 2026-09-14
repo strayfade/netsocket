@@ -27,6 +27,12 @@ function resolveMcpAgentModel(override) {
             return trimmed
         }
     }
+    // Include provider default chain
+    try {
+        const pm = require('../manager/providerManager')
+        const def = pm.getDefaultProvider()
+        if (def && def.defaultModel) return String(def.defaultModel).trim() || resolveDefaultModel()
+    } catch (_) {}
     return resolveDefaultModel()
 }
 

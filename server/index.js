@@ -53,6 +53,7 @@ const nodePreferencesRegistry = require('./manager/nodePreferencesRegistry')
 require('./utils/mcpAgentSettings')
 const { SCOPES, buildOAuthClient, getStoredTokens, mergeTokenSets, persistOAuthSession, CONNECTED_EMAIL_KEY } = require('./utils/googleAuth')
 const { startGoogleTriggerPoller } = require('./utils/googleTriggerPoller')
+const providerManager = require('./manager/providerManager')
 
 // Create an HTTP server
 const server = http.createServer(app);
@@ -737,9 +738,9 @@ app.post('/v1/dashboard/run', async (req, res) => {
         return res.status(400).json({ error: 'nodeId_required' })
     }
     try {
-        const { RUNNABLE_TRIGGER_TYPES } = require('./manager/dashboardSummary.js')
+        const { RUNNABLE_TRIGGER_TYPES, getGraphNodes } = require('./manager/dashboardSummary.js')
         const graphRoot = getNodes()
-        const nodes = Array.isArray(graphRoot?.nodes) ? graphRoot.nodes : []
+        const nodes = getGraphNodes(graphRoot)
         const target = nodes.find((n) => n && String(n.id) === String(nodeId))
         if (!target) return res.status(404).json({ error: 'unknown_node' })
         if (!RUNNABLE_TRIGGER_TYPES.has(target.type)) {
@@ -770,31 +771,6 @@ app.get("/", (req, res) => {
     res.redirect(302, "/login");
 });
 const { onNewCommand } = require('./utils/waitForCommands.js')
-const { runMcpAgent } = require('./utils/mcpAgent.js')
-
-app.post('/v1/mcp-agent', async (req, res) => {
-    if (!canAccessPrivateApi(req, res)) {
-        return res.sendStatus(401)
-    }
-    const command = typeof req.body?.command === 'string' ? req.body.command.trim() : ''
-    if (!command) {
-        return res.status(400).json({ error: 'command_required' })
-    }
-    const memoryKey = typeof req.body?.memoryKey === 'string' && req.body.memoryKey.trim()
-        ? req.body.memoryKey.trim()
-        : 'dashboard'
-    try {
-        const result = await runMcpAgent({
-            command,
-            memoryKey,
-            silent: true,
-        })
-        return res.status(200).json(result)
-    } catch (e) {
-        log(`mcp-agent: ${e}`, logColors.Error)
-        return res.status(500).json({ error: 'agent_failed', message: e?.message || String(e) })
-    }
-})
 
 app.post("/v1/triggers/command-palette", async (req, res) => {
     const expectedSecret = settingsManager.getSetting('triggersCommandPalette.secret')
@@ -931,6 +907,88 @@ app.delete('/v1/devices/:deviceId', (req, res) => {
     return res.sendStatus(204)
 })
 
+// MARK: AI Providers
+app.get('/v1/providers', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    try {
+        return res.status(200).json({ providers: providerManager.listProviders() })
+    } catch (e) {
+        log(`providers-list: ${e}`, logColors.Error)
+        return res.sendStatus(500)
+    }
+})
+app.post('/v1/providers', async (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const body = req.body || {}
+    const name = typeof body.name === 'string' ? body.name.trim() : ''
+    const kind = typeof body.kind === 'string' ? body.kind : 'ollama'
+    const baseUrl = typeof body.baseUrl === 'string' ? body.baseUrl : ''
+    const apiKey = body.apiKey != null ? String(body.apiKey) : undefined
+    const defaultModel = body.defaultModel != null ? String(body.defaultModel) : ''
+    const isDefault = !!body.isDefault
+    if (!name) return res.status(400).json({ error: 'name_required' })
+    if (!baseUrl) return res.status(400).json({ error: 'baseUrl_required' })
+    try {
+        const created = providerManager.createProvider({ name, kind, baseUrl, apiKey, defaultModel, isDefault })
+        await providerManager.saveProviders()
+        return res.status(201).json({ provider: created })
+    } catch (e) {
+        const msg = String(e.message || '')
+        const code = ['name_required','name_exists','baseUrl_required','baseUrl_invalid'].includes(msg) ? msg : 'create_failed'
+        const status = code === 'create_failed' ? 500 : 400
+        if (status === 500) log(`providers-create: ${e}`, logColors.Error)
+        return res.status(status).json({ error: code })
+    }
+})
+app.patch('/v1/providers/:id', async (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const body = req.body || {}
+    const patch = {}
+    if (body.name !== undefined) patch.name = String(body.name)
+    if (body.kind !== undefined) patch.kind = String(body.kind)
+    if (body.baseUrl !== undefined) patch.baseUrl = String(body.baseUrl)
+    if (body.apiKey !== undefined) patch.apiKey = body.apiKey === null ? null : String(body.apiKey)
+    if (body.defaultModel !== undefined) patch.defaultModel = String(body.defaultModel)
+    if (body.isDefault !== undefined) patch.isDefault = !!body.isDefault
+    try {
+        const updated = providerManager.updateProvider(req.params.id, patch)
+        await providerManager.saveProviders()
+        return res.status(200).json({ provider: updated })
+    } catch (e) {
+        const msg = String(e.message || '')
+        if (msg === 'not_found') return res.sendStatus(404)
+        const code = ['name_required','name_exists','baseUrl_required','baseUrl_invalid','cannot_clear_default'].includes(msg) ? msg : 'update_failed'
+        const status = code === 'update_failed' ? 500 : 400
+        if (status === 500) log(`providers-update: ${e}`, logColors.Error)
+        return res.status(status).json({ error: code })
+    }
+})
+app.delete('/v1/providers/:id', async (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    try {
+        providerManager.deleteProvider(req.params.id)
+        await providerManager.saveProviders()
+        return res.sendStatus(204)
+    } catch (e) {
+        if (String(e.message) === 'not_found') return res.sendStatus(404)
+        log(`providers-delete: ${e}`, logColors.Error)
+        return res.sendStatus(500)
+    }
+})
+app.get('/v1/providers/:id/models', async (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const row = providerManager.getProviderById(req.params.id)
+    if (!row) return res.sendStatus(404)
+    try {
+        const { listModels } = require('./utils/providers')
+        const models = await listModels(row)
+        return res.status(200).json({ models })
+    } catch (e) {
+        log(`providers-models: ${e}`, logColors.Warning)
+        return res.status(502).json({ error: e.message || 'list_failed' })
+    }
+})
+
 app.get("/v1/auth-state", (req, res) => {
     res.status(200).json({ needsRegistration: !hasAccount() });
 });
@@ -1021,6 +1079,7 @@ app.get('/v1/export-full-state', async (req, res) => {
             settings: settingsManager.getAllSettings(),
             vars: getVarsSnapshot(),
             subgraphs: require('./manager/subgraphStore').listDefinitions(),
+            providers: providerManager.listProviders(),
         }
         const stamp = new Date().toISOString().replace(/[:.]/g, '-')
         const filename = `netsocket-backup-${stamp}.json`
@@ -1055,6 +1114,26 @@ app.post('/v1/import-full-state', async (req, res) => {
         }
         setNodes(nextGraph, { fromImport: true })
         await settingsManager.replaceAllSettings(payload.settings)
+        if (Array.isArray(payload.providers)) {
+            // Restore providers stripped (hasApiKey, no ciphertext) - tokens must be re-entered
+            const raw = providerManager.getProvidersRaw()
+            // Merge: keep existing encrypted keys if imported row has hasApiKey but no ciphertext
+            // Imported providers are public-shaped; converting to raw requires clearing apiKeyEncrypted
+            const imported = payload.providers.filter(p => p && typeof p.id === 'string').map(p => ({
+                id: String(p.id),
+                name: String(p.name || ''),
+                kind: String(p.kind || 'openai-compatible'),
+                baseUrl: providerManager.normalizeBaseUrl(p.baseUrl || ''),
+                apiKeyEncrypted: null,
+                defaultModel: String(p.defaultModel || ''),
+                isDefault: !!p.isDefault,
+                createdAt: Number(p.createdAt) || Date.now(),
+                updatedAt: Date.now(),
+            }))
+            raw.length = 0
+            for (const r of imported) raw.push(r)
+            await providerManager.saveProviders()
+        }
         await replaceVarsAndPersist(payload.vars != null ? payload.vars : [])
         if (Array.isArray(payload.subgraphs)) {
             const subgraphStore = require('./manager/subgraphStore')
@@ -1085,6 +1164,7 @@ app.post('/v1/import-full-state', async (req, res) => {
         } catch (e) {
             log(`Ollama reinit after import: ${e}`, logColors.Warning)
         }
+        try { await providerManager.loadProviders() } catch (e) { log(`Providers reload after import: ${e}`, logColors.Warning) }
         broadcastGraphToClients()
         return res.status(200).json({ ok: true })
     } catch (e) {
@@ -1130,6 +1210,7 @@ const { killProcessOnPort } = require('./utils/killProcessOnPort');
         await reloadVars()
         await reloadMcpAgentMemory()
         await settingsManager.reloadSettings()
+        await providerManager.loadProviders()
         if (!authSkipped()) {
             const existingMcpToken = settingsManager.getSetting('mcp.apiToken')
             const mcpToken = await ensureMcpApiToken()

@@ -3,7 +3,7 @@
 const sessionAuth = require('../utils/sessionAuth')
 const deviceAuth = require('../utils/deviceAuth')
 const panelStore = require('./panelStore')
-const { summarizeAutomations, RUNNABLE_TRIGGER_TYPES } = require('./dashboardSummary')
+const { summarizeAutomations, RUNNABLE_TRIGGER_TYPES, getGraphNodes } = require('./dashboardSummary')
 
 const getDefaultGraphRoot = () => require('./saveState').getNodes()
 const runDefaultExecute = (node) => require('./execute').executeGraph(node)
@@ -129,9 +129,8 @@ const handleDevicePanelGrants = (socket, message, deps = {}) => {
 }
 
 const resolvePanelAutomations = (panel, graphRoot) => {
-    const nodes = graphRoot && Array.isArray(graphRoot.nodes) ? graphRoot.nodes : []
-    const allowed = new Set((panel.automationIds || []).map((id) => String(id)))
-    return summarizeAutomations(nodes.filter((n) => n && allowed.has(String(n.id))))
+    const nodes = getGraphNodes(graphRoot)
+    return summarizeAutomations(nodes.filter((n) => n && RUNNABLE_TRIGGER_TYPES.has(n.type)))
 }
 
 /** Values for variables bound to the panel's content widgets (nothing else leaks). */
@@ -170,12 +169,8 @@ const handlePanelExecute = async (req, res, deps = {}) => {
     if (nodeId == null || (typeof nodeId !== 'string' && typeof nodeId !== 'number')) {
         return res.status(400).json({ error: 'nodeId_required' })
     }
-    const allowed = (access.panel.automationIds || []).map((id) => String(id))
-    if (!allowed.includes(String(nodeId))) {
-        return res.status(403).json({ error: 'not_allowed' })
-    }
     const graphRoot = deps.graphRoot !== undefined ? deps.graphRoot : getDefaultGraphRoot()
-    const nodes = graphRoot && Array.isArray(graphRoot.nodes) ? graphRoot.nodes : []
+    const nodes = getGraphNodes(graphRoot)
     const target = nodes.find((n) => n && String(n.id) === String(nodeId))
     if (!target) return res.status(404).json({ error: 'unknown_node' })
     if (!RUNNABLE_TRIGGER_TYPES.has(target.type)) {

@@ -9,15 +9,24 @@ const RUNNABLE_TRIGGER_TYPES = new Set([
 const getGraphNodes = (graphRoot) => {
     if (!graphRoot || typeof graphRoot !== 'object') return [];
     if (Array.isArray(graphRoot.nodes)) return graphRoot.nodes;
+    if (graphRoot.nodes && typeof graphRoot.nodes === 'object' && Array.isArray(graphRoot.nodes.nodes)) {
+        return graphRoot.nodes.nodes;
+    }
     if (Array.isArray(graphRoot)) return graphRoot;
     return [];
 };
 
 const getNodeLabel = (node, fallback) => {
-    if (node && typeof node.title === 'string' && node.title.trim()) return node.title.trim();
-    if (node && node.properties && typeof node.properties.label === 'string' && node.properties.label.trim()) {
-        return node.properties.label.trim();
+    if (node && typeof node.title === 'string' && node.title.trim() && node.title.trim() !== 'Triggers/Button' && node.title.trim() !== 'Triggers/Command Palette') {
+        // Custom title set via double-click rename
+        return node.title.trim();
     }
+    if (node && node.properties) {
+        if (typeof node.properties.Name === 'string' && node.properties.Name.trim()) return node.properties.Name.trim();
+        if (typeof node.properties.name === 'string' && node.properties.name.trim()) return node.properties.name.trim();
+        if (typeof node.properties.label === 'string' && node.properties.label.trim()) return node.properties.label.trim();
+    }
+    if (node && typeof node.title === 'string' && node.title.trim()) return node.title.trim();
     return fallback;
 };
 

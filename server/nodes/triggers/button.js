@@ -3,6 +3,7 @@ const { log, logColors } = require('../../log')
 class NodeDefinition {
     constructor() {
         this.addOutput("", LiteGraph.EVENT);
+        this.addProperty("Name", "");
         this.clicked = false;
         this.buttonHovered = false;
         this.desc = "Triggers an event";

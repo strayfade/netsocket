@@ -10,6 +10,8 @@ class NodeDefinition {
         this.addProperty('Conversation ID', '')
         this.addInput('Memory Key', 'string')
         this.addProperty('Memory Key', 'default')
+        this.addInput('Provider', 'string')
+        this.addProperty('Provider', '')
         this.addInput('Model', 'string')
         this.addProperty('Model', '')
         this.addInput('Max Steps', 'number')
@@ -29,7 +31,8 @@ NodeDefinition.prototype.portMeta = {
 		Command: {"description":"User command to execute.","structure":"Natural-language command for the agent.","required":true},
 		"Conversation ID": {"description":"Input \"Conversation ID\" for MCP Agent.","structure":"Plain text string (UTF-8).","required":true},
 		"Memory Key": {"description":"Input \"Memory Key\" for MCP Agent.","structure":"Plain text string (UTF-8).","required":false},
-		Model: {"description":"Language model name or ID. Leave empty to use MCP Agent model override or the Ollama default model setting.","structure":"Model identifier string (provider-specific).","required":false},
+		Provider: {"description":"AI provider ID. Leave empty to use the default provider.","structure":"Provider identifier string.","required":false},
+		Model: {"description":"Language model name or ID. Leave empty to use MCP Agent model override or the default model for the selected provider.","structure":"Model identifier string (provider-specific).","required":false},
 		"Max Steps": {"description":"Input \"Max Steps\" for MCP Agent.","structure":"Numeric value (integer or float).","required":false},
 		"System Prompt": {"description":"System instructions for the model.","structure":"System/instruction prompt text.","required":true},
 	},
@@ -48,6 +51,7 @@ const NodeFunction = async (node, params, behaviors) => {
 
     const result = await runMcpAgent({
         command: string(params.Command),
+        providerId: string(params.Provider),
         model: string(params.Model),
         maxSteps: number(params['Max Steps']),
         systemPrompt: string(params['System Prompt']),

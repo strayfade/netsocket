@@ -5,7 +5,7 @@
 // button (automationId) and markdown/html (variable) types.
 //
 // Fixed size presets (w x h in grid units, 12-column grid):
-//   button:            1x1
+//   button:            1x1, 1x2, 2x1, 2x2, 3x2, 3x3, etc.
 //   clock:             4x2, 2x1
 //   markdown / html:   2x2, 4x2, 4x3, 6x4
 
@@ -19,7 +19,7 @@ const WIDGET_TYPES = Object.freeze(['button', 'clock', 'markdown', 'html'])
 const VARIABLE_WIDGET_TYPES = Object.freeze(['markdown', 'html'])
 
 const TYPE_PRESETS = Object.freeze({
-    button: Object.freeze([{ w: 1, h: 1 }]),
+    button: Object.freeze([{ w: 1, h: 1 }, { w: 1, h: 2 }, { w: 2, h: 1 }, { w: 2, h: 2 }, { w: 3, h: 2 }, { w: 3, h: 3 }]),
     clock: Object.freeze([{ w: 4, h: 2 }, { w: 2, h: 1 }]),
     markdown: Object.freeze([{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }]),
     html: Object.freeze([{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }]),
@@ -76,6 +76,7 @@ const validateWidget = (entry, index) => {
         const automationId = normalizeAutomationId(entry.automationId)
         if (!automationId) throw new Error('automation_required')
         widget.automationId = automationId
+        if (entry.showName === true) widget.showName = true
     }
     if (VARIABLE_WIDGET_TYPES.includes(type)) {
         const variable = normalizeVariable(entry.variable)
