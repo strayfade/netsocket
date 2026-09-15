@@ -5,7 +5,7 @@ const { hueDiscovery } = require('../../../utils/hueApi')
 class NodeDefinition {
     constructor() {
 
-        this.addOutput("Rules", "array");
+        this.addOutput("Rules", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Rules/Get All Rules"

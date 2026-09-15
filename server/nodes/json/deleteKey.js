@@ -3,11 +3,11 @@ const { deleteObjectKey } = require('../../utils/arrayTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Object", "object");
+        this.addInput("Object", "JSON");
         this.addProperty("Object", "{}");
         this.addInput("Key", "string");
         this.addProperty("Key", "");
-        this.addOutput("Result", "object");
+        this.addOutput("Result", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Delete Key"

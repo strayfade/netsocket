@@ -3,7 +3,7 @@ const { validateJsonSchema } = require('../../utils/jsonTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("JSON", "object");
+        this.addInput("JSON", "JSON");
         this.addProperty("JSON", "{}");
         this.addInput("Schema", "string");
         this.addProperty("Schema", "{\"type\":\"object\"}");

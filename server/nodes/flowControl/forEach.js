@@ -4,10 +4,10 @@ const { number, string, bool, json } = require('../../utils/inputParser')
 class NodeDefinition {
     constructor() {
         this.addInput("", LiteGraph.EVENT);
-        this.addInput("Array", "array");
+        this.addInput("Array", "JSON");
         this.addInput("Delay (ms)", "number");
         this.addOutput("On Element", LiteGraph.EVENT);
-        this.addOutput("Element", "object")
+        this.addOutput("Element", "JSON")
         this.addOutput("Index", "number")
         this.addOutput("On Finish", LiteGraph.EVENT);
     }

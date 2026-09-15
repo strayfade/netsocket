@@ -10,7 +10,7 @@ class NodeDefinition {
         this.addInput("Payload (JSON)", "string");
         this.addProperty("Payload (JSON)", "{\"name\":\"Relax\",\"lights\":[],\"type\":\"LightScene\"}");
         this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("Scene", "object");
+        this.addOutput("Scene", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Scenes/Create Scene"

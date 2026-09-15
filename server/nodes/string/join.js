@@ -3,7 +3,7 @@ const { joinArray } = require('../../utils/stringTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Array", "array");
+        this.addInput("Array", "JSON");
         this.addProperty("Array", "[]");
         this.addInput("Delimiter", "string");
         this.addProperty("Delimiter", ",");

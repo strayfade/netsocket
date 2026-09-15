@@ -3,7 +3,7 @@ const { filterArray } = require('../../utils/jsonTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Array", "object");
+        this.addInput("Array", "JSON");
         this.addProperty("Array", "[]");
         this.addInput("Key", "string");
         this.addProperty("Key", "status");
@@ -20,7 +20,7 @@ class NodeDefinition {
             "lt",
             "lte",
         ]);
-        this.addOutput("Result", "object");
+        this.addOutput("Result", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Filter Array"

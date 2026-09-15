@@ -5,7 +5,7 @@ const { hueDiscovery } = require('../../../utils/hueApi')
 class NodeDefinition {
     constructor() {
 
-        this.addOutput("Configuration", "object");
+        this.addOutput("Configuration", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Bridge/Get Bridge Configuration"

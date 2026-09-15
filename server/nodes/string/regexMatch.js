@@ -11,7 +11,7 @@ class NodeDefinition {
         this.addProperty("Flags", "");
         this.addOutput("Matched", "boolean");
         this.addOutput("Match", "string");
-        this.addOutput("Groups", "array");
+        this.addOutput("Groups", "JSON");
     }
 }
 NodeDefinition.prototype.title = "String/Regex Match"

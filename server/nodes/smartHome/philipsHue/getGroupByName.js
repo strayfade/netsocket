@@ -5,7 +5,7 @@ const { hueDiscovery } = require('../../../utils/hueApi')
 class NodeDefinition {
     constructor() {
         this.addInput("Name", "string");
-        this.addOutput("Groups", "array");
+        this.addOutput("Groups", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Groups/Get Group by Name"

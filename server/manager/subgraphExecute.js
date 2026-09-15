@@ -39,19 +39,24 @@ const defaultValueForType = (type) => {
             return 0
         case 'boolean':
             return 'False'
-        case 'array':
-            return '[]'
-        case 'object':
+        case 'JSON':
             return '{}'
         default:
+            // Legacy array/object defaults map to JSON
+            if (String(type).toLowerCase() === 'array' || String(type).toLowerCase() === 'object') return '{}'
             return ''
     }
 }
 
 const normalizePortType = (type) => {
     const t = String(type || 'string').trim()
-    if (['string', 'number', 'boolean', 'array', 'object', '*'].includes(t)) {
+    const lower = t.toLowerCase()
+    if (lower === 'array' || lower === 'object' || lower === 'json') return 'JSON'
+    if (['string', 'number', 'boolean', '*'].includes(t)) {
         return t
+    }
+    if (['string', 'number', 'boolean', '*'].includes(lower)) {
+        return lower
     }
     return 'string'
 }

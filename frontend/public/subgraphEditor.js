@@ -6,7 +6,7 @@ const NetsocketSubgraphs = (() => {
     const INPUT_TYPE = "Subgraph/Input"
     const OUTPUT_TYPE = "Subgraph/Output"
     const EVENT_TYPE = -1
-    const PORT_TYPES = ["string", "number", "boolean", "array", "object", "*"]
+    const PORT_TYPES = ["string", "number", "boolean", "JSON", "*"]
 
     let api = null
     let definitions = []
@@ -22,9 +22,7 @@ const NetsocketSubgraphs = (() => {
                 return 0
             case "boolean":
                 return "False"
-            case "array":
-                return "[]"
-            case "object":
+            case "JSON":
                 return "{}"
             default:
                 return ""
@@ -49,6 +47,9 @@ const NetsocketSubgraphs = (() => {
 
     const normalizeType = (type) => {
         const t = typeof type === "string" ? type : "string"
+        // Legacy migration: array/object -> JSON
+        const lower = t.toLowerCase()
+        if (lower === "array" || lower === "object" || lower === "json") return "JSON"
         return PORT_TYPES.includes(t) ? t : "string"
     }
 

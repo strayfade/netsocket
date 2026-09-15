@@ -3,9 +3,9 @@ const { number, string, bool, json } = require('../../utils/inputParser')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("JSON", "object");
+        this.addInput("JSON", "JSON");
         this.addProperty("JSON", "{}");
-        this.addOutput("", "array");
+        this.addOutput("", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Get Object Keys"

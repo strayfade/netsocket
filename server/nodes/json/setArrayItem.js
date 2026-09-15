@@ -4,12 +4,12 @@ const { number, string, bool } = require('../../utils/inputParser')
 class NodeDefinition {
     constructor() {
         this.addInput("", LiteGraph.EVENT);
-        this.addInput("Array", "array");
+        this.addInput("Array", "JSON");
         this.addInput("Index", "number")
         this.addInput("New Item", "string");
         this.addProperty("New Item", "{}");
         this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("New Array", "array");
+        this.addOutput("New Array", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Set Array Item"

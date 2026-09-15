@@ -8,7 +8,7 @@ class NodeDefinition {
         this.addInput("Payload (JSON)", "string");
         this.addProperty("Payload (JSON)", "{\"name\":\"My link\",\"links\":[],\"class\":\"device\"}");
         this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("Resource Link", "object");
+        this.addOutput("Resource Link", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Resource Links/Create Resource Link"

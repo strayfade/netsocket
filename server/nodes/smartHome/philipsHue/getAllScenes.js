@@ -5,7 +5,7 @@ const { hueDiscovery } = require('../../../utils/hueApi')
 class NodeDefinition {
     constructor() {
 
-        this.addOutput("Scenes", "array");
+        this.addOutput("Scenes", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Scenes/Get All Scenes"

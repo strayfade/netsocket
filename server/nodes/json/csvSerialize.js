@@ -3,7 +3,7 @@ const { serializeCsv } = require('../../utils/jsonTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Rows", "object");
+        this.addInput("Rows", "JSON");
         this.addProperty("Rows", "[]");
         this.addInput("Columns", "string");
         this.addProperty("Columns", "");

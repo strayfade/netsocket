@@ -5,7 +5,7 @@ class NodeDefinition {
     constructor() {
         this.addInput("Query", "string");
         this.addProperty("Query", "");
-        this.addOutput("Object", "object");
+        this.addOutput("Object", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Encoding/Query String Parse"

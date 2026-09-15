@@ -2,9 +2,9 @@ const { coalesceValue } = require('../../utils/stringTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Value", "object");
-        this.addInput("Fallback", "object");
-        this.addOutput("Result", "object");
+        this.addInput("Value", "JSON");
+        this.addInput("Fallback", "JSON");
+        this.addOutput("Result", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Logic/Coalesce"

@@ -23,7 +23,7 @@ describe('Philips Hue nodes', () => {
         }
     })
 
-    it('uses array types for list outputs', () => {
+    it('uses JSON types for list outputs', () => {
         const dir = path.join(__dirname, '../server/nodes/smartHome/philipsHue')
         const listNodes = [
             ['getAllLights.js', 'Lights'],
@@ -36,8 +36,8 @@ describe('Philips Hue nodes', () => {
             const source = fs.readFileSync(path.join(dir, file), 'utf8')
             assert.match(
                 source,
-                new RegExp(`this\\.addOutput\\("${port.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}", "array"\\);`),
-                `${file} should declare ${port} as array`
+                new RegExp(`this\\.addOutput\\("${port.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}", "JSON"\\);`),
+                `${file} should declare ${port} as JSON`
             )
             assert.ok(mod.NodeDefinition, `${file} exports NodeDefinition`)
         }

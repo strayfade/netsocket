@@ -7,7 +7,7 @@ class NodeDefinition {
     constructor() {
         this.addInput("Name", "string");
         this.addProperty("Name", "Hue bloom 1");
-        this.addOutput("Light Object", "array");
+        this.addOutput("Light Object", "JSON");
         this.addOutput("ID", "string");
     }
 }

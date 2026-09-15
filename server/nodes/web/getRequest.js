@@ -7,7 +7,7 @@ class NodeDefinition {
         this.addInput("", LiteGraph.EVENT);
         this.addInput("URL", "string")
         this.addProperty("URL", "")
-        this.addInput("Headers", "object")
+        this.addInput("Headers", "JSON")
         this.addProperty("Headers", "{}")
         this.addInput("Timeout Ms", "number")
         this.addProperty("Timeout Ms", "30000")

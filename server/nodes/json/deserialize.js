@@ -5,7 +5,7 @@ class NodeDefinition {
     constructor() {
         this.addInput("JSON String", "string");
         this.addProperty("JSON String", "{}");
-        this.addOutput("", "array");
+        this.addOutput("", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Deserialize"

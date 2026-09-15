@@ -3,11 +3,11 @@ const { getByPath } = require('../../utils/arrayTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("JSON", "object");
+        this.addInput("JSON", "JSON");
         this.addProperty("JSON", "{}");
         this.addInput("Path", "string");
         this.addProperty("Path", "");
-        this.addOutput("Value", "object");
+        this.addOutput("Value", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Get By Path"

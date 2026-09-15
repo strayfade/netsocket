@@ -8,7 +8,7 @@ class NodeDefinition {
         this.addInput("Time Zone", "string");
         this.addProperty("Time Zone", "UTC");
         this.addOutput("ISO Like", "string");
-        this.addOutput("Parts", "object");
+        this.addOutput("Parts", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Time/Convert Timezone"

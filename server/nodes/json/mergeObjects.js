@@ -3,11 +3,11 @@ const { mergeObjects } = require('../../utils/arrayTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("A", "object");
+        this.addInput("A", "JSON");
         this.addProperty("A", "{}");
-        this.addInput("B", "object");
+        this.addInput("B", "JSON");
         this.addProperty("B", "{}");
-        this.addOutput("Result", "object");
+        this.addOutput("Result", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Merge Objects"

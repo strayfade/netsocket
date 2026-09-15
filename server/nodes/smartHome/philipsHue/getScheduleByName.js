@@ -5,7 +5,7 @@ const { hueDiscovery } = require('../../../utils/hueApi')
 class NodeDefinition {
     constructor() {
         this.addInput("Name", "string");
-        this.addOutput("Schedules", "array");
+        this.addOutput("Schedules", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Schedules/Get Schedule by Name"

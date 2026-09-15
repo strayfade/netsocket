@@ -18,7 +18,7 @@ class NodeDefinition {
             "application/xml",
             "application/octet-stream",
         ])
-        this.addInput("Headers", "object")
+        this.addInput("Headers", "JSON")
         this.addProperty("Headers", "{}")
         this.addInput("Timeout Ms", "number")
         this.addProperty("Timeout Ms", "30000")

@@ -3,7 +3,7 @@ const { buildQueryString } = require('../../utils/encodingTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Object", "object");
+        this.addInput("Object", "JSON");
         this.addProperty("Object", "{}");
         this.addOutput("Query", "string");
     }

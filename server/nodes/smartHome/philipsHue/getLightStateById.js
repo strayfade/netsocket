@@ -5,7 +5,7 @@ const { getHueApi, LightState, hueApiLib, doesHueApiWork } = require('../../../u
 class NodeDefinition {
     constructor() {
         this.addInput("ID", "string");
-        this.addOutput("State Object", "object");
+        this.addOutput("State Object", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Get Light State by ID"

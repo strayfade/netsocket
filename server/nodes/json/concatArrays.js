@@ -3,11 +3,11 @@ const { concatArrays } = require('../../utils/arrayTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("A", "array");
+        this.addInput("A", "JSON");
         this.addProperty("A", "[]");
-        this.addInput("B", "array");
+        this.addInput("B", "JSON");
         this.addProperty("B", "[]");
-        this.addOutput("Result", "array");
+        this.addOutput("Result", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Concat Arrays"

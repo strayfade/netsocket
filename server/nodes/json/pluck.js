@@ -3,11 +3,11 @@ const { pluckArray } = require('../../utils/arrayTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Array", "array");
+        this.addInput("Array", "JSON");
         this.addProperty("Array", "[]");
         this.addInput("Key", "string");
         this.addProperty("Key", "");
-        this.addOutput("Result", "array");
+        this.addOutput("Result", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Pluck"

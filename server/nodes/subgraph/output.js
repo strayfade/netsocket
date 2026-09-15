@@ -1,7 +1,7 @@
 class NodeDefinition {
     constructor() {
         this.addProperty("Name", "output");
-        this.addEnumProperty("Type", "string", ["string", "number", "boolean", "array", "object", "*"]);
+        this.addEnumProperty("Type", "string", ["string", "number", "boolean", "JSON", "*"]);
         this.addInput("Value", "*");
         this.addProperty("Value", "");
     }
@@ -12,7 +12,7 @@ NodeDefinition.prototype.portMeta = {
     inputs: {
         Value: {
             description: "Value collected as this subgraph's matching output on the Call node.",
-            structure: "Same type as the Type property (string, number, boolean, array, object, or any).",
+            structure: "Same type as the Type property (string, number, boolean, JSON, or any).",
             required: false,
         },
     },

@@ -9,7 +9,7 @@ class NodeDefinition {
         this.addInput("Config (JSON)", "string");
         this.addProperty("Config (JSON)", "{}");
         this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("Result", "object");
+        this.addOutput("Result", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Sensors/Update Sensor Config"

@@ -7,7 +7,7 @@ class NodeDefinition {
         this.addProperty("CSV", "name,score\nAlice,10");
         this.addInput("Has Header", "boolean");
         this.addEnumProperty("Has Header", "True", ["True", "False"]);
-        this.addOutput("Rows", "object");
+        this.addOutput("Rows", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/CSV Parse"

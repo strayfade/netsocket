@@ -2,7 +2,7 @@ const { typeOfValue } = require('../../utils/stringTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Value", "object");
+        this.addInput("Value", "JSON");
         this.addOutput("Type", "string");
     }
 }

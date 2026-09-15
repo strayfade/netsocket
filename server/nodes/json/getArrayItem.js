@@ -3,10 +3,10 @@ const { number, string, bool, json } = require('../../utils/inputParser')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Array", "array");
+        this.addInput("Array", "JSON");
         this.addInput("Index", "number")
         this.addProperty("Index", "0")
-        this.addOutput("", "object");
+        this.addOutput("", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Get Array Item"

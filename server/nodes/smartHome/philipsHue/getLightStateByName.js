@@ -6,7 +6,7 @@ class NodeDefinition {
     constructor() {
         this.addInput("Name", "string");
         this.addProperty("Name", "Hue bloom 1");
-        this.addOutput("State Object", "object");
+        this.addOutput("State Object", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Get Light State by Name"

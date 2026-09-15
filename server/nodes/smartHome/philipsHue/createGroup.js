@@ -10,7 +10,7 @@ class NodeDefinition {
         this.addInput("Payload (JSON)", "string");
         this.addProperty("Payload (JSON)", "{\"name\":\"My room\",\"lights\":[]}");
         this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("Group", "object");
+        this.addOutput("Group", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Groups/Create Group"

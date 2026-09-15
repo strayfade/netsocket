@@ -3,7 +3,7 @@ const { arrayIncludes } = require('../../utils/arrayTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Array", "array");
+        this.addInput("Array", "JSON");
         this.addProperty("Array", "[]");
         this.addInput("Value", "string");
         this.addProperty("Value", "");

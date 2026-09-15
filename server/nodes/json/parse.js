@@ -5,7 +5,7 @@ class NodeDefinition {
     constructor() {
         this.addInput("String", "string");
         this.addProperty("String", "{}");
-        this.addOutput("", "object");
+        this.addOutput("", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Parse"

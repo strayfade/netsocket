@@ -5,7 +5,7 @@ const { hueDiscovery } = require('../../../utils/hueApi')
 class NodeDefinition {
     constructor() {
         this.addInput("Name", "string");
-        this.addOutput("Resource Links", "array");
+        this.addOutput("Resource Links", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Resource Links/Get Resource Link by Name"

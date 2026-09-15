@@ -5,7 +5,7 @@ class NodeDefinition {
     constructor() {
         this.addInput("Template", "string");
         this.addProperty("Template", "Hello {name}");
-        this.addInput("Values", "object");
+        this.addInput("Values", "JSON");
         this.addProperty("Values", "{\"name\":\"world\"}");
         this.addOutput("Text", "string");
     }

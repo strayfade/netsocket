@@ -796,6 +796,18 @@
             type_a = type_a.toLowerCase();
             type_b = type_b.toLowerCase();
 
+            // Legacy alias: JSON unified type is compatible with old array/object during migration
+            const jsonAliases = new Set(["json", "array", "object"]);
+            const isJsonCompat = (a, b) => {
+                const aIsJson = a === "json" || a === "array" || a === "object";
+                const bIsJson = b === "json" || b === "array" || b === "object";
+                // JSON (including legacy array/object) is mutually compatible
+                if (aIsJson && bIsJson) return true;
+                // Explicitly also treat lower-cased JSON title case: already covered
+                return false;
+            };
+            if (isJsonCompat(type_a, type_b)) return true;
+
             // For nodes supporting multiple connection types
             if (type_a.indexOf(",") == -1 && type_b.indexOf(",") == -1) {
                 return type_a == type_b;
@@ -941,7 +953,7 @@
     global.LGraph = LiteGraph.LGraph = LGraph;
 
     //default supported types
-    LGraph.supported_types = ["number", "string", "boolean"];
+    LGraph.supported_types = ["number", "string", "boolean", "JSON"];
 
     //used to know which types of connections support this graph (some graphs do not allow certain types)
     LGraph.prototype.getSupportedTypes = function () {

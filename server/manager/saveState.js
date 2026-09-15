@@ -2,6 +2,7 @@ const path = require('path')
 const fs = require('fs').promises
 const { config } = require('../config')
 const { log, logColors } = require('../log')
+const { migrateGraphRoot } = require('./graphMigration')
 
 const EMPTY_LITEGRAPH = {
     last_node_id: 0,
@@ -167,6 +168,16 @@ const loadNodesFromDisk = async () => {
     try {
         rawText = await fs.readFile(config.storage.nodes, { encoding: 'utf-8' })
         const parsed = JSON.parse(rawText)
+        // Auto-migrate legacy array/object port types -> JSON
+        const migrated = migrateGraphRoot(parsed)
+        if (migrated) {
+            try {
+                await writeJsonAtomic(config.storage.nodes, JSON.stringify(parsed))
+                log('Migrated legacy array/object types to JSON in state.json', logColors.Success)
+            } catch (e) {
+                log(`Failed to persist migrated state.json: ${e}`, logColors.Warning)
+            }
+        }
         const normalized = normalizeGraphRoot(parsed)
         if (normalized) {
             graphNodes = normalized
@@ -183,6 +194,15 @@ const loadNodesFromDisk = async () => {
     if (restored) {
         try {
             const parsed = JSON.parse(await fs.readFile(config.storage.nodes, { encoding: 'utf-8' }))
+            const migrated2 = migrateGraphRoot(parsed)
+            if (migrated2) {
+                try {
+                    await writeJsonAtomic(config.storage.nodes, JSON.stringify(parsed))
+                    log('Migrated legacy array/object types to JSON in restored state.json', logColors.Success)
+                } catch (e) {
+                    log(`Failed to persist migrated restored state.json: ${e}`, logColors.Warning)
+                }
+            }
             const normalized = normalizeGraphRoot(parsed)
             if (normalized) {
                 graphNodes = normalized
@@ -369,6 +389,10 @@ const getNodes = () => {
 
 const setNodes = (newNodes, opts = {}) => {
     const fromImport = opts.fromImport === true
+    // Migrate legacy types on imported payload before normalization
+    if (newNodes && typeof newNodes === 'object') {
+        migrateGraphRoot(newNodes)
+    }
     const normalized = normalizeGraphRoot(newNodes)
     if (!normalized) {
         if (!fromImport && lastKnownNodeCount > 0 && !restoreInProgress) {

@@ -8,7 +8,7 @@ class NodeDefinition {
         this.addInput("Payload (JSON)", "string");
         this.addProperty("Payload (JSON)", "{\"name\":\"Wake up\",\"command\":{\"address\":\"/api/<username>/groups/0/action\",\"method\":\"PUT\",\"body\":{\"on\":true}},\"localtime\":\"W0770450\"}");
         this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("Schedule", "object");
+        this.addOutput("Schedule", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Schedules/Create Schedule"

@@ -541,6 +541,14 @@
 
         const serializeGraphJson = () => JSON.stringify(graph.serialize());
         const cloneGraphData = (data) => JSON.parse(JSON.stringify(data));
+        const migrateGraphData = (data) => {
+            if (window.NetsocketGraphMigration) {
+                const cloned = cloneGraphData(data);
+                if (window.NetsocketGraphMigration.migrateGraphRoot(cloned)) return cloned;
+                return data;
+            }
+            return data;
+        };
 
         const undoBtn = document.getElementById("editor-undo");
         const redoBtn = document.getElementById("editor-redo");
@@ -610,7 +618,8 @@
             const snap = graphHistory[graphHistoryIndex];
             graphReconfiguring = true;
             try {
-                graph.configure(cloneGraphData(snap));
+                const migratedSnap = migrateGraphData(snap);
+                graph.configure(migratedSnap);
                 graph.start();
             } finally {
                 graphReconfiguring = false;
@@ -841,7 +850,8 @@
                         graphPersistChain = Promise.resolve();
                         graphReconfiguring = true;
                         try {
-                            graph.configure(parsedMessage.broadcastData);
+                            const incoming = migrateGraphData(parsedMessage.broadcastData);
+                            graph.configure(incoming);
                             graph.start();
                             graphLoaded = true;
                             resetHistoryToCurrentGraph();
@@ -1038,6 +1048,7 @@
     <script>
         if (window.ShellLogic) ShellLogic.markActiveTab(document);
     </script>
+    <script type="text/javascript" src="graphMigration.js"></script>
     <script type="text/javascript" src="aiProviders.js"></script>
     <script type="text/javascript" src="createNode.js"></script>
     <script type="text/javascript" src="constructNodes.js"></script>

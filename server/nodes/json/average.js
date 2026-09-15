@@ -3,7 +3,7 @@ const { averageArray } = require('../../utils/arrayTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Array", "array");
+        this.addInput("Array", "JSON");
         this.addProperty("Array", "[]");
         this.addInput("Key", "string");
         this.addProperty("Key", "");

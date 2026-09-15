@@ -3,7 +3,7 @@ const { encodeJwt } = require('../../utils/jwtTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Payload", "object");
+        this.addInput("Payload", "JSON");
         this.addProperty("Payload", "{}");
         this.addInput("Secret", "string");
         this.addProperty("Secret", "");

@@ -3,13 +3,13 @@ const { sliceArray } = require('../../utils/arrayTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Array", "array");
+        this.addInput("Array", "JSON");
         this.addProperty("Array", "[]");
         this.addInput("Begin", "number");
         this.addProperty("Begin", "0");
         this.addInput("End", "number");
         this.addProperty("End", "");
-        this.addOutput("Result", "array");
+        this.addOutput("Result", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Slice Array"

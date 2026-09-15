@@ -3,13 +3,13 @@ const { sortArray } = require('../../utils/arrayTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Array", "array");
+        this.addInput("Array", "JSON");
         this.addProperty("Array", "[]");
         this.addInput("Key", "string");
         this.addProperty("Key", "");
         this.addInput("Direction", "string");
         this.addEnumProperty("Direction", "asc", ["asc", "desc"]);
-        this.addOutput("Result", "array");
+        this.addOutput("Result", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Sort Array"

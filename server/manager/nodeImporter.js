@@ -236,7 +236,17 @@ ${(() => {
                     outConstructor += `\t\t${input.value}\n`
                 }
                 else {
-                    outConstructor += `\t\tthis.addInput("${input.name}", ${input.type != "LiteGraph.EVENT" ? `"${input.type}"` : input.type})\n`
+                    // Normalize legacy array/object -> JSON
+                    const normalizedInputType = (() => {
+                        if (input.type === "LiteGraph.EVENT") return input.type
+                        const lower = String(input.type).toLowerCase()
+                        if (lower === "array" || lower === "object" || lower === "json") return "JSON"
+                        return input.type
+                    })()
+                    const inputTypeStr = normalizedInputType !== "LiteGraph.EVENT" ? `"${normalizedInputType}"` : normalizedInputType
+                    outConstructor += `\t\tthis.addInput("${input.name}", ${inputTypeStr})\n`
+                    // Track normalized type for property fallback
+                    if (normalizedInputType === "JSON") input.type = "JSON"
 
                     // Skip widget/property defaults for unnamed pins (e.g. Reroute, event slots)
                     const hasInputName = input.name != null && String(input.name).length > 0
@@ -254,15 +264,16 @@ ${(() => {
                             outConstructor += formatBooleanPropertyLine(input.name, "False")
                         } else if (input.type === "number") {
                             outConstructor += formatPropertyLine({ name: input.name, defaultValue: "0", type: "number" })
-                        } else {
+                        }                     else {
                             outConstructor += `\t\tthis.addProperty("${input.name}", "${(() => {
-                                switch (input.type) {
+                                switch (String(input.type).toLowerCase()) {
                                     case "string":
                                         return ""
                                     case "number":
                                         return "0.0"
+                                    case "json":
+                                        return "{}"
                                     case "array":
-                                        return "[]"
                                     case "object":
                                         return "{}"
                                 }
@@ -276,6 +287,15 @@ ${(() => {
             for (property of foundProperties) {
                 outConstructor += formatPropertyLine(property)
             }
+            // Normalize any addOutput lines that still use legacy array/object types
+            outConstructor = outConstructor.replace(
+                /this\.addOutput\s*\(\s*("[^"]*"|'[^']*')\s*,\s*"(?:array|object)"\s*\)/gi,
+                (match, name) => `this.addOutput(${name}, "JSON")`
+            )
+            outConstructor = outConstructor.replace(
+                /this\.addOutput\s*\(\s*("[^"]*"|'[^']*')\s*,\s*'(?:array|object)'\s*\)/gi,
+                (match, name) => `this.addOutput(${name}, "JSON")`
+            )
             outConstructor = outConstructor.substring(0, outConstructor.lastIndexOf("\n"))
             return outConstructor
         })()}

@@ -8,7 +8,7 @@ class NodeDefinition {
         this.addInput("Payload (JSON)", "string");
         this.addProperty("Payload (JSON)", "{\"name\":\"My rule\",\"conditions\":[],\"actions\":[]}");
         this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("Rule", "object");
+        this.addOutput("Rule", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Rules/Create Rule"

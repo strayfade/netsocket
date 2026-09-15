@@ -9,7 +9,7 @@ class NodeDefinition {
         this.addInput("State (JSON)", "string");
         this.addProperty("State (JSON)", "{\"on\":true,\"bri\":254}");
         this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("Result", "object");
+        this.addOutput("Result", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Set Light State"

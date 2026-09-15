@@ -19,12 +19,12 @@ function emitReadNode({ file, folder, title, description, inputs, outputs, body,
         return line
     }).join('\n')
     const outputLines = (outputs || []).map((o) => {
-        const type = o.type || (o.fail === 'failArray' ? 'array' : 'object')
+        const type = o.type || 'JSON'
         return `        this.addOutput("${o.name}", "${type}");`
     }).join('\n')
     const failValues = (outputs || []).map((o) => {
-        const type = o.type || (o.fail === 'failArray' ? 'array' : 'object')
-        return o.fail ?? (type === 'array' ? 'failArray' : 'failObject')
+        const type = o.type || 'JSON'
+        return o.fail ?? 'failArray'
     }).join(', ')
 
     const content = `${header}
@@ -107,7 +107,7 @@ emitReadNode({
     file: 'getAllLights.js',
     title: 'Get All Lights',
     description: 'Returns all lights registered on the Hue bridge.',
-    outputs: [{ name: 'Lights', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Lights', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.lights.getAll()]',
 })
 
@@ -117,7 +117,7 @@ emitReadNode({
     title: 'Get Light by ID',
     description: 'Returns a single Hue light by its bridge ID.',
     inputs: [{ name: 'ID', type: 'string' }],
-    outputs: [{ name: 'Light', type: 'object' }],
+    outputs: [{ name: 'Light', type: 'JSON' }],
     body: '        return [await api.lights.getLight(string(params.ID))]',
 })
 
@@ -126,7 +126,7 @@ emitReadNode({
     file: 'getNewLights.js',
     title: 'Get New Lights',
     description: 'Returns lights discovered by the bridge that are not yet fully configured.',
-    outputs: [{ name: 'Lights', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Lights', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.lights.getNew()]',
 })
 
@@ -145,7 +145,7 @@ emitReadNode({
     title: 'Get Light Attributes and State',
     description: 'Returns full attributes and state for a light by ID.',
     inputs: [{ name: 'ID', type: 'string' }],
-    outputs: [{ name: 'Light Data', type: 'object' }],
+    outputs: [{ name: 'Light Data', type: 'JSON' }],
     body: '        return [await api.lights.getLightAttributesAndState(string(params.ID))]',
 })
 
@@ -183,7 +183,7 @@ emitWriteNode({
         { name: 'ID', type: 'string' },
         { name: 'State (JSON)', type: 'string', property: '{"on":true,"bri":254}' },
     ],
-    outputs: [{ name: 'Result', type: 'object', expr: 'result' }],
+    outputs: [{ name: 'Result', type: 'JSON', expr: 'result' }],
     body: '        const result = await api.lights.setLightState(string(params.ID), json(params["State (JSON)"]))',
 })
 
@@ -193,7 +193,7 @@ emitReadNode({
     file: 'getAllGroups.js',
     title: 'Get All Groups',
     description: 'Returns all groups on the Hue bridge.',
-    outputs: [{ name: 'Groups', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Groups', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.groups.getAll()]',
 })
 
@@ -203,7 +203,7 @@ emitReadNode({
     title: 'Get Group by ID',
     description: 'Returns a single Hue group by ID.',
     inputs: [{ name: 'ID', type: 'string' }],
-    outputs: [{ name: 'Group', type: 'object' }],
+    outputs: [{ name: 'Group', type: 'JSON' }],
     body: '        return [await api.groups.getGroup(number(params.ID))]',
 })
 
@@ -213,7 +213,7 @@ emitReadNode({
     title: 'Get Group by Name',
     description: 'Returns Hue groups matching the given name.',
     inputs: [{ name: 'Name', type: 'string' }],
-    outputs: [{ name: 'Groups', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Groups', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.groups.getGroupByName(string(params.Name))]',
 })
 
@@ -231,7 +231,7 @@ emitWriteNode({
         },
         { name: 'Payload (JSON)', type: 'string', property: '{"name":"My room","lights":[]}' },
     ],
-    outputs: [{ name: 'Group', type: 'object', expr: 'created' }],
+    outputs: [{ name: 'Group', type: 'JSON', expr: 'created' }],
     body: `        const type = string(params.Type).toLowerCase()
         const payload = json(params["Payload (JSON)"])
         const group = hueModel.createFromBridge(type, 0, payload)
@@ -269,7 +269,7 @@ emitReadNode({
     title: 'Get Group State',
     description: 'Returns the current action state for a group.',
     inputs: [{ name: 'ID', type: 'string' }],
-    outputs: [{ name: 'State', type: 'object' }],
+    outputs: [{ name: 'State', type: 'JSON' }],
     body: '        return [await api.groups.getGroupState(number(params.ID))]',
 })
 
@@ -301,7 +301,7 @@ for (const [file, title, , method] of groupTypeReaders) {
         file,
         title,
         description: `Returns ${title.replace('Get ', '').toLowerCase()} from the Hue bridge.`,
-        outputs: [{ name: 'Groups', type: 'array', fail: 'failArray' }],
+        outputs: [{ name: 'Groups', type: 'JSON', fail: 'failArray' }],
         body: `        return [await api.groups.${method}()]`,
     })
 }
@@ -332,7 +332,7 @@ emitReadNode({
     file: 'getAllScenes.js',
     title: 'Get All Scenes',
     description: 'Returns all scenes stored on the Hue bridge.',
-    outputs: [{ name: 'Scenes', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Scenes', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.scenes.getAll()]',
 })
 
@@ -342,7 +342,7 @@ emitReadNode({
     title: 'Get Scene by ID',
     description: 'Returns a scene by its ID.',
     inputs: [{ name: 'ID', type: 'string' }],
-    outputs: [{ name: 'Scene', type: 'object' }],
+    outputs: [{ name: 'Scene', type: 'JSON' }],
     body: '        return [await api.scenes.getScene(string(params.ID))]',
 })
 
@@ -352,7 +352,7 @@ emitReadNode({
     title: 'Get Scene by Name',
     description: 'Returns scenes matching the given name.',
     inputs: [{ name: 'Name', type: 'string' }],
-    outputs: [{ name: 'Scenes', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Scenes', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.scenes.getSceneByName(string(params.Name))]',
 })
 
@@ -370,7 +370,7 @@ emitWriteNode({
         },
         { name: 'Payload (JSON)', type: 'string', property: '{"name":"Relax","lights":[],"type":"LightScene"}' },
     ],
-    outputs: [{ name: 'Scene', type: 'object', expr: 'created' }],
+    outputs: [{ name: 'Scene', type: 'JSON', expr: 'created' }],
     body: `        const type = string(params.Type).toLowerCase()
         const payload = json(params["Payload (JSON)"])
         const scene = hueModel.createFromBridge(type, 0, payload)
@@ -386,7 +386,7 @@ emitWriteNode({
         { name: 'ID', type: 'string' },
         { name: 'Attributes (JSON)', type: 'string', property: '{"name":"Evening"}' },
     ],
-    outputs: [{ name: 'Result', type: 'object', expr: 'result' }],
+    outputs: [{ name: 'Result', type: 'JSON', expr: 'result' }],
     body: `        const scene = await api.scenes.getScene(string(params.ID))
         const updated = mergeModelPayload(scene, json(params["Attributes (JSON)"]))
         const result = await api.scenes.updateScene(updated)`,
@@ -402,7 +402,7 @@ emitWriteNode({
         { name: 'Light ID', type: 'string' },
         { name: 'State (JSON)', type: 'string', property: '{"on":true,"bri":200}' },
     ],
-    outputs: [{ name: 'Result', type: 'object', expr: 'result' }],
+    outputs: [{ name: 'Result', type: 'JSON', expr: 'result' }],
     body: `        const state = new SceneLightState().populate(json(params["State (JSON)"]))
         const result = await api.scenes.updateLightState(string(params["Scene ID"]), string(params["Light ID"]), state)`,
 })
@@ -433,7 +433,7 @@ emitReadNode({
     file: 'getAllSensors.js',
     title: 'Get All Sensors',
     description: 'Returns all sensors on the Hue bridge.',
-    outputs: [{ name: 'Sensors', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Sensors', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.sensors.getAll()]',
 })
 
@@ -443,7 +443,7 @@ emitReadNode({
     title: 'Get Sensor by ID',
     description: 'Returns a sensor by ID.',
     inputs: [{ name: 'ID', type: 'string' }],
-    outputs: [{ name: 'Sensor', type: 'object' }],
+    outputs: [{ name: 'Sensor', type: 'JSON' }],
     body: '        return [await api.sensors.getSensor(string(params.ID))]',
 })
 
@@ -461,7 +461,7 @@ emitReadNode({
     file: 'getNewSensors.js',
     title: 'Get New Sensors',
     description: 'Returns sensors discovered but not yet configured.',
-    outputs: [{ name: 'Sensors', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Sensors', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.sensors.getNew()]',
 })
 
@@ -494,7 +494,7 @@ emitWriteNode({
         },
         { name: 'Payload (JSON)', type: 'string', property: '{"name":"My sensor","modelid":"PHCLIPSOM01"}' },
     ],
-    outputs: [{ name: 'Sensor', type: 'object', expr: 'created' }],
+    outputs: [{ name: 'Sensor', type: 'JSON', expr: 'created' }],
     body: `        const type = string(params.Type).toLowerCase()
         const payload = json(params["Payload (JSON)"])
         const sensor = hueModel.createFromBridge(type, 0, payload)
@@ -520,7 +520,7 @@ emitWriteNode({
         { name: 'ID', type: 'string' },
         { name: 'Config (JSON)', type: 'string', property: '{}' },
     ],
-    outputs: [{ name: 'Result', type: 'object', expr: 'result' }],
+    outputs: [{ name: 'Result', type: 'JSON', expr: 'result' }],
     body: `        const sensor = await api.sensors.getSensor(string(params.ID))
         if (sensor.config)
             Object.assign(sensor.config, json(params["Config (JSON)"]))
@@ -536,7 +536,7 @@ emitWriteNode({
         { name: 'ID', type: 'string' },
         { name: 'State (JSON)', type: 'string', property: '{}' },
     ],
-    outputs: [{ name: 'Result', type: 'object', expr: 'result' }],
+    outputs: [{ name: 'Result', type: 'JSON', expr: 'result' }],
     body: `        const sensor = await api.sensors.getSensor(string(params.ID))
         if (sensor.state)
             Object.assign(sensor.state, json(params["State (JSON)"]))
@@ -549,7 +549,7 @@ emitReadNode({
     file: 'getAllSchedules.js',
     title: 'Get All Schedules',
     description: 'Returns all schedules on the Hue bridge.',
-    outputs: [{ name: 'Schedules', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Schedules', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.schedules.getAll()]',
 })
 
@@ -559,7 +559,7 @@ emitReadNode({
     title: 'Get Schedule by ID',
     description: 'Returns a schedule by ID.',
     inputs: [{ name: 'ID', type: 'string' }],
-    outputs: [{ name: 'Schedule', type: 'object' }],
+    outputs: [{ name: 'Schedule', type: 'JSON' }],
     body: '        return [await api.schedules.getSchedule(string(params.ID))]',
 })
 
@@ -569,7 +569,7 @@ emitReadNode({
     title: 'Get Schedule by Name',
     description: 'Returns schedules matching the given name.',
     inputs: [{ name: 'Name', type: 'string' }],
-    outputs: [{ name: 'Schedules', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Schedules', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.schedules.getScheduleByName(string(params.Name))]',
 })
 
@@ -579,7 +579,7 @@ emitWriteNode({
     title: 'Create Schedule',
     description: 'Creates a schedule from a JSON payload.',
     inputs: [{ name: 'Payload (JSON)', type: 'string', property: '{"name":"Wake up","command":{"address":"/api/<username>/groups/0/action","method":"PUT","body":{"on":true}},"localtime":"W0770450"}' }],
-    outputs: [{ name: 'Schedule', type: 'object', expr: 'created' }],
+    outputs: [{ name: 'Schedule', type: 'JSON', expr: 'created' }],
     body: `        const payload = json(params["Payload (JSON)"])
         const schedule = hueModel.createFromBridge('schedule', 0, payload)
         const created = await api.schedules.createSchedule(schedule)`,
@@ -616,7 +616,7 @@ emitReadNode({
     file: 'getAllRules.js',
     title: 'Get All Rules',
     description: 'Returns all rules on the Hue bridge.',
-    outputs: [{ name: 'Rules', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Rules', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.rules.getAll()]',
 })
 
@@ -626,7 +626,7 @@ emitReadNode({
     title: 'Get Rule by ID',
     description: 'Returns a rule by ID.',
     inputs: [{ name: 'ID', type: 'string' }],
-    outputs: [{ name: 'Rule', type: 'object' }],
+    outputs: [{ name: 'Rule', type: 'JSON' }],
     body: '        return [await api.rules.getRule(number(params.ID))]',
 })
 
@@ -636,7 +636,7 @@ emitReadNode({
     title: 'Get Rule by Name',
     description: 'Returns rules matching the given name.',
     inputs: [{ name: 'Name', type: 'string' }],
-    outputs: [{ name: 'Rules', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Rules', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.rules.getRuleByName(string(params.Name))]',
 })
 
@@ -646,7 +646,7 @@ emitWriteNode({
     title: 'Create Rule',
     description: 'Creates a rule from a JSON payload.',
     inputs: [{ name: 'Payload (JSON)', type: 'string', property: '{"name":"My rule","conditions":[],"actions":[]}' }],
-    outputs: [{ name: 'Rule', type: 'object', expr: 'created' }],
+    outputs: [{ name: 'Rule', type: 'JSON', expr: 'created' }],
     body: `        const payload = json(params["Payload (JSON)"])
         const rule = hueModel.createFromBridge('rule', 0, payload)
         const created = await api.rules.createRule(rule)`,
@@ -661,7 +661,7 @@ emitWriteNode({
         { name: 'ID', type: 'string' },
         { name: 'Attributes (JSON)', type: 'string', property: '{}' },
     ],
-    outputs: [{ name: 'Result', type: 'object', expr: 'result' }],
+    outputs: [{ name: 'Result', type: 'JSON', expr: 'result' }],
     body: `        const rule = await api.rules.getRule(number(params.ID))
         const updated = mergeModelPayload(rule, json(params["Attributes (JSON)"]))
         const result = await api.rules.updateRule(updated)`,
@@ -683,7 +683,7 @@ emitReadNode({
     file: 'getAllResourceLinks.js',
     title: 'Get All Resource Links',
     description: 'Returns all resource links on the Hue bridge.',
-    outputs: [{ name: 'Resource Links', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Resource Links', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.resourceLinks.getAll()]',
 })
 
@@ -693,7 +693,7 @@ emitReadNode({
     title: 'Get Resource Link by ID',
     description: 'Returns a resource link by ID.',
     inputs: [{ name: 'ID', type: 'string' }],
-    outputs: [{ name: 'Resource Link', type: 'object' }],
+    outputs: [{ name: 'Resource Link', type: 'JSON' }],
     body: '        return [await api.resourceLinks.getResourceLink(string(params.ID))]',
 })
 
@@ -703,7 +703,7 @@ emitReadNode({
     title: 'Get Resource Link by Name',
     description: 'Returns resource links matching the given name.',
     inputs: [{ name: 'Name', type: 'string' }],
-    outputs: [{ name: 'Resource Links', type: 'array', fail: 'failArray' }],
+    outputs: [{ name: 'Resource Links', type: 'JSON', fail: 'failArray' }],
     body: '        return [await api.resourceLinks.getResourceLinkByName(string(params.Name))]',
 })
 
@@ -713,7 +713,7 @@ emitWriteNode({
     title: 'Create Resource Link',
     description: 'Creates a resource link from a JSON payload.',
     inputs: [{ name: 'Payload (JSON)', type: 'string', property: '{"name":"My link","links":[],"class":"device"}' }],
-    outputs: [{ name: 'Resource Link', type: 'object', expr: 'created' }],
+    outputs: [{ name: 'Resource Link', type: 'JSON', expr: 'created' }],
     body: `        const payload = json(params["Payload (JSON)"])
         const link = hueModel.createFromBridge('resourcelink', 0, payload)
         const created = await api.resourceLinks.createResourceLink(link)`,
@@ -728,7 +728,7 @@ emitWriteNode({
         { name: 'ID', type: 'string' },
         { name: 'Attributes (JSON)', type: 'string', property: '{}' },
     ],
-    outputs: [{ name: 'Result', type: 'object', expr: 'result' }],
+    outputs: [{ name: 'Result', type: 'JSON', expr: 'result' }],
     body: `        const link = await api.resourceLinks.getResourceLink(string(params.ID))
         const updated = mergeModelPayload(link, json(params["Attributes (JSON)"]))
         const result = await api.resourceLinks.updateResourceLink(updated)`,
@@ -750,7 +750,7 @@ emitReadNode({
     file: 'getBridgeConfiguration.js',
     title: 'Get Bridge Configuration',
     description: 'Returns the authenticated bridge configuration object.',
-    outputs: [{ name: 'Configuration', type: 'object' }],
+    outputs: [{ name: 'Configuration', type: 'JSON' }],
     body: '        return [await api.configuration.getConfiguration()]',
 })
 
@@ -759,7 +759,7 @@ emitReadNode({
     file: 'getAllConfiguration.js',
     title: 'Get All Configuration',
     description: 'Returns the full bridge state including lights, groups, scenes, and more.',
-    outputs: [{ name: 'Configuration', type: 'object' }],
+    outputs: [{ name: 'Configuration', type: 'JSON' }],
     body: '        return [await api.configuration.getAll()]',
 })
 
@@ -778,7 +778,7 @@ emitReadNode({
     file: 'getCapabilities.js',
     title: 'Get Capabilities',
     description: 'Returns bridge capability metadata.',
-    outputs: [{ name: 'Capabilities', type: 'object' }],
+    outputs: [{ name: 'Capabilities', type: 'JSON' }],
     body: '        return [await api.capabilities.getAll()]',
 })
 

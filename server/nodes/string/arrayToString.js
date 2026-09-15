@@ -3,7 +3,7 @@ const { json } = require('../../utils/inputParser')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Array", "array");
+        this.addInput("Array", "JSON");
         this.addOutput("String", "string");
     }
 }

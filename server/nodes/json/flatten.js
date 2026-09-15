@@ -3,11 +3,11 @@ const { flattenObject, unflattenObject } = require('../../utils/jsonTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("JSON", "object");
+        this.addInput("JSON", "JSON");
         this.addProperty("JSON", "{}");
         this.addInput("Mode", "string");
         this.addEnumProperty("Mode", "Flatten", ["Flatten", "Unflatten"]);
-        this.addOutput("Result", "object");
+        this.addOutput("Result", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Flatten"

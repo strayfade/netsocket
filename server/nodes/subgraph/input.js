@@ -1,7 +1,7 @@
 class NodeDefinition {
     constructor() {
         this.addProperty("Name", "input");
-        this.addEnumProperty("Type", "string", ["string", "number", "boolean", "array", "object", "*"]);
+        this.addEnumProperty("Type", "string", ["string", "number", "boolean", "JSON", "*"]);
         this.addOutput("Value", "*");
     }
 }
@@ -11,7 +11,7 @@ NodeDefinition.prototype.portMeta = {
     outputs: {
         Value: {
             description: "Value passed in from the enclosing Call node's matching input.",
-            structure: "Same type as the Type property (string, number, boolean, array, object, or any).",
+            structure: "Same type as the Type property (string, number, boolean, JSON, or any).",
         },
     },
 }

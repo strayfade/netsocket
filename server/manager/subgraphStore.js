@@ -17,6 +17,7 @@ const {
 
 const SUBGRAPH_PREFIX = 'Subgraphs/'
 const STORAGE_PATH = config.storage.subgraphs
+const { migrateSubgraphDefinitions, migrateLiteGraphSerialize } = require('./graphMigration')
 
 let definitionsById = new Map()
 let loaded = false
@@ -84,6 +85,15 @@ const loadSubgraphs = async () => {
     try {
         const raw = await fs.readFile(STORAGE_PATH, 'utf8')
         const parsed = JSON.parse(raw)
+        const didMigrate = migrateSubgraphDefinitions(parsed)
+        if (didMigrate) {
+            try {
+                await fs.writeFile(STORAGE_PATH, JSON.stringify(parsed, null, 2), 'utf8')
+                log('Migrated legacy array/object types to JSON in subgraphs.json', logColors.Success)
+            } catch (e) {
+                log(`Failed to persist migrated subgraphs.json: ${e}`, logColors.Warning)
+            }
+        }
         const list = Array.isArray(parsed?.definitions) ? parsed.definitions : []
         definitionsById = new Map()
         for (const item of list) {
@@ -160,9 +170,24 @@ const saveDefinition = async (incoming) => {
         unregisterDynamicNode(titleForName(existing.name))
     }
 
-    const graph = incoming?.graph && typeof incoming.graph === 'object'
+    let graph = incoming?.graph && typeof incoming.graph === 'object'
         ? cloneGraph(incoming.graph)
         : (existing ? cloneGraph(existing.graph) : createEmptySubgraphGraph())
+    // Migrate legacy types on incoming subgraph graph before syncing signature
+    if (graph && typeof graph === 'object') {
+        migrateLiteGraphSerialize(graph)
+        // Also handle case where incoming has explicit inputs/outputs with legacy types
+        if (Array.isArray(incoming?.inputs)) {
+            for (const inp of incoming.inputs) {
+                if (inp && typeof inp.type === 'string' && /^(array|object)$/i.test(inp.type)) inp.type = 'JSON'
+            }
+        }
+        if (Array.isArray(incoming?.outputs)) {
+            for (const out of incoming.outputs) {
+                if (out && typeof out.type === 'string' && /^(array|object)$/i.test(out.type)) out.type = 'JSON'
+            }
+        }
+    }
 
     const definition = syncSignature({
         id,

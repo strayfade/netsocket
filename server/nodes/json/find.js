@@ -3,13 +3,13 @@ const { findInArray } = require('../../utils/arrayTools')
 
 class NodeDefinition {
     constructor() {
-        this.addInput("Array", "array");
+        this.addInput("Array", "JSON");
         this.addProperty("Array", "[]");
         this.addInput("Key", "string");
         this.addProperty("Key", "");
         this.addInput("Value", "string");
         this.addProperty("Value", "");
-        this.addOutput("Item", "object");
+        this.addOutput("Item", "JSON");
     }
 }
 NodeDefinition.prototype.title = "JSON/Find"

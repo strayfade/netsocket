@@ -6,7 +6,7 @@ class NodeDefinition {
     this.addInput('Input', 'string');
     this.addInput('Delimiter', 'string');
     this.addProperty('Delimiter', '\n');
-    this.addOutput('', 'array');
+    this.addOutput('', 'JSON');
   }
 }
 NodeDefinition.prototype.title = 'String/Split'

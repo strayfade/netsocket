@@ -5,7 +5,7 @@ const { hueDiscovery } = require('../../../utils/hueApi')
 class NodeDefinition {
     constructor() {
         this.addInput("ID", "string");
-        this.addOutput("Light Data", "object");
+        this.addOutput("Light Data", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Lights/Get Light Attributes and State"

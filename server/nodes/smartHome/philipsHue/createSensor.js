@@ -10,7 +10,7 @@ class NodeDefinition {
         this.addInput("Payload (JSON)", "string");
         this.addProperty("Payload (JSON)", "{\"name\":\"My sensor\",\"modelid\":\"PHCLIPSOM01\"}");
         this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("Sensor", "object");
+        this.addOutput("Sensor", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Philips Hue/Sensors/Create CLIP Sensor"

@@ -3,7 +3,7 @@ const { number, string, bool } = require('../../../utils/inputParser')
 
 class NodeDefinition {
     constructor() {
-        this.addOutput("Devices", "array");
+        this.addOutput("Devices", "JSON");
     }
 }
 NodeDefinition.prototype.title = "Smart Home/Netsocket/List Devices"

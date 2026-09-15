@@ -8,8 +8,7 @@ const PORT_TYPE_STRUCTURES = {
     string: 'Plain text string (UTF-8).',
     number: 'Numeric value (integer or float).',
     boolean: 'Boolean true or false.',
-    array: 'JSON array (may be serialized as a string in some nodes).',
-    object: 'JSON object (may be serialized as a string in some nodes).',
+    JSON: 'JSON value — object, array, string, number, boolean, or null; may be serialized as a string in some nodes.',
     event: 'Flow-control event port; omit from execute_node.inputs — standalone MCP calls run the node directly.',
 }
 
@@ -64,7 +63,10 @@ const PORT_NAME_HINTS = {
 
 const normalizePortType = (type) => {
     if (type === 'LiteGraph.EVENT') return 'event'
-    return String(type || 'string').replace(/^["']|["']$/g, '')
+    const raw = String(type || 'string').replace(/^["']|["']$/g, '')
+    const lower = raw.toLowerCase()
+    if (lower === 'array' || lower === 'object' || lower === 'json') return 'JSON'
+    return raw
 }
 
 const humanizePortName = (name) => {
@@ -100,11 +102,11 @@ const inferPortStructure = (name, type, nodeTitle) => {
     const hints = PORT_NAME_HINTS[name]
     if (hints?.structure) return hints.structure
 
-    if (type === 'array' && /Hue|Lights/i.test(nodeTitle)) {
-        return 'Array of Philips Hue resource objects.'
+    if (type === 'JSON' && /Hue|Lights/i.test(nodeTitle)) {
+        return 'JSON array of Philips Hue resource objects (or single object for Get-by-Id).'
     }
-    if (type === 'object' && /JSON/i.test(nodeTitle)) {
-        return 'JSON object; may be returned as a parsed object or JSON string depending on the node.'
+    if (type === 'JSON' && /JSON/i.test(nodeTitle)) {
+        return 'JSON value — object, array, or primitive; may be returned as a parsed value or JSON string depending on the node.'
     }
     if (type === 'string' && /Request|Web\//i.test(nodeTitle)) {
         return 'Text response body (often JSON serialized as a string).'
@@ -120,8 +122,7 @@ const hasMeaningfulDefault = (input) => {
     const value = String(input.defaultValue).trim()
     if (input.type === 'number') return value !== '' && value !== '0' && value !== '0.0'
     if (input.type === 'boolean') return value.toLowerCase() === 'true'
-    if (input.type === 'array') return value !== '[]'
-    if (input.type === 'object') return value !== '{}'
+    if (input.type === 'JSON') return value !== '[]' && value !== '{}' && value !== ''
     return value !== ''
 }
 
@@ -303,10 +304,8 @@ const extractNodeSchemaFromDefinition = (oNodeDefinition) => {
                 ? 'False'
                 : input.type === 'number'
                     ? '0'
-                    : input.type === 'array'
-                        ? '[]'
-                        : input.type === 'object'
-                            ? '{}'
+                    : input.type === 'JSON'
+                        ? '{}'
                             : ''
         }
         inputs.push(entry)
@@ -377,7 +376,7 @@ const buildMcpCallingGuide = (schema) => {
         'Pass data inputs in execute_node.inputs keyed by input name. Event inputs are not used in standalone MCP execution.',
         'Use execute_node.properties only for settings that are not already listed as inputs.',
         'On success, read execute_node.outputs (named map) or execute_node.outputSlots (ordered list with types). Use the output mcpKey shown here — unnamed outputs use output_0, named outputs use their name (e.g. Code, Accounts, Value).',
-        'Many nodes serialize array/object outputs as JSON strings (e.g. Authentication/Get OTP Accounts → Accounts is "[\\"Discord:Strayfade\\"]", Smart Home Get All Lights → Lights is a JSON array string, Web Response is often JSON-stringified). If typeof output is string and you need an element, JSON.parse it first. Most JSON nodes accept either a string or a parsed object/array.',
+        'Many nodes serialize JSON outputs as JSON strings (e.g. Authentication/Get OTP Accounts → Accounts is "[\\"Discord:Strayfade\\"]", Smart Home Get All Lights → Lights is a JSON array string, Web Response is often JSON-stringified). If typeof output is string and you need an element, JSON.parse it first. Most JSON nodes accept either a string or a parsed object/array.',
         'Chain example — OTP: 1) execute_node "Authentication/Get OTP Accounts" → JSON.parse(outputs.Accounts) → pick "Discord:Strayfade" → 2) execute_node "Authentication/OTP" with inputs {"Account":"Discord:Strayfade"} → outputs.Code is the 6-digit code. For JSON arrays, use "JSON/Get Array Item" with Array=+stringified JSON and index=0 to extract one element before the next node.',
         'Chain nodes by passing prior execute_node.outputs values (or outputSlots[].value) into the next execute_node.inputs object.',
     ]
@@ -413,8 +412,7 @@ const exampleValueForType = (type) => {
     switch (type) {
         case 'number': return 1
         case 'boolean': return true
-        case 'array': return []
-        case 'object': return {}
+        case 'JSON': return {}
         default: return 'example'
     }
 }
@@ -428,11 +426,11 @@ const coerceExampleValue = (type, defaultValue) => {
         const parsed = parseFloat(defaultValue)
         return Number.isFinite(parsed) ? parsed : 0
     }
-    if (type === 'array') {
-        try { return JSON.parse(defaultValue || '[]') } catch { return [] }
-    }
-    if (type === 'object') {
-        try { return JSON.parse(defaultValue || '{}') } catch { return {} }
+    if (type === 'JSON') {
+        try {
+            const parsed = JSON.parse(defaultValue || '{}')
+            return parsed
+        } catch { return {} }
     }
     return defaultValue != null ? String(defaultValue) : exampleValueForType(type)
 }

@@ -2,7 +2,7 @@ const { otpController } = require('../../utils/authenticator')
 
 class NodeDefinition {
     constructor() {
-        this.addOutput("Accounts", "array");
+        this.addOutput("Accounts", "JSON");
         this.desc = "Lists OTP account keys (Issuer:Account name) from the Authentication preference \"OTP account secrets\". Configure accounts there using Issuer:Name:Secret per entry, comma-separated."
     }
 }

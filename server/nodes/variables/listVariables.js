@@ -2,7 +2,7 @@ const { getVarsSnapshot } = require('../../utils/vars')
 
 class NodeDefinition {
     constructor() {
-        this.addOutput("Variables", "array");
+        this.addOutput("Variables", "JSON");
         this.desc = "Lists all stored variable names from server storage as a JSON array string. Use with Variables/Get Variable to read one entry."
     }
 }

@@ -5,8 +5,8 @@ const path = require('path')
 
 const HUE_DIR = path.join(__dirname, '../server/nodes/smartHome/philipsHue')
 
-/** Output port names that carry arrays, keyed by node filename. */
-const ARRAY_OUTPUTS_BY_FILE = {
+/** Output port names that should be JSON, keyed by node filename. */
+const JSON_OUTPUTS_BY_FILE = {
     'getAllLights.js': ['Lights'],
     'getNewLights.js': ['Lights'],
     'getLightByName.js': ['Light Object'],
@@ -32,26 +32,31 @@ const ARRAY_OUTPUTS_BY_FILE = {
 
 let updated = 0
 
-for (const [file, outputNames] of Object.entries(ARRAY_OUTPUTS_BY_FILE)) {
+for (const [file, outputNames] of Object.entries(JSON_OUTPUTS_BY_FILE)) {
     const fullPath = path.join(HUE_DIR, file)
     if (!fs.existsSync(fullPath))
         throw new Error(`Missing node file: ${file}`)
     let source = fs.readFileSync(fullPath, 'utf8')
+    let changed = false
     for (const name of outputNames) {
-        const from = `this.addOutput("${name}", "object");`
-        const to = `this.addOutput("${name}", "array");`
-        if (!source.includes(from))
-            throw new Error(`${file}: expected ${from}`)
-        source = source.replace(from, to)
+        const variants = [
+            `this.addOutput("${name}", "object");`,
+            `this.addOutput("${name}", "array");`,
+            `this.addOutput('${name}', 'object');`,
+            `this.addOutput('${name}', 'array');`,
+        ]
+        const target = `this.addOutput("${name}", "JSON");`
+        for (const v of variants) {
+            if (source.includes(v)) {
+                source = source.replace(v, target)
+                changed = true
+            }
+        }
     }
-    if (file === 'getLightByName.js') {
-        source = source.replace(
-            'await behaviors.populateNextNodeLinks([{}, ""]);',
-            'await behaviors.populateNextNodeLinks([[], ""]);'
-        )
+    if (changed) {
+        fs.writeFileSync(fullPath, source)
+        updated++
     }
-    fs.writeFileSync(fullPath, source)
-    updated++
 }
 
-console.log(`Updated array output types in ${updated} Hue node files`)
+console.log(`Ensured JSON output types in ${updated} Hue node files`)
