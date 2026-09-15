@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.GestureDetector
@@ -17,9 +18,11 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.updatePadding
 import com.strayfade.netsocket.notification.databinding.ActivityPanelBinding
 import org.json.JSONObject
 
@@ -88,7 +91,7 @@ class PanelActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPanelBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        SettingsUi.applyInsets(this, binding.rootContainer)
+        applyCutoutAwareInsets()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         hideSystemBars()
 
@@ -155,6 +158,34 @@ class PanelActivity : AppCompatActivity() {
             systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
+    }
+
+    /**
+     * Kiosk insets: the camera cutout is not usable, so the WebView sits
+     * below it. The opposite edge gets the same margin so top/bottom (and,
+     * in landscape, left/right) stay symmetric. Re-applied on rotation via
+     * the window-insets listener.
+     */
+    private fun applyCutoutAwareInsets() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(binding.rootContainer) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val cutout = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            // Portrait: cutout on top. Landscape: cutout on the side.
+            val top = maxOf(bars.top, cutout.top)
+            // Symmetric vertical margins: bottom mirrors the unusable top size.
+            val bottom = maxOf(maxOf(bars.bottom, cutout.bottom), top)
+            // Symmetric horizontal margins for landscape side cutouts.
+            val sides = maxOf(maxOf(bars.left, cutout.left), maxOf(bars.right, cutout.right))
+            view.updatePadding(left = sides, top = top, right = sides, bottom = bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(binding.rootContainer)
     }
 
     override fun onResume() {
