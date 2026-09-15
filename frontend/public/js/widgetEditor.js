@@ -197,11 +197,11 @@
             if (window.GridStack) {
                 grid = window.GridStack.init({
                     column: 12,
-                    cellHeight: 80,
+                    cellHeight: 'auto',
                     margin: 0,
                     staticGrid: !editing,
                     animate: false,
-                    float: false,
+                    float: true,
                     draggable: { handle: '.widget-drag-handle' },
                     disableResize: true,
                     columnOpts: { breakpoints: [{ w: 640, c: 4 }] },

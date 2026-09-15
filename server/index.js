@@ -907,6 +907,42 @@ app.delete('/v1/devices/:deviceId', (req, res) => {
     return res.sendStatus(204)
 })
 
+// MARK: Preferences (REST mirror of WS getPreferences/saveSetting) — allows Settings modal on any tab
+app.get('/v1/preferences', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const defs = nodePreferencesRegistry.getPrefs()
+    const withValues = defs.map((p) => {
+        let stored = settingsManager.getStoredValue(p.id)
+        if (p.id === 'google.oauth.connect') {
+            const email = settingsManager.getStoredValue(CONNECTED_EMAIL_KEY)
+            stored = email !== undefined ? email : stored
+        }
+        const fallback = p.defaultVal != null && p.defaultVal !== '' ? String(p.defaultVal) : ''
+        return {
+            category: p.category,
+            id: p.id,
+            displayName: p.displayName,
+            type: p.type,
+            defaultVal: p.defaultVal,
+            description: p.description || '',
+            value: stored !== undefined ? stored : fallback,
+        }
+    })
+    return res.status(200).json({ preferences: withValues })
+})
+app.post('/v1/preferences', async (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const { name, value } = req.body || {}
+    if (typeof name !== 'string' || !name.length || name === 'google.oauth.connect') {
+        return res.status(400).json({ error: 'invalid_name' })
+    }
+    settingsManager.setSetting(name, value ?? '')
+    await settingsManager.saveSettings()
+    try { await require('./utils/hueApi').setupHueApi() } catch (e) { log(`Hue reconnect after save: ${e}`, logColors.Warning) }
+    try { require('./utils/languageModel').reinitOllama() } catch (e) { log(`Ollama reinit after save: ${e}`, logColors.Warning) }
+    return res.status(200).json({ ok: true })
+})
+
 // MARK: AI Providers
 app.get('/v1/providers', (req, res) => {
     if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
