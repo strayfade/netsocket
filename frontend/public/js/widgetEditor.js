@@ -164,7 +164,32 @@
             if (!widgets.length && !editing) {
                 // Leave container empty; emptyEl shows
             }
-            widgets.forEach(function (widget) {
+            // Center collective bounds horizontally (like panel kiosk) while preserving relative layout.
+            var displayWidgets = widgets;
+            if (widgets.length) {
+                var minX = Infinity, maxX = -Infinity, minY = Infinity;
+                widgets.forEach(function (w) {
+                    var x = w.x || 0;
+                    var ww = w.w || 1;
+                    var y = w.y || 0;
+                    if (x < minX) minX = x;
+                    if (x + ww > maxX) maxX = x + ww;
+                    if (y < minY) minY = y;
+                });
+                var boundsW = maxX - minX;
+                var offsetX = Math.floor((12 - boundsW) / 2) - minX;
+                var offsetY = -minY;
+                if (offsetX !== 0 || offsetY !== 0) {
+                    displayWidgets = widgets.map(function (w) {
+                        var copy = {};
+                        for (var k in w) if (Object.prototype.hasOwnProperty.call(w, k)) copy[k] = w[k];
+                        copy.x = (w.x || 0) + offsetX;
+                        copy.y = (w.y || 0) + offsetY;
+                        return copy;
+                    });
+                }
+            }
+            displayWidgets.forEach(function (widget) {
                 var item = window.Widgets ? window.Widgets.createItem(widget, widgetCtx()) : null;
                 if (item) container.appendChild(item);
             });

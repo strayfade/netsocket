@@ -48,6 +48,39 @@ body {
     pointer-events: auto;
 }
 
+/* Sidebar layout for editor: stage holds canvas + floating toolbar */
+.editor-stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-floating-toolbar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px;
+    background: rgba(20, 20, 20, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    pointer-events: auto;
+}
+
+.editor-floating-toolbar .header-toolbar-btn {
+    min-width: 36px;
+    min-height: 36px;
+}
+
 header {
     display: flex;
     width: 100%;
@@ -289,6 +322,38 @@ header #node-count-visible {
 .subgraph-editor-banner-close:hover {
     border-color: #888;
     background: #222;
+}
+
+/* When sidebar is present, left drawers are offset on desktop */
+.has-sidebar .litegraph .dialog.settings {
+    left: var(--shell-sidebar-width, 240px);
+    width: min(560px, calc(92vw - var(--shell-sidebar-width, 240px)));
+}
+
+@media (max-width: 768px) {
+    .has-sidebar .litegraph .dialog.settings {
+        left: 0;
+        width: min(560px, 92vw);
+        width: 100vw;
+    }
+    .editor-floating-toolbar {
+        top: 56px;
+    }
+    .has-sidebar #nodegraph,
+    .has-sidebar #log {
+        left: 0 !important;
+        width: 100% !important;
+    }
+}
+
+.has-sidebar #nodegraph {
+    left: 0;
+    width: 100%;
+}
+
+.has-sidebar #log {
+    left: 0;
+    width: 100%;
 }
 
 #log {

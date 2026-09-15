@@ -26,33 +26,46 @@
     <title>Dashboard - netsocket</title>
 </head>
 
-<body class="shell-page">
-    <header class="shell-topbar">
-        <a class="shell-brand" href="/dashboard" aria-label="netsocket home">
-            <img src="/favicon.png" alt="">
-        </a>
-        <nav class="shell-tabs" aria-label="Primary">
-            <a class="shell-tab" data-shell-tab="dashboard" href="/dashboard">
-                <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
-                <span class="shell-tab-label">Dashboard</span>
-            </a>
-            <a class="shell-tab" data-shell-tab="automate" href="/automate">
-                <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
-                <span class="shell-tab-label">Automate</span>
-            </a>
-            <a class="shell-tab" data-shell-tab="panels" href="/panels">
-                <span class="material-symbols-outlined" aria-hidden="true">wall_art</span>
-                <span class="shell-tab-label">Panels</span>
-            </a>
+<body class="shell-page has-sidebar">
+    <div class="shell-layout">
+        <nav class="shell-sidebar" id="shell-sidebar" aria-label="Primary">
+            <div class="shell-sidebar-brand">
+                <a class="shell-brand" href="/dashboard" aria-label="netsocket home">
+                    <img src="/favicon.png" alt="">
+                </a>
+            </div>
+            <div class="shell-sidebar-nav">
+                <a class="shell-tab" data-shell-tab="dashboard" href="/dashboard">
+                    <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
+                    <span class="shell-tab-label">Dashboard</span>
+                </a>
+                <a class="shell-tab" data-shell-tab="automate" href="/automate">
+                    <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
+                    <span class="shell-tab-label">Automate</span>
+                </a>
+                <a class="shell-tab" data-shell-tab="panels" href="/panels">
+                    <span class="material-symbols-outlined" aria-hidden="true">wall_art</span>
+                    <span class="shell-tab-label">Panels</span>
+                </a>
+            </div>
+            <div class="shell-sidebar-spacer" aria-hidden="true"></div>
+            <div class="shell-sidebar-bottom">
+                <a class="shell-sidebar-link" href="#" id="open-backup" aria-label="Backup">
+                    <span class="material-symbols-outlined" aria-hidden="true">cloud_download</span>
+                    <span>Backup</span>
+                </a>
+                <a class="shell-sidebar-link" href="#" id="open-settings" aria-label="Settings">
+                    <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+                    <span>Settings</span>
+                </a>
+                <a class="shell-sidebar-link shell-sidebar-link--logout" href="/logout" aria-label="Log out">
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_outward</span>
+                    <span>Log Out</span>
+                </a>
+            </div>
         </nav>
-        <span class="shell-topbar-spacer"></span>
-        <a class="shell-topbar-link" href="/logout">
-            <span class="shell-tab-label">Log Out</span>
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_outward</span>
-        </a>
-    </header>
-
-    <main class="shell-main">
+        <div class="shell-content">
+            <main class="shell-main">
         <h1 class="shell-page-title">Dashboard</h1>
 
         <div class="grid-stack" id="dashboard-widgets">
@@ -119,7 +132,45 @@
                 </div>
             </div>
         </dialog>
-    </main>
+            </main>
+        </div>
+    </div>
+    <div id="shell-sidebar-backdrop" class="shell-sidebar-backdrop" hidden aria-hidden="true"></div>
+    <button id="shell-sidebar-toggle" class="shell-sidebar-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="shell-sidebar">
+        <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+    </button>
+    <div id="backup-modal" class="backup-modal-root" hidden aria-hidden="true">
+        <div id="backup-backdrop" class="settings-backdrop" aria-hidden="true"></div>
+        <div class="backup-dialog" role="dialog" aria-modal="true" aria-labelledby="backup-modal-title">
+            <h2 id="backup-modal-title">Backup &amp; restore</h2>
+            <p class="backup-intro">Download or upload a single file with your entire node graph, workflow variables, and integration settings (including API keys and OAuth tokens stored in settings). Your netsocket login name and password are never included.</p>
+            <p id="backup-status" class="backup-status" role="status"></p>
+            <div class="backup-actions">
+                <button type="button" id="backup-export-btn" class="backup-primary-btn">Export everything</button>
+                <button type="button" id="backup-import-btn" class="backup-secondary-btn">Import from file…</button>
+            </div>
+            <input type="file" id="backup-file-input" accept=".json,application/json" hidden />
+            <button type="button" id="backup-close-btn" class="backup-close-footer">Close</button>
+        </div>
+    </div>
+    <div id="settings-modal" style="display:none; position:fixed; inset:0; z-index:50;">
+        <div id="settings-backdrop" class="settings-backdrop" aria-hidden="true"></div>
+        <div class="settings-shell" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+            <div id="settings-sidebar">
+                <div class="settings-sidebar-top">
+                    <button type="button" id="close-settings" class="settings-close-btn" aria-label="Close settings">
+                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                    </button>
+                </div>
+                <span class="settings-tabs-container-header">Settings</span>
+                <div id="settings-tabs-container"></div>
+            </div>
+            <div id="settings-content">
+                <span id="settings-modal-title" class="visually-hidden">Application settings</span>
+                <div id="settings-panels-scroll"></div>
+            </div>
+        </div>
+    </div>
 
     <script src="/js/agentMarkdown.js"></script>
     <script src="/js/shell.js"></script>

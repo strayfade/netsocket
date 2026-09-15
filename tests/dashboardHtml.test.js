@@ -107,25 +107,35 @@ describe('dashboard shell pages', () => {
         assert.match(html, /<script src="\/js\/shell\.js"><\/script>/);
     });
 
-    it('editor.html uses the shared shell topbar and gates on /automate', () => {
+    it('editor.html uses the shared shell sidebar and floating toolbar and gates on /automate', () => {
         const html = readFrontend('editor.html');
         for (const tab of ['dashboard', 'automate', 'panels']) {
             assert.match(html, new RegExp(`data-shell-tab="${tab}"`));
         }
-        assert.match(html, /<header class="shell-topbar">/);
+        assert.match(html, /class="shell-layout"/);
+        assert.match(html, /class="shell-sidebar"/);
+        assert.match(html, /id="shell-sidebar"/);
+        assert.match(html, /class="shell-sidebar-toggle"/);
+        assert.match(html, /class="shell-sidebar-backdrop"/);
+        assert.match(html, /class="shell-content editor-stage"/);
+        assert.match(html, /class="editor-floating-toolbar"/);
+        assert.match(html, /id="editor-undo"/);
+        assert.match(html, /id="editor-redo"/);
+        assert.match(html, /id="editor-fit-view"/);
+        assert.match(html, /id="editor-toggle-log"/);
+        assert.match(html, /class="shell-sidebar-link/);
+        assert.match(html, /id="open-backup"/);
+        assert.match(html, /id="open-settings"/);
         assert.match(html, /<link rel="stylesheet" href="\/css\/shell\.css">/);
         assert.match(html, /<script src="\/js\/shell\.js"><\/script>/);
         assert.match(html, /ShellLogic\.markActiveTab\(document\)/);
         assert.match(html, /data-shell-tab="automate" href="\/automate" aria-current="page"/);
         assert.match(html, /class="shell-brand"/);
-        assert.match(html, /class="shell-topbar-link"/);
-        // Log Out matches Dashboard/Panels exactly: same label class, plain
-        // icon (inherits 18px / wght 400), no inline variation style.
+        // Log Out is now in sidebar bottom
         const logoutStart = html.indexOf('href="/logout"');
         assert.ok(logoutStart !== -1);
         const logoutBlock = html.slice(logoutStart, logoutStart + 400);
-        assert.match(logoutBlock, /<span class="shell-tab-label">Log Out<\/span>/);
-        assert.match(logoutBlock, /<span class="material-symbols-outlined" aria-hidden="true">arrow_outward<\/span>/);
+        assert.match(logoutBlock, /arrow_outward/);
         assert.doesNotMatch(logoutBlock, /font-variation-settings/);
         assert.match(html, /encodeURIComponent\('\/automate'\)/);
         assert.match(html, /hasConnectedOnce/);
@@ -133,5 +143,7 @@ describe('dashboard shell pages', () => {
         assert.doesNotMatch(html, /editor-brand/);
         assert.doesNotMatch(html, /editor-shell-tabs/);
         assert.doesNotMatch(html, /editor-tabs/);
+        assert.match(html, /has-sidebar/);
+        assert.match(html, /shell-page/);
     });
 });

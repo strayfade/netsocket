@@ -37,20 +37,23 @@
     <style>
         body:has(#node-panel) canvas,
         body:has(#node-panel) #log,
-        body:has(#node-panel) .editor-top-chrome {
+        body:has(#node-panel) .editor-floating-toolbar,
+        body:has(#node-panel) #editor-keybinds-bar {
             filter: brightness(50%);
         }
     </style>
     <script src="inset.browser.js"></script>
 </head>
 
-<body style="width: 100vw; height: 100vh; margin: 0;" class="litegraph litegraph-editor">
-    <div class="editor-top-chrome">
-        <header class="shell-topbar">
-            <a class="shell-brand" href="/dashboard" aria-label="netsocket home">
-                <img src="favicon.png" alt="">
-            </a>
-            <nav class="shell-tabs" aria-label="Primary">
+<body class="litegraph litegraph-editor shell-page has-sidebar" style="margin: 0;">
+    <div class="shell-layout">
+        <nav class="shell-sidebar" id="shell-sidebar" aria-label="Primary">
+            <div class="shell-sidebar-brand">
+                <a class="shell-brand" href="/dashboard" aria-label="netsocket home">
+                    <img src="/favicon.png" alt="">
+                </a>
+            </div>
+            <div class="shell-sidebar-nav">
                 <a class="shell-tab" data-shell-tab="dashboard" href="/dashboard">
                     <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
                     <span class="shell-tab-label">Dashboard</span>
@@ -63,49 +66,50 @@
                     <span class="material-symbols-outlined" aria-hidden="true">wall_art</span>
                     <span class="shell-tab-label">Panels</span>
                 </a>
-            </nav>
-            <div class="header-left">
-                <span class="editor-history-controls" role="group" aria-label="Graph undo and redo">
-                    <button type="button" id="editor-undo" class="header-toolbar-btn" disabled title="Undo (Ctrl+Z)">
-                        <span class="material-symbols-outlined" aria-hidden="true">undo</span>
-                    </button>
-                    <button type="button" id="editor-redo" class="header-toolbar-btn" disabled title="Redo (Ctrl+Y or Ctrl+Shift+Z)">
-                        <span class="material-symbols-outlined" aria-hidden="true">redo</span>
-                    </button>
-                    <button type="button" id="editor-fit-view" class="header-toolbar-btn" title="Fit all nodes to view">
-                        <span class="material-symbols-outlined" aria-hidden="true">fit_screen</span>
-                    </button>
-                    <button type="button" id="editor-toggle-log" class="header-toolbar-btn" title="Show log"
-                        aria-pressed="false" aria-controls="log">
-                        <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
-                    </button>
-                </span>
             </div>
-            <div class="header-right">
-                <a class="shell-topbar-link" href="#" id="open-backup" title="Move your graph and settings to another machine"
-                    aria-label="Backup">
-                    <span class="header-link-label">Backup</span>
-                    <span class="material-symbols-outlined"
-                        style="font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;">cloud_download</span>
+            <div class="shell-sidebar-spacer" aria-hidden="true"></div>
+            <div class="shell-sidebar-bottom">
+                <a class="shell-sidebar-link" href="#" id="open-backup" title="Move your graph and settings to another machine" aria-label="Backup">
+                    <span class="material-symbols-outlined" aria-hidden="true">cloud_download</span>
+                    <span>Backup</span>
                 </a>
-                <a class="shell-topbar-link" href="#" id="open-settings" aria-label="Settings">
-                    <span class="header-link-label">Settings</span>
-                    <span class="material-symbols-outlined"
-                        style="font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;">settings</span>
+                <a class="shell-sidebar-link" href="#" id="open-settings" aria-label="Settings">
+                    <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+                    <span>Settings</span>
                 </a>
-                <a class="shell-topbar-link" href="/logout" aria-label="Log out">
-                    <span class="shell-tab-label">Log Out</span>
+                <a class="shell-sidebar-link shell-sidebar-link--logout" href="/logout" aria-label="Log out">
                     <span class="material-symbols-outlined" aria-hidden="true">arrow_outward</span>
+                    <span>Log Out</span>
                 </a>
             </div>
-        </header>
-        <div id="editor-keybinds-bar" class="editor-keybinds-bar" hidden aria-hidden="true">
-            <div class="editor-keybinds-inner" id="editor-keybinds-inner"></div>
+        </nav>
+        <div class="shell-content editor-stage">
+            <div class="editor-floating-toolbar" role="toolbar" aria-label="Graph tools">
+                <button type="button" id="editor-undo" class="header-toolbar-btn" disabled title="Undo (Ctrl+Z)">
+                    <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+                </button>
+                <button type="button" id="editor-redo" class="header-toolbar-btn" disabled title="Redo (Ctrl+Y or Ctrl+Shift+Z)">
+                    <span class="material-symbols-outlined" aria-hidden="true">redo</span>
+                </button>
+                <button type="button" id="editor-fit-view" class="header-toolbar-btn" title="Fit all nodes to view">
+                    <span class="material-symbols-outlined" aria-hidden="true">fit_screen</span>
+                </button>
+                <button type="button" id="editor-toggle-log" class="header-toolbar-btn" title="Show log" aria-pressed="false" aria-controls="log">
+                    <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
+                </button>
+            </div>
+            <div id="editor-keybinds-bar" class="editor-keybinds-bar" hidden aria-hidden="true">
+                <div class="editor-keybinds-inner" id="editor-keybinds-inner"></div>
+            </div>
+            <div class="connection-banner"></div>
+            <canvas id='nodegraph'></canvas>
+            <textarea id="log" spellcheck="false" readonly tabindex="-1" aria-label="Server log" hidden></textarea>
         </div>
     </div>
-    <div class="connection-banner"></div>
-    <canvas id='nodegraph'></canvas>
-    <textarea id="log" spellcheck="false" readonly tabindex="-1" aria-label="Server log" hidden></textarea>
+    <div id="shell-sidebar-backdrop" class="shell-sidebar-backdrop" hidden aria-hidden="true"></div>
+    <button id="shell-sidebar-toggle" class="shell-sidebar-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="shell-sidebar">
+        <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+    </button>
     <script>
 
         (async () => {
@@ -768,7 +772,7 @@
                 scrollToBottom();
             }
             if (typeof detectResizeNeeded === "function") {
-                lastSize = [0, 0, 0, 0, -1];
+                lastSize = [0, 0, 0, 0, -1, -1];
                 detectResizeNeeded();
             }
         };
@@ -887,11 +891,18 @@
         connectWebSocket();
 
         // On resize — size the graph canvas between the top chrome and the optional log panel.
+        // With the sidebar layout, the canvas is offset by the sidebar width on desktop and full-width on mobile.
         // Bitmap size is CSS size × devicePixelRatio × (render_resolution / 100).
-        let lastSize = [0, 0, 0, 0, 0];
+        let lastSize = [0, 0, 0, 0, 0, 0];
         const measureEditorChrome = () => {
-            const chrome = document.querySelector(".editor-top-chrome");
-            return chrome ? chrome.offsetHeight : 0;
+            const bar = document.getElementById("editor-keybinds-bar");
+            return bar && !bar.hidden ? bar.offsetHeight : 0;
+        };
+        const measureSidebarInset = () => {
+            const sb = document.getElementById("shell-sidebar");
+            if (!sb) return 0;
+            if (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) return 0;
+            return sb.offsetWidth || 0;
         };
         const measureLogInset = () => {
             if (!logVisible) return 0;
@@ -900,13 +911,17 @@
         const resize = () => {
             const topInset = measureEditorChrome();
             const bottomInset = measureLogInset();
-            const w = Math.max(1, window.innerWidth);
+            const sidebarInset = measureSidebarInset();
+            const w = Math.max(1, window.innerWidth - sidebarInset);
             const h = Math.max(1, window.innerHeight - topInset - bottomInset);
             const renderPct = canvas.render_resolution != null ? canvas.render_resolution : 100;
-            lastSize = [w, h, topInset, bottomInset, renderPct];
+            lastSize = [w, h, topInset, bottomInset, renderPct, sidebarInset];
             nodegraph.style.top = `${topInset}px`;
+            nodegraph.style.left = `0px`;
             nodegraph.style.width = `${w}px`;
             nodegraph.style.height = `${h}px`;
+            log.style.left = `0px`;
+            log.style.width = `${w}px`;
             const dpr = window.devicePixelRatio || 1;
             const scale = dpr * (renderPct / 100);
             const bw = Math.max(1, Math.round(w * scale));
@@ -918,7 +933,8 @@
         const detectResizeNeeded = () => {
             const topInset = measureEditorChrome();
             const bottomInset = measureLogInset();
-            const w = Math.max(1, window.innerWidth);
+            const sidebarInset = measureSidebarInset();
+            const w = Math.max(1, window.innerWidth - sidebarInset);
             const h = Math.max(1, window.innerHeight - topInset - bottomInset);
             const renderPct = canvas.render_resolution != null ? canvas.render_resolution : 100;
             if (
@@ -926,13 +942,14 @@
                 h !== lastSize[1] ||
                 topInset !== lastSize[2] ||
                 bottomInset !== lastSize[3] ||
-                renderPct !== lastSize[4]
+                renderPct !== lastSize[4] ||
+                sidebarInset !== lastSize[5]
             ) {
                 resize();
             }
         };
         window.__netsocketForceCanvasResize = () => {
-            lastSize = [0, 0, 0, 0, -1];
+            lastSize = [0, 0, 0, 0, -1, -1];
             detectResizeNeeded();
         };
         setInterval(detectResizeNeeded, 6)
@@ -1017,122 +1034,8 @@
         </div>
     </div>
     <script>
+        // Backup modal is now handled centrally by ShellLogic.initBackupModal (shell.js) for all pages.
         document.addEventListener('DOMContentLoaded', () => {
-            const backupModal = document.getElementById('backup-modal')
-            const backupBackdrop = document.getElementById('backup-backdrop')
-            const backupCloseBtn = document.getElementById('backup-close-btn')
-            const openBackupBtn = document.getElementById('open-backup')
-            const backupExportBtn = document.getElementById('backup-export-btn')
-            const backupImportBtn = document.getElementById('backup-import-btn')
-            const backupFileInput = document.getElementById('backup-file-input')
-            const backupStatus = document.getElementById('backup-status')
-
-            const setBackupStatus = (text, isError = false) => {
-                if (!backupStatus) return
-                backupStatus.textContent = text || ''
-                backupStatus.classList.toggle('backup-status-error', Boolean(isError && text))
-            }
-
-            const openBackupModal = () => {
-                if (!backupModal) return
-                backupModal.hidden = false
-                backupModal.setAttribute('aria-hidden', 'false')
-                setBackupStatus('')
-            }
-
-            const closeBackupModal = () => {
-                if (!backupModal) return
-                backupModal.hidden = true
-                backupModal.setAttribute('aria-hidden', 'true')
-                setBackupStatus('')
-            }
-
-            const parseFilenameFromDisposition = (header) => {
-                if (!header) return null
-                const m = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(header)
-                return m ? decodeURIComponent(m[1].replace(/"/g, '')) : null
-            }
-
-            if (openBackupBtn) {
-                openBackupBtn.addEventListener('click', (e) => {
-                    e.preventDefault()
-                    openBackupModal()
-                })
-            }
-            if (backupBackdrop) backupBackdrop.addEventListener('click', closeBackupModal)
-            if (backupCloseBtn) backupCloseBtn.addEventListener('click', closeBackupModal)
-
-            if (backupExportBtn) {
-                backupExportBtn.addEventListener('click', async () => {
-                    setBackupStatus('')
-                    backupExportBtn.disabled = true
-                    try {
-                        const res = await fetch('/v1/export-full-state', { credentials: 'same-origin' })
-                        if (!res.ok) {
-                            setBackupStatus(res.status === 401 ? 'Not signed in.' : `Export failed (${res.status}).`, true)
-                            return
-                        }
-                        const blob = await res.blob()
-                        const url = URL.createObjectURL(blob)
-                        const a = document.createElement('a')
-                        a.href = url
-                        a.download = parseFilenameFromDisposition(res.headers.get('Content-Disposition')) || 'netsocket-backup.json'
-                        a.rel = 'noopener'
-                        document.body.appendChild(a)
-                        a.click()
-                        a.remove()
-                        URL.revokeObjectURL(url)
-                        setBackupStatus('Download started.')
-                    } catch (err) {
-                        console.warn(err)
-                        setBackupStatus('Export failed. Check your connection and try again.', true)
-                    } finally {
-                        backupExportBtn.disabled = false
-                    }
-                })
-            }
-
-            if (backupImportBtn && backupFileInput) {
-                backupImportBtn.addEventListener('click', () => {
-                    setBackupStatus('')
-                    backupFileInput.click()
-                })
-                backupFileInput.addEventListener('change', async () => {
-                    const file = backupFileInput.files && backupFileInput.files[0]
-                    backupFileInput.value = ''
-                    if (!file) return
-                    if (!window.confirm('Replace this machine’s entire graph, variables, and integration settings with the contents of this file? This cannot be undone.')) {
-                        return
-                    }
-                    backupImportBtn.disabled = true
-                    if (backupExportBtn) backupExportBtn.disabled = true
-                    setBackupStatus('Importing…')
-                    try {
-                        const text = await file.text()
-                        const body = JSON.parse(text)
-                        const res = await fetch('/v1/import-full-state', {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(body)
-                        })
-                        if (!res.ok) {
-                            const errJson = await res.json().catch(() => ({}))
-                            const code = errJson.error || res.statusText
-                            setBackupStatus(`Import failed${code ? `: ${code}` : ''}.`, true)
-                            return
-                        }
-                        setBackupStatus('Import complete. Graph and settings are updated.')
-                    } catch (err) {
-                        console.warn(err)
-                        setBackupStatus('Import failed. Use a netsocket backup JSON file.', true)
-                    } finally {
-                        backupImportBtn.disabled = false
-                        if (backupExportBtn) backupExportBtn.disabled = false
-                    }
-                })
-            }
-
             const openSettingsBtn = document.getElementById('open-settings')
             const settingsModal = document.getElementById('settings-modal')
             const closeSettingsBtn = document.getElementById('close-settings')
