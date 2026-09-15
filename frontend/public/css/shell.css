@@ -347,7 +347,165 @@ body.shell-page {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    align-items: center;
     gap: 20px;
+}
+
+/* Panel widget grid: center all widgets horizontally + vertically */
+#panel-content {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+}
+
+#panel-content[hidden] {
+    display: none !important;
+}
+
+#panel-content:not([hidden]) {
+    display: flex;
+}
+
+#panel-grid {
+    width: 100%;
+    min-height: 200px;
+}
+
+#panel-grid .shell-card,
+#panel-grid .widget-run-btn,
+#panel-grid .shell-widget-frame,
+#panel-edit-grid .shell-card,
+#panel-edit-grid .widget-run-btn,
+#panel-edit-grid .shell-widget-frame,
+.grid-stack .shell-card,
+.grid-stack .widget-run-btn,
+.grid-stack .shell-widget-frame {
+    border-radius: 0;
+}
+
+#panel-grid .grid-stack-item-content,
+#panel-edit-grid .grid-stack-item-content {
+    border-radius: 0;
+}
+
+/* Keep widgets' inner content centered without breaking GridStack sizing */
+#panel-grid .grid-stack-item-content > .shell-card {
+    justify-content: center;
+    text-align: center;
+}
+
+/* Widget content 1.5× scaling — layout (grid cells, w/h, margin, padding) unchanged */
+#panel-grid .shell-prose,
+#panel-edit-grid .shell-prose,
+.grid-stack .shell-prose {
+    font-size: 1.35rem;
+}
+#panel-grid .shell-prose h1,
+#panel-edit-grid .shell-prose h1,
+.grid-stack .shell-prose h1 {
+    font-size: 1.875rem;
+}
+#panel-grid .shell-prose h2,
+#panel-edit-grid .shell-prose h2,
+.grid-stack .shell-prose h2 {
+    font-size: 1.65rem;
+}
+#panel-grid .shell-prose h3,
+#panel-edit-grid .shell-prose h3,
+.grid-stack .shell-prose h3 {
+    font-size: 1.5rem;
+}
+#panel-grid .shell-prose h4,
+#panel-edit-grid .shell-prose h4,
+.grid-stack .shell-prose h4 {
+    font-size: 1.35rem;
+}
+#panel-grid .shell-clock-value,
+#panel-edit-grid .shell-clock-value,
+.grid-stack .shell-clock-value {
+    font-size: 3rem;
+}
+#panel-grid .widget-clock-compact .shell-clock-value,
+#panel-edit-grid .widget-clock-compact .shell-clock-value,
+.grid-stack .widget-clock-compact .shell-clock-value {
+    font-size: 2.4rem;
+}
+#panel-grid .widget-clock-compact .shell-stat-sub,
+#panel-edit-grid .widget-clock-compact .shell-stat-sub,
+.grid-stack .widget-clock-compact .shell-stat-sub {
+    font-size: 1.08rem;
+}
+#panel-grid .widget-run-btn .material-symbols-outlined,
+#panel-edit-grid .widget-run-btn .material-symbols-outlined,
+.grid-stack .widget-run-btn .material-symbols-outlined {
+    font-size: 42px;
+}
+#panel-grid .widget-run-btn-label,
+#panel-edit-grid .widget-run-btn-label,
+.grid-stack .widget-run-btn-label {
+    font-size: 1.2rem;
+}
+#panel-grid .shell-prose code,
+#panel-edit-grid .shell-prose code,
+.grid-stack .shell-prose code {
+    font-size: 1.275em;
+}
+
+/* Markdown widgets specifically 2× — overrides 1.5× above, layout unchanged */
+#panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose,
+#panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose,
+.grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose {
+    font-size: 1.8rem;
+}
+#panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose h1,
+#panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose h1,
+.grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose h1 {
+    font-size: 2.5rem;
+}
+#panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose h2,
+#panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose h2,
+.grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose h2 {
+    font-size: 2.2rem;
+}
+#panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose h3,
+#panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose h3,
+.grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose h3 {
+    font-size: 2rem;
+}
+#panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose h4,
+#panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose h4,
+.grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose h4 {
+    font-size: 1.8rem;
+}
+#panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose code,
+#panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose code,
+.grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose code {
+    font-size: 1.7em;
+}
+
+/* Markdown: if content shorter than widget, center total size h+v within widget */
+#panel-grid .grid-stack-item-content > .shell-card[data-widget-kind="markdown"],
+#panel-edit-grid .grid-stack-item-content > .shell-card[data-widget-kind="markdown"],
+.grid-stack .grid-stack-item-content > .shell-card[data-widget-kind="markdown"] {
+    justify-content: flex-start;
+    align-items: stretch;
+}
+
+#panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose,
+#panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose,
+.grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose {
+    flex: 0 1 auto;
+    margin: auto;
+    max-height: 100%;
+    max-width: 100%;
+    width: fit-content;
+    overflow: auto;
+    align-self: center;
 }
 
 .kiosk-clock-hero {
@@ -518,7 +676,7 @@ select.admin-input {
 .shell-prose h2,
 .shell-prose h3,
 .shell-prose h4 {
-    margin: 0.75em 0 0.4em;
+    margin: 0.75em 0;
     letter-spacing: -0.02em;
 }
 

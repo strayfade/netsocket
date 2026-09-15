@@ -173,7 +173,7 @@
                 grid = window.GridStack.init({
                     column: 12,
                     cellHeight: 80,
-                    margin: 12,
+                    margin: 0,
                     staticGrid: !editing,
                     animate: false,
                     float: false,

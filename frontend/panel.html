@@ -140,7 +140,32 @@
                     grid = null;
                 }
                 container.innerHTML = '';
-                widgets.forEach(function (widget) {
+                // Center the collective bounds while preserving relative layout.
+                var centered = widgets;
+                if (widgets.length) {
+                    var minX = Infinity, maxX = -Infinity, minY = Infinity;
+                    widgets.forEach(function (w) {
+                        var x = w.x || 0;
+                        var ww = w.w || 1;
+                        var y = w.y || 0;
+                        if (x < minX) minX = x;
+                        if (x + ww > maxX) maxX = x + ww;
+                        if (y < minY) minY = y;
+                    });
+                    var boundsW = maxX - minX;
+                    var offsetX = Math.floor((12 - boundsW) / 2) - minX;
+                    var offsetY = -minY;
+                    if (offsetX !== 0 || offsetY !== 0) {
+                        centered = widgets.map(function (w) {
+                            var copy = {};
+                            for (var k in w) if (Object.prototype.hasOwnProperty.call(w, k)) copy[k] = w[k];
+                            copy.x = (w.x || 0) + offsetX;
+                            copy.y = (w.y || 0) + offsetY;
+                            return copy;
+                        });
+                    }
+                }
+                centered.forEach(function (widget) {
                     var item = Widgets.createItem(widget, widgetCtx());
                     if (item) container.appendChild(item);
                 });
@@ -150,7 +175,7 @@
                     grid = window.GridStack.init({
                         column: 12,
                         cellHeight: 80,
-                        margin: 12,
+                        margin: 0,
                         staticGrid: true,
                         animate: false,
                         float: false,
