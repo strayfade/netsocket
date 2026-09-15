@@ -413,6 +413,40 @@ body.shell-page {
     font-size: 24px;
 }
 
+/* Panel kiosk surface: nothing is selectable and widgets give no hover
+   feedback (touch kiosk — tap-triggered :hover would otherwise stick). */
+.kiosk-wrap,
+.kiosk-wrap * {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kiosk-wrap .kiosk-btn:hover {
+    background: var(--shell-surface-raised);
+    color: var(--shell-text);
+}
+
+.kiosk-wrap .widget-run-btn:hover:not(:disabled) {
+    background: #000;
+    color: var(--shell-text);
+}
+
+.kiosk-wrap .widget-run-btn:hover:not(:disabled) .material-symbols-outlined {
+    color: #ffffff;
+}
+
+.kiosk-wrap .shell-btn:hover {
+    filter: none;
+}
+
+.kiosk-wrap .shell-btn-secondary:hover {
+    background: transparent;
+}
+
 .admin-form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
