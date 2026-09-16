@@ -227,6 +227,40 @@ describe('panelStore', () => {
         assert.equal(store.getPanelPublic(panel.id), null);
     });
 
+    it('defaults widget borders on and toggles them per panel', () => {
+        const created = store.createPanel({ name: 'Kitchen' });
+        assert.equal(created.panel.showBorders, true);
+
+        const borderless = store.createPanel({ name: 'Porch', showBorders: false });
+        assert.equal(borderless.panel.showBorders, false);
+
+        const updated = store.updatePanel(borderless.panel.id, { showBorders: true });
+        assert.equal(updated.showBorders, true);
+        assert.equal(store.updatePanel(borderless.panel.id, { showBorders: false }).showBorders, false);
+
+        assert.throws(() => store.createPanel({ name: 'Bad', showBorders: 'yes' }), /invalid_show_borders/);
+        assert.throws(() => store.updatePanel('kitchen', { showBorders: 1 }), /invalid_show_borders/);
+        // Failed updates leave the stored value untouched.
+        assert.equal(store.getPanelPublic('kitchen').showBorders, true);
+    });
+
+    it('migrates legacy panels without a border flag to borders-on', () => {
+        const panelsPath = require('../server/config').config.storage.panels;
+        fs.writeFileSync(panelsPath, JSON.stringify({
+            version: 1,
+            panels: {
+                legacy: {
+                    id: 'legacy', name: 'Legacy', room: '', widgets: [], automationIds: [],
+                    deviceIds: [], createdAt: 1, updatedAt: 2, lastSeenAt: null,
+                },
+            },
+        }));
+        delete require.cache[require.resolve('../server/manager/panelStore')];
+        const reloaded = require('../server/manager/panelStore');
+        assert.equal(reloaded.getPanelPublic('legacy').showBorders, true);
+        reloaded.resetForTests();
+    });
+
     it('persists panels across a simulated restart', () => {
         const { panel } = store.createPanel({ name: 'Porch', widgets: [{ type: 'clock', x: 0, y: 0, w: 4, h: 2 }] });
         delete require.cache[require.resolve('../server/manager/panelStore')];

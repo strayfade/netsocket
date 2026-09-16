@@ -38,6 +38,16 @@ const persist = () => {
     writeJsonAtomic(PANELS_PATH, store)
 }
 
+/**
+ * Per-panel widget borders. Missing/null defaults to true (current look);
+ * anything non-boolean is invalid.
+ */
+const normalizeShowBorders = (value) => {
+    if (value == null) return true
+    if (typeof value === 'boolean') return value
+    return null
+}
+
 const normalizeDeviceIds = (value) => {
     if (value == null) return []
     if (!Array.isArray(value)) return null
@@ -59,6 +69,10 @@ const load = () => {
     for (const panel of Object.values(panels)) {
         if (!panel || typeof panel !== 'object') continue
         if (!Array.isArray(panel.deviceIds)) panel.deviceIds = []
+        if (typeof panel.showBorders !== 'boolean') {
+            panel.showBorders = true
+            migrated = true
+        }
         // Drop legacy per-panel token material (auth is sessions + device grants now).
         delete panel.tokenHash
         delete panel.deviceTokens
@@ -233,6 +247,7 @@ const publicPanelView = (panel) => {
         id: panel.id,
         name: panel.name || '',
         room: panel.room || '',
+        showBorders: panel.showBorders !== false,
         widgets: Array.isArray(panel.widgets)
             ? panel.widgets.map((w) => (w && typeof w === 'object' ? { ...w } : w))
             : [],
@@ -268,7 +283,7 @@ const uniqueIdFor = (base) => {
     return candidate
 }
 
-const createPanel = ({ id, name, room, widgets, deviceIds } = {}) => {
+const createPanel = ({ id, name, room, widgets, deviceIds, showBorders } = {}) => {
     const cleanName = normalizeName(name)
     if (!cleanName) throw new Error('name_required')
     const cleanAutomationIds = []
@@ -276,6 +291,8 @@ const createPanel = ({ id, name, room, widgets, deviceIds } = {}) => {
     if (!cleanWidgets) throw new Error('invalid_widgets')
     const cleanDeviceIds = normalizeDeviceIds(deviceIds)
     if (!cleanDeviceIds) throw new Error('invalid_device_ids')
+    const cleanShowBorders = normalizeShowBorders(showBorders)
+    if (cleanShowBorders == null) throw new Error('invalid_show_borders')
     const requestedId = normalizePanelId(id)
     if (requestedId != null && !isValidPanelId(requestedId)) throw new Error('invalid_id')
     if (requestedId != null && store.panels[requestedId]) throw new Error('id_taken')
@@ -285,6 +302,7 @@ const createPanel = ({ id, name, room, widgets, deviceIds } = {}) => {
         id: finalId,
         name: cleanName,
         room: normalizeName(room) || '',
+        showBorders: cleanShowBorders,
         widgets: cleanWidgets,
         automationIds: cleanAutomationIds,
         deviceIds: cleanDeviceIds,
@@ -297,7 +315,7 @@ const createPanel = ({ id, name, room, widgets, deviceIds } = {}) => {
     return { panel: publicPanelView(panel) }
 }
 
-const updatePanel = (panelId, { name, room, widgets, deviceIds } = {}) => {
+const updatePanel = (panelId, { name, room, widgets, deviceIds, showBorders } = {}) => {
     const panel = getPanel(panelId)
     if (!panel) return null
     if (name !== undefined) {
@@ -311,6 +329,11 @@ const updatePanel = (panelId, { name, room, widgets, deviceIds } = {}) => {
     }
     // automationIds is deprecated; ignore any value and keep [].
     panel.automationIds = []
+    if (showBorders !== undefined) {
+        const cleanShowBorders = normalizeShowBorders(showBorders)
+        if (cleanShowBorders == null) throw new Error('invalid_show_borders')
+        panel.showBorders = cleanShowBorders
+    }
     if (widgets !== undefined) {
         const cleanWidgets = normalizeWidgets(widgets, [])
         if (!cleanWidgets) throw new Error('invalid_widgets')

@@ -20,6 +20,7 @@ const STORE_ERRORS = new Set([
     'too_many_widgets',
     'invalid_automation_ids',
     'invalid_device_ids',
+    'invalid_show_borders',
     'invalid_id',
     'id_taken',
 ])
@@ -67,6 +68,7 @@ const handleCreatePanel = (req, res, deps = {}) => {
             widgets: body.widgets,
             automationIds: body.automationIds,
             deviceIds: body.deviceIds,
+            showBorders: body.showBorders,
         })
         return res.status(201).json({ panel })
     } catch (e) {

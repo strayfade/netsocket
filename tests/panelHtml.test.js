@@ -40,6 +40,8 @@ describe('panel pages', () => {
         assert.match(html, /<script src="\/js\/widgets\.js"><\/script>/);
         assert.match(html, /Widgets\.createItem/);
         assert.match(html, /staticGrid/);
+        assert.match(html, /showBorders/);
+        assert.match(html, /no-borders/);
         assert.match(html, /refreshVarContent/);
         assert.match(html, /varsChanged/);
         assert.match(html, /new WebSocket/);
@@ -72,6 +74,7 @@ describe('panel pages', () => {
             'panel-dialog-add',
             'edit-panel-name',
             'edit-panel-room',
+            'edit-panel-borders',
             'edit-panel-devices',
         ]) {
             assert.match(html, new RegExp(`id="${id}"`));
@@ -87,6 +90,7 @@ describe('panel pages', () => {
         assert.doesNotMatch(html, /\/revoke/);
         assert.match(html, /\/v1\/devices/);
         assert.match(html, /deviceIds/);
+        assert.match(html, /showBorders/);
         assert.match(html, /\/v1\/panels/);
         assert.match(html, /ensureSession/);
         assert.match(html, /<script src="\/js\/widgetEditor\.js"><\/script>/);

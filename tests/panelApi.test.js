@@ -271,6 +271,53 @@ describe('panelApi', () => {
         assert.equal(sent.length, 1);
     });
 
+    it('creates panels with widget borders on by default and validates the flag', () => {
+        const created = mockRes();
+        panelApi.handleCreatePanel(
+            reqWith({ body: { name: 'Kitchen', showBorders: false } }),
+            created,
+            { store, auth: adminAuth }
+        );
+        assert.equal(created.statusCode, 201);
+        assert.equal(created.body.panel.showBorders, false);
+
+        const def = mockRes();
+        panelApi.handleCreatePanel(
+            reqWith({ body: { name: 'Office' } }),
+            def,
+            { store, auth: adminAuth }
+        );
+        assert.equal(def.statusCode, 201);
+        assert.equal(def.body.panel.showBorders, true);
+
+        const bad = mockRes();
+        panelApi.handleCreatePanel(
+            reqWith({ body: { name: 'Bad', showBorders: 'yes' } }),
+            bad,
+            { store, auth: adminAuth }
+        );
+        assert.equal(bad.statusCode, 400);
+        assert.equal(bad.body.error, 'invalid_show_borders');
+
+        const toggled = mockRes();
+        panelApi.handleUpdatePanel(
+            reqWith({ params: { panelId: 'kitchen' }, body: { showBorders: true } }),
+            toggled,
+            { store, auth: adminAuth }
+        );
+        assert.equal(toggled.statusCode, 200);
+        assert.equal(toggled.body.panel.showBorders, true);
+
+        const badUpdate = mockRes();
+        panelApi.handleUpdatePanel(
+            reqWith({ params: { panelId: 'kitchen' }, body: { showBorders: 0 } }),
+            badUpdate,
+            { store, auth: adminAuth }
+        );
+        assert.equal(badUpdate.statusCode, 400);
+        assert.equal(badUpdate.body.error, 'invalid_show_borders');
+    });
+
     it('supports admin update and delete with 404s', () => {
         const created = mockRes();
         panelApi.handleCreatePanel(reqWith({ body: { name: 'Den' } }), created, { store, auth: adminAuth });

@@ -114,6 +114,12 @@
                 </div>
             </div>
             <div class="admin-field" style="margin: 0;">
+                <label class="admin-check" for="edit-panel-borders" style="margin: 0;">
+                    <input type="checkbox" id="edit-panel-borders" checked>
+                    Show widget borders
+                </label>
+            </div>
+            <div class="admin-field" style="margin: 0;">
                 <label>Layout</label>
                 <div class="grid-stack" id="panel-edit-grid"></div>
                 <p class="shell-empty" id="panel-edit-grid-empty" hidden>No widgets. Add one below.</p>
@@ -293,6 +299,11 @@
             WidgetEditor.tickClock();
             setInterval(WidgetEditor.tickClock, 15000);
 
+            // Live border preview in the edit grid.
+            document.getElementById('edit-panel-borders').addEventListener('change', function () {
+                document.getElementById('panel-edit-grid').classList.toggle('no-borders', !this.checked);
+            });
+
             var editor = WidgetEditor.attach({
                 gridId: 'panel-edit-grid',
                 editToggleId: 'panel-layout-edit-toggle',
@@ -382,7 +393,8 @@
                 var deviceCount = Array.isArray(panel.deviceIds) ? panel.deviceIds.length : 0;
                 sub.textContent = '/panel/' + panel.id
                     + ' - ' + formatWidgets(panel.widgets)
-                    + ' - ' + deviceCount + ' devices';
+                    + ' - ' + deviceCount + ' devices'
+                    + (panel.showBorders === false ? ' - borders off' : '');
                 main.appendChild(title);
                 main.appendChild(sub);
                 li.appendChild(main);
@@ -460,6 +472,9 @@
                 document.getElementById('panel-edit-id').textContent = '/panel/' + panel.id;
                 document.getElementById('edit-panel-name').value = panel.name || '';
                 document.getElementById('edit-panel-room').value = panel.room || '';
+                var bordersBox = document.getElementById('edit-panel-borders');
+                bordersBox.checked = panel.showBorders !== false;
+                document.getElementById('panel-edit-grid').classList.toggle('no-borders', !bordersBox.checked);
                 editingWidgets = (panel.widgets || []).map(function (w) {
                     return {
                         id: w.id,
@@ -555,6 +570,7 @@
                         body: JSON.stringify({
                             name: document.getElementById('edit-panel-name').value,
                             room: document.getElementById('edit-panel-room').value,
+                            showBorders: document.getElementById('edit-panel-borders').checked,
                             deviceIds: deviceIds,
                         }),
                     });

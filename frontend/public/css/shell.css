@@ -517,26 +517,38 @@ body.shell-page {
 .kiosk-wrap {
     position: relative;
     z-index: 1;
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 32px 20px 64px;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 20px;
+    gap: 0;
+    overflow: hidden;
+    background: #000;
 }
 
-/* Panel widget grid: center all widgets horizontally + vertically */
+/* Panel widget grid: fullscreen, scaled with object-fit: contain behavior */
 #panel-content {
-    width: 100%;
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
     flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 0;
+    overflow: hidden;
+    padding: 0;
 }
 
 #panel-content[hidden] {
@@ -549,7 +561,10 @@ body.shell-page {
 
 #panel-grid {
     width: 100%;
-    min-height: 200px;
+    height: auto;
+    min-height: 0;
+    transform-origin: center center;
+    flex-shrink: 0;
 }
 
 #panel-grid .shell-card,
@@ -567,6 +582,17 @@ body.shell-page {
 #panel-grid .grid-stack-item-content,
 #panel-edit-grid .grid-stack-item-content {
     border-radius: 0;
+}
+
+/* Per-panel widget borders: .no-borders keeps the 1px box (grid layout
+   identical) but paints it transparent instead of removing it. */
+#panel-grid.no-borders .shell-card,
+#panel-grid.no-borders .widget-run-btn,
+#panel-grid.no-borders .shell-widget-frame,
+#panel-edit-grid.no-borders .shell-card,
+#panel-edit-grid.no-borders .widget-run-btn,
+#panel-edit-grid.no-borders .shell-widget-frame {
+    border-color: transparent;
 }
 
 /* Keep widgets' inner content centered without breaking GridStack sizing */

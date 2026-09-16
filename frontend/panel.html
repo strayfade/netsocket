@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="theme-color" content="#000000">
     <meta name="author" content="strayfade">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta property="og:site_name" content="netsocket">
     <meta property="og:title" content="Panel">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -133,6 +133,42 @@
                 };
             }
 
+            // Fullscreen kiosk scaling: object-fit: contain behavior.
+            // The grid keeps its natural aspect ratio and is uniformly
+            // scaled to fit inside the viewport — fills as much as possible
+            // without cropping, letterboxed via flex centering.
+            function fitPanelContain() {
+                var gridEl = document.getElementById('panel-grid');
+                var contentEl = document.getElementById('panel-content');
+                if (!gridEl || !contentEl || contentEl.hidden) return;
+                // Reset to measure the natural (unscaled) size. transform
+                // does not affect layout, so without compensation flexbox
+                // would center the unscaled box and the painted grid would
+                // sit off-center (in landscape: pushed toward the top).
+                gridEl.style.transform = '';
+                gridEl.style.margin = '';
+                var vw = contentEl.clientWidth || window.innerWidth;
+                var vh = contentEl.clientHeight || window.innerHeight;
+                var gw = gridEl.offsetWidth || gridEl.scrollWidth || vw;
+                var gh = gridEl.scrollHeight || gridEl.offsetHeight || vh;
+                if (!gw || !gh || !vw || !vh) return;
+                var scale = Math.min(vw / gw, vh / gh);
+                if (!isFinite(scale) || scale <= 0) return;
+                if (scale > 8) scale = 8;
+                if (scale === 1) return;
+                gridEl.style.transform = 'scale(' + scale + ')';
+                // Shrink the layout box to the painted box so flex centering
+                // applies to what is actually visible (negative when scaling
+                // down, positive on the rare upscale).
+                var mx = (gw * (1 - scale)) / 2;
+                var my = (gh * (1 - scale)) / 2;
+                gridEl.style.margin = (-my) + 'px ' + (-mx) + 'px';
+            }
+            window.addEventListener('resize', fitPanelContain);
+            window.addEventListener('orientationchange', function () {
+                setTimeout(fitPanelContain, 100);
+            });
+
             function rebuildGrid(widgets) {
                 var container = document.getElementById('panel-grid');
                 if (grid) {
@@ -182,6 +218,11 @@
                         columnOpts: { breakpoints: [{ w: 640, c: 4 }] },
                     }, container);
                 }
+                requestAnimationFrame(function () {
+                    fitPanelContain();
+                    // GridStack sizes cells after layout — re-fit once settled.
+                    setTimeout(fitPanelContain, 100);
+                });
             }
 
             function renderConfig(data) {
@@ -191,6 +232,8 @@
                 document.getElementById('panel-login-required').hidden = true;
                 document.getElementById('panel-content').hidden = false;
                 document.title = (panel.room || panel.name || 'Panel') + ' - netsocket';
+                // Per-panel widget borders (default on; transparent 1px keeps layout identical).
+                document.getElementById('panel-grid').classList.toggle('no-borders', panel.showBorders === false);
 
                 var widgets = Array.isArray(panel.widgets) ? panel.widgets : [];
                 liveVariables = data.variables && typeof data.variables === 'object' ? data.variables : {};
