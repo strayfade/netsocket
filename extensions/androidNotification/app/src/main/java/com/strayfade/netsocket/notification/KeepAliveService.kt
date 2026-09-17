@@ -73,7 +73,7 @@ class KeepAliveService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.keepalive_title))
             .setContentText(getString(R.string.keepalive_text))
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setContentIntent(openApp)
             .setOngoing(true)
             .setOnlyAlertOnce(true)

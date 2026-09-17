@@ -49,7 +49,7 @@ object IncomingNotifier {
             .setContentTitle(context.getString(R.string.message_notification_title))
             .setContentText(preview)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text.trim()))
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setContentIntent(open)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
