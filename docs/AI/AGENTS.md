@@ -231,7 +231,7 @@ const NodeFunction = async (node, params, behaviors) => {
 ## 6. Debugging and Troubleshooting Approaches
 
 ### Runtime Debugging
-1. **Enable Debug Mode**: Use `npm run develop-noauth` for local development with auth skipped
+1. **Enable Debug Mode**: Use `npm run dev:noauth` for local development with auth skipped
 2. **Check Logs**: All server activity is logged via `log()` function
 3. **Browser DevTools**: Inspect network traffic in browser for API calls
 4. **WebSocket Debugging**: Monitor WebSocket connections for real-time debugging

@@ -144,7 +144,7 @@ After adding a node, smoke-test in the editor (linked and unlinked inputs, succe
 | `HOSTNAME` | Bind address |
 | `COOKIE_SECURE` | Set to `1` when serving over HTTPS |
 
-Local dev: `npm run develop` (auth on) or `npm run develop-noauth` (`--skip-auth`, dev only).
+Local dev: `npm run dev` (auth on) or `npm run dev:noauth` (`--skip-auth`, dev only).
 
 ## Pre-submit checklist
 

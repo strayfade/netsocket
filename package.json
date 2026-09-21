@@ -5,6 +5,9 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "dev:noauth": "npm i && node server/index.js --skip-auth",
+    "dev-noauth": "npm i && node server/index.js --skip-auth",
     "develop": "node server/index.js",
     "develop-noauth": "npm i && node server/index.js --skip-auth",
     "reset-credentials": "node server/scripts/resetCredentials.js",

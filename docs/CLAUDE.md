@@ -157,8 +157,8 @@ test('Math/Add returns correct sum', async () => {
 | Command | What it does | Shortcut |
 |---------|--------------|----------|
 | `npm start` | Run the server in development mode | `npm start` |
-| `npm run develop` | Same as `npm start` (keeps the same entry point) | `npm run develop` |
-| `npm run develop-noauth` | Start server with `--skip-auth` (dev only) | `npm run develop-noauth` |
+| `npm run dev` | Same as `npm start` (keeps the same entry point) | `npm run dev` |
+| `npm run dev:noauth` | Start server with `--skip-auth` (dev only) | `npm run dev:noauth` |
 | `npm test` | Run all tests once | `npm test` |
 | `npm run test:watch` | Run tests in watch mode | `npm run test:watch` |
 | `npm run reset-credentials` | Reset user credentials (dev helper) | `npm run reset-credentials` |
