@@ -2,6 +2,12 @@ let wsServerClients = []
 const conversationSockets = new Map()
 const deviceSockets = new Map()
 
+/** Ring buffer of recent alerts for pull-based clients (e.g. wearables). */
+const MAX_ALERT_HISTORY = 50
+/** Defensive cap so one alert can't bloat the in-memory history. */
+const MAX_ALERT_TEXT_LENGTH = 2000
+let alertHistory = []
+
 const normalizeId = (value) => {
     if (value == null) return null
     const trimmed = String(value).trim()
@@ -55,9 +61,37 @@ const sendToClient = (client, payload) => {
     client.send(typeof payload === 'string' ? payload : JSON.stringify(payload))
 }
 
+const pushHistory = (text, conversationId, deviceId) => {
+    alertHistory.push({
+        text: String(text ?? '').slice(0, MAX_ALERT_TEXT_LENGTH),
+        conversationId: conversationId,
+        deviceId: deviceId,
+        ts: Date.now(),
+    })
+    if (alertHistory.length > MAX_ALERT_HISTORY) {
+        alertHistory = alertHistory.slice(alertHistory.length - MAX_ALERT_HISTORY)
+    }
+}
+
+/**
+ * Recent alerts visible to a device: broadcast entries (blank device id)
+ * plus entries targeted at that device. Conversation-targeted entries are
+ * excluded — they belong to another session's reply flow.
+ * Returns newest-first.
+ */
+const getRecentAlerts = (deviceId = null, limit = MAX_ALERT_HISTORY) => {
+    const normalizedDeviceId = normalizeId(deviceId)
+    const count = Number.isInteger(limit) ? Math.max(1, Math.min(limit, MAX_ALERT_HISTORY)) : MAX_ALERT_HISTORY
+    return alertHistory
+        .filter((entry) => !entry.conversationId && (!entry.deviceId || entry.deviceId === normalizedDeviceId))
+        .slice(-count)
+        .reverse()
+}
+
 const alert = async (text, conversationId = null, deviceId = null) => {
     const normalizedConversationId = normalizeId(conversationId)
     const normalizedDeviceId = normalizeId(deviceId)
+    pushHistory(text, normalizedConversationId, normalizedDeviceId)
     const message = {
         broadcastPurpose: "overlay",
         broadcastData: {
@@ -100,10 +134,13 @@ const resetAlertStateForTests = () => {
     wsServerClients = []
     conversationSockets.clear()
     deviceSockets.clear()
+    alertHistory = []
 }
 
 module.exports = {
     alert,
+    getRecentAlerts,
+    MAX_ALERT_HISTORY,
     setWsServerConnectedClients,
     registerConversation,
     registerDevice,

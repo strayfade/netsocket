@@ -5,8 +5,9 @@ Boot sequence:
   2. `npm run sim:auto` (evenhub-simulator ... --automation-port 9898) in another
   3. `python scripts/test_simulator.py` (this file)
 
-Asserts the QA basics: app boots, framebuffer has lit pixels,
-and double-tap produces the system exit dialog.
+Asserts the QA basics: app boots, framebuffer has lit pixels, and
+double-tap / long-press cycle through all three tabs (framebuffer
+changes each time, looping back to status).
 Requires: pip install pillow
 """
 
@@ -19,7 +20,7 @@ from urllib.request import Request, urlopen
 from PIL import Image
 
 BASE = "http://127.0.0.1:9898"
-READY_MARKER = "[even-g2-example] ready"
+READY_MARKER = "[netsocket-g2] ready"
 TIMEOUT_S = 30
 
 
@@ -64,6 +65,11 @@ def lit_pixel_count(img: Image.Image) -> int:
     return sum(1 for px in img.getdata() if px[3] > 0)
 
 
+def shot_bytes() -> bytes:
+    with urlopen(f"{BASE}/api/screenshot/glasses") as r:
+        return r.read()
+
+
 def main() -> int:
     ping = get_json("/api/ping")
     assert ping in ("pong", {"message": "pong"}), f"simulator not up: {ping}"
@@ -72,14 +78,16 @@ def main() -> int:
     boot = get_png("/api/screenshot/glasses")
     assert lit_pixel_count(boot) > 100, "framebuffer is blank after ready"
 
-    post_json("/api/input", {"action": "double_click"})
-    time.sleep(0.5)
+    # Double-tap cycles status -> alerts -> aria -> status; each step redraws.
+    prev = shot_bytes()
+    for action in ("double_click", "double_click", "long_press"):
+        post_json("/api/input", {"action": action})
+        time.sleep(0.5)
+        current = shot_bytes()
+        assert current != prev, f"framebuffer did not change after {action} - tab cycle missing?"
+        prev = current
 
-    after = get_png("/api/screenshot/glasses")
-    delta = abs(lit_pixel_count(after) - lit_pixel_count(boot))
-    assert delta > 50, "framebuffer did not change after double_click - exit dialog missing?"
-
-    print("OK - app booted, rendered, and produced an exit dialog on double-tap")
+    print("OK - app booted, rendered, and cycled status->alerts->aria->status on double-tap/long-press")
     return 0
 
 

@@ -1,9 +1,9 @@
 {
-  "name": "even-g2-example",
+  "name": "netsocket-g2",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Example Even Realities G2 app (Vite + TypeScript + Even Hub SDK) with simulator workflow",
+  "description": "netsocket companion for Even Realities G2: recent Alerts + Aria chat (Vite + TypeScript + Even Hub SDK)",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "tsc --noEmit && vite build",
@@ -15,7 +15,10 @@
     "qr": "evenhub qr --url"
   },
   "dependencies": {
-    "@evenrealities/even_hub_sdk": "^0.0.16"
+    "@evenrealities/even_hub_sdk": "^0.0.16",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "geist": "^1.7.2"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",

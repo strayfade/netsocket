@@ -38,6 +38,7 @@ const DEVICE_PURPOSES = new Set([
     'importOtpFromQr',
     'reorderOtpAccounts',
     'getPanelGrants',
+    'getRecentAlerts',
 ])
 
 const HANDSHAKE_PURPOSES = new Set([

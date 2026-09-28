@@ -378,6 +378,9 @@ const handleTrustedMessage = async (socket, message) => {
         case 'getPanelGrants':
             panelApi.handleDevicePanelGrants(socket, message)
             break
+        case 'getRecentAlerts':
+            require('./manager/alertApi.js').handleDeviceRecentAlerts(socket, message)
+            break
         case 'getSubgraphs': {
             if (!isEditorOrLegacy) break
             const subgraphStore = require('./manager/subgraphStore')
