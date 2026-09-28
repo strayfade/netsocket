@@ -20,13 +20,6 @@ export interface G2Config {
   preset: 'ping' | 'short'
   /** Canned prompts — the glasses have no keyboard, so these are the inputs */
   prompts: string[]
-  /**
-   * Black-point 0-100 (%). Frame pixels at/below it map to black, the
-   * rest spread across the display's 16 green levels before tiles are
-   * pushed — our own mapping beats the firmware's grey conversion.
-   * Raise it when dim fringe pixels blow out to bright green.
-   */
-  threshold: number
 }
 
 export const DEFAULT_PROMPTS = [
@@ -48,7 +41,6 @@ export function defaultConfig(): G2Config {
     model: '',
     preset: 'short',
     prompts: [...DEFAULT_PROMPTS],
-    threshold: 50,
   }
 }
 
@@ -115,9 +107,5 @@ function sanitizeConfig(raw: Partial<G2Config>): G2Config {
     model: str(raw.model, ''),
     preset: raw.preset === 'ping' ? 'ping' : 'short',
     prompts,
-    threshold:
-      typeof raw.threshold === 'number' && Number.isFinite(raw.threshold)
-        ? Math.max(0, Math.min(100, Math.round(raw.threshold)))
-        : base.threshold,
   }
 }

@@ -6,29 +6,33 @@ layout for the 576×288 display. Stack: Vite + TypeScript + Even Hub SDK.
 
 What it does:
 
-- **Tab bar footer** — app icon far-left (uniform 4px padding),
-  text-width square cells per tab (`STATUS` / `ALERTS` / `ARIA`), and a
-  12-hour clock far-right. No titles, no hint strips, no rounded
-  corners. Swipe moves focus *with* the tab; the highlight always
-  mirrors the visible content. All type is light-weight Geist.
-- **STATUS** — link state, Aria readiness, device ID, alert counts.
-- **ALERTS** — recent alerts (broadcast + targeted at this device), live
-  over the device WebSocket plus pull-to-refresh. Tap = next, long-press
-  = open detail, swipe = page, double-tap = back.
-- **ARIA** — canned prompts (the glasses have no keyboard) asked via
-  `POST /api/v1/chat` (SSE `stream: true`, `short`/`ping` + `plaintext`,
-  tool calls hidden). Replies stream into the view as deltas arrive
-  (UI updates throttled to ~4/sec, following the tail); double-tap
-  backs out and cancels. Long-press a prompt to ask.
+- **Header strip** — `>STATUS  ALERTS  ARIA` tab indicator plus a 12-hour
+  clock, pushed as a native text container. No titles, no rounded
+  corners, no image tiles.
+- **STATUS** — link state, Aria readiness, device ID, alert counts
+  (native text container, updated in place).
+- **ALERTS** — recent alerts as a **native list container** (firmware
+  scroll + selection highlight), live over the device WebSocket plus
+  pull-to-refresh. Tap a row = open detail (native text container,
+  overflow scrolls in firmware). Back out with tap.
+- **ARIA** — canned prompts as a native list (the glasses have no
+  keyboard) asked via `POST /api/v1/chat` (SSE `stream: true`,
+  `short`/`ping` + `plaintext`, tool calls hidden). Replies stream into
+  a text container via flicker-free `textContainerUpgrade` (UI updates
+  throttled to ~4/sec while streaming); tap backs out and cancels.
+- **Contextual menu** (tap-then-long-press) — Refresh alerts plus direct
+  tab jumps. Re-sent on every rebuild.
 - **Pairing** — same handshake as the Android app: a device ID is
   generated on first boot, `deviceHello`/`deviceAuth` over WebSocket
   (Ed25519 + X25519 via `@noble/curves`, AES-256-GCM session), then
   approve/deny in the netsocket dashboard → Settings → Devices.
   Server identity is pinned on first use (TOFU).
-- Rendering reuses the proven fullscreen image path: 2×2 grid of
-  288×144 tiles, dirty-tile skip, serialized `updateImageRawData`, one
-  fullscreen invisible text layer for input. Double-tap at tab level
-  shows the system exit dialog (`shutDownPageContainer(1)`).
+- Rendering is 100% native containers: layout changes rebuild the page,
+  content changes upgrade text in place, and all bridge calls run
+  through one serialized queue (no concurrent sends). Zero image
+  containers — no tiling, no quantization, no tear window.
+  Double-tap at tab level shows the system exit dialog
+  (`shutDownPageContainer(1)`).
 - Logs `[netsocket-g2] ready` for headless simulator automation.
 
 Verified against simulator 0.9.5: boot, swipe tab-switch, exit dialog,
@@ -59,27 +63,22 @@ npm run sim
 
 ## Configure (mirror page)
 
-Open the dev URL in a browser (phone or laptop). Below the live canvas:
+Open the dev URL in a browser (phone or laptop). Above the settings
+form is a text preview showing the exact strings pushed to the glasses
+containers:
 
-1. **Display** — black-point slider. Frame pixels at/below this
-   brightness go black, the rest map across the display's 16 green
-   levels before tiles are pushed (canvas text is antialiased, so our
-   own mapping beats the firmware's grey conversion — edges land on
-   intermediate greens instead of melting to white). Drag it and watch
-   the glasses update live. Saved with everything else, so it rides
-   along in the sideload link.
-2. **Connection** — netsocket host/port, https toggle, device name.
+1. **Connection** — netsocket host/port, https toggle, device name.
    The device ID is shown underneath; approve it in the netsocket
    dashboard → Settings → Devices.
-3. **Aria** — endpoint (host root; a trailing `/api/v1` is stripped
+2. **Aria** — endpoint (host root; a trailing `/api/v1` is stripped
    automatically), API key, provider + model (use *Load providers* to
    discover IDs), preset (`short` fits the display, `ping` is terser).
    The Aria host must serve CORS on `/api/v1/*` (added to Aria's
    `next.config.ts` — redeploy Aria after pulling) or the glasses get
    `failed to fetch` on preflight.
-4. **Prompts** — one canned question per line; these are the only inputs
+3. **Prompts** — one canned question per line; these are the only inputs
    the glasses can send.
-5. **Save + reconnect**, then **Copy sideload link** — the link encodes
+4. **Save + reconnect**, then **Copy sideload link** — the link encodes
    everything in `?cfg=`, because the glasses WebView has no keyboard
    and shares no storage with your phone browser.
 
@@ -132,16 +131,15 @@ this repo's server gained (with `node:test` coverage in
 
 ```text
 extensions/even-g2/
-├── src/main.ts            ← boot + input map + bridge/tile push + mirror UI
+├── src/main.ts            ← boot + input map + render pipeline + mirror UI
 ├── src/config.ts          ← settings schema, localStorage, ?cfg= sideload
-├── src/state/store.ts     ← tabs, alerts, Aria reply pages, link state
+├── src/state/store.ts     ← tabs, alerts, Aria reply text, link state
 ├── src/crypto/device.ts   ← pairing crypto (noble curves + WebCrypto)
 ├── src/net/netsocket.ts   ← device WS client (hello/challenge/auth/ping)
 ├── src/net/aria.ts        ← Aria chat + model discovery
-├── src/image/tiles.ts     ← 2x2 tile slicing + PNG bytes + dirty compare
-├── src/ui/chrome.ts       ← frame base, tab bar, title, hint
-├── src/ui/views.ts        ← status / alerts / Aria renderers
-├── src/ui/text.ts         ← wrap, ellipsis, paginate, roundRect
+├── src/glasses/pages.ts   ← native containers: header/body builders,
+│                             list rows, contextual menu, text budgets
+├── src/ui/font.ts         ← Geist for the browser mirror (mirror-only)
 ├── src/style.css          ← browser mirror + settings form
 ├── app.json               ← Even Hub manifest (fill network whitelist!)
 └── scripts/test_simulator.py ← headless QA smoke test
@@ -151,9 +149,10 @@ extensions/even-g2/
 
 | Gesture | Tab level | Detail level |
 |---|---|---|
-| Swipe up/down | Move selection | Previous/next page |
+| Swipe up/down | Firmware scroll | Firmware scroll |
 | Tap | Main action (refresh / open alert / send prompt) | Back (Aria: after a reply arrives) |
 | Double-tap / long-press | Next tab (loops around) | Next tab (loops around) |
+| Tap-then-long-press | Contextual menu (refresh, tab jumps) | Contextual menu |
 
 > Simulator is layout/logic only, not a hardware emulator (font, timing,
 > BLE quirks differ). Always validate on real glasses before shipping.

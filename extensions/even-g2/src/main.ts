@@ -1,29 +1,40 @@
-// netsocket G2 companion: recent Alerts + Aria chat on a 576x288
-// canvas with a tab-bar footer (logo far-left, one pill per tab).
+// netsocket G2 companion: recent Alerts + Aria chat via native Even Hub
+// text + list containers (no canvas, no image tiles).
 //
-// Input map (no touch positions on the G2 — taps carry no coordinates):
-// - swipe up/down at tab level = switch tab (focus moves WITH the tab)
-// - tap = next item (lists) / next page (detail) / refresh (status)
-// - long-press = open detail / ask prompt / retry / reconnect
-// - double-tap = back, or the system exit dialog at tab level
+// Layout: a one-line header strip (tabs + clock) plus one capturing body
+// container per screen. Layout changes rebuild the page; content changes
+// within a layout upgrade the text in place (flicker-free).
+//
+// Input map (taps carry no coordinates on the G2):
+// - tap a list row = open alert / ask prompt
+// - tap body text = back (status/empty screens: refresh instead)
+// - swipe = firmware-native scroll (lists and overflowing text scroll)
+// - double-tap / long-press = next tab (loops around)
+// - tap-then-long-press = contextual menu (refresh, tab jumps)
+// - double-tap at tab level also reaches the system exit dialog via menu;
+//   shutDownPageContainer(1) stays available for the QA root-page rule.
 
-import {
-  waitForEvenAppBridge,
-  TextContainerProperty,
-  ImageContainerProperty,
-  ImageRawDataUpdate,
-  CreateStartUpPageContainer,
-  OsEventTypeList,
-} from '@evenrealities/even_hub_sdk'
+import { OsEventTypeList, waitForEvenAppBridge } from '@evenrealities/even_hub_sdk'
 import './style.css'
 import { applyUrlConfig, encodeSideloadUrl, loadConfig, saveConfig, type G2Config } from './config'
 import { getOrCreateDeviceId, NetsocketLink, type LinkStatus } from './net/netsocket'
 import { fetchProviders, sendPromptStream, type AriaProvider } from './net/aria'
-import { TILES, TILE_W, TILE_H, quantizeFrame, sliceTiles, canvasToPngBytes, bytesEqual, FRAME_W, FRAME_H } from './image/tiles'
-import { drawFrameBase, drawTabBar, loadTabIcon } from './ui/chrome'
 import { loadFonts } from './ui/font'
-import { drawAlerts, drawAria, drawStatus, paginateReply } from './ui/views'
-import { TABS, initialState, markAllSeen, unreadCount, type AlertItem, type AppState } from './state/store'
+import {
+  MENU_ALERTS,
+  MENU_ARIA,
+  MENU_REFRESH,
+  MENU_STATUS,
+  ariaConfigured,
+  ariaVisible,
+  buildBodyUpgrade,
+  buildCreate,
+  buildHeaderUpgrade,
+  buildRebuild,
+  screenFor,
+  type Screen,
+} from './glasses/pages'
+import { TABS, initialState, markAllSeen, unreadCount, type AlertItem, type AppState, type TabId } from './state/store'
 
 const READY_MARKER = '[netsocket-g2] ready'
 
@@ -34,93 +45,87 @@ function saveAndReturn(c: G2Config): G2Config {
 }
 
 const state: AppState = initialState()
-const frameCanvas = document.createElement('canvas')
-frameCanvas.width = FRAME_W
-frameCanvas.height = FRAME_H
 const link = new NetsocketLink()
-
-function renderCanvas(): void {
-  const ctx = frameCanvas.getContext('2d')
-  if (!ctx) return
-  drawFrameBase(ctx)
-  if (state.tab === 'status') drawStatus(ctx, state, cfg)
-  else if (state.tab === 'alerts') drawAlerts(ctx, state)
-  else drawAria(ctx, state, cfg)
-  drawTabBar(ctx, state)
-  quantizeFrame(frameCanvas, cfg.threshold)
-  updateMirrorStatus()
-}
-
-// --- Glasses tile push (one frame at a time, dirty tiles skipped) ---
-//
-// The firmware lights each tile as its `updateImageRawData` lands — there
-// is no present/flush/vsync API, so a 4-tile frame is never atomic on the
-// glass. Two rules keep the tear window as small as the protocol allows
-// (docs: "No concurrent image sends", paced at 100ms, one frame >> 100ms
-// over BLE):
-// 1. Sends are strictly sequential (`await` each call, never parallel).
-// 2. Only one frame is ever in flight. A `render()` that lands mid-push
-//    sets `pushNeeded` and the in-flight frame aborts its remaining tiles
-//    so the loop can re-slice the *latest* canvas — tiles from two
-//    generations never interleave on the link.
 
 type Bridge = Awaited<ReturnType<typeof waitForEvenAppBridge>>
 let bridge: Bridge | null = null
-const lastTileBytes: (Uint8Array | null)[] = TILES.map(() => null)
-let pushInFlight = false
-let pushNeeded = false
 
-async function pushCurrentFrame(): Promise<void> {
-  const b = bridge
-  if (!b) return
-  const tileCanvases = sliceTiles(frameCanvas)
-  const allBytes = await Promise.all(tileCanvases.map((c) => canvasToPngBytes(c)))
-  for (let i = 0; i < allBytes.length; i++) {
-    // A newer render() queued while we were encoding/sending — stop
-    // lighting stale tiles; the loop below re-slices the latest frame.
-    if (pushNeeded) break
-    const bytes = allBytes[i]
-    const prev = lastTileBytes[i]
-    if (prev && bytesEqual(prev, bytes)) continue
-    try {
-      const result = await b.updateImageRawData(
-        new ImageRawDataUpdate({
-          containerID: TILES[i].id,
-          containerName: TILES[i].name,
-          imageData: bytes,
-        }),
-      )
-      if (result !== 'success') {
-        console.error(`updateImageRawData ${TILES[i].name}:`, result)
-      } else {
-        lastTileBytes[i] = bytes
-      }
-    } catch (err) {
-      console.error('pushTile:', err)
-    }
-  }
+// --- Render pipeline ---
+//
+// All bridge mutations go through one serialized chain (the firmware
+// accepts no concurrent sends). Renders only record intent: a layout
+// change enqueues a rebuild, a content change enqueues a text upgrade.
+// `last*` is updated synchronously so rapid renders coalesce.
+
+let chain: Promise<unknown> = Promise.resolve()
+let lastLayout = ''
+let lastHeader = ''
+let lastBody = ''
+let lastItems = ''
+// Firmware-highlighted row of the current list (row 0 on a fresh list).
+// Updated by indexed taps; a rebuild re-highlights row 0.
+let listSel = 0
+
+function enqueue(fn: () => Promise<unknown>): void {
+  chain = chain.then(fn).catch((err) => console.error('bridge:', err))
 }
 
-async function schedulePush(): Promise<void> {
-  if (!bridge) return
-  if (pushInFlight) {
-    pushNeeded = true
-    return
-  }
-  pushInFlight = true
-  try {
-    do {
-      pushNeeded = false
-      await pushCurrentFrame()
-    } while (pushNeeded)
-  } finally {
-    pushInFlight = false
-  }
+function detailKey(): string {
+  if (state.alertDetail !== null) return `alert${state.alertDetail}`
+  if (ariaVisible(state)) return 'aria'
+  return 'tab'
 }
 
 function render(): void {
-  renderCanvas()
-  void schedulePush().catch((err) => console.error('push:', err))
+  const now = Date.now()
+  const screen = screenFor(state, cfg, now)
+  renderMirror(screen)
+  const b = bridge
+  if (!b) return
+  const key = `${screen.kind}|${state.tab}|${detailKey()}`
+  if (key !== lastLayout) {
+    lastLayout = key
+    lastHeader = screen.header
+    if (screen.kind === 'text') {
+      lastBody = screen.body
+      lastItems = ''
+    } else {
+      lastItems = screen.items.join('\n')
+      lastBody = ''
+      listSel = 0
+    }
+    enqueue(() =>
+      b.rebuildPageContainer(buildRebuild(screen)).then((ok) => {
+        if (!ok) console.error('rebuildPageContainer failed')
+      }),
+    )
+    return
+  }
+  if (screen.header !== lastHeader) {
+    lastHeader = screen.header
+    const content = screen.header
+    enqueue(() => b.textContainerUpgrade(buildHeaderUpgrade(content)))
+  }
+  if (screen.kind === 'text') {
+    if (screen.body !== lastBody) {
+      lastBody = screen.body
+      const content = screen.body
+      enqueue(() => b.textContainerUpgrade(buildBodyUpgrade(content)))
+    }
+  } else {
+    const joined = screen.items.join('\n')
+    if (joined !== lastItems) {
+      // Lists have no in-place update — a changed list rebuilds the page.
+      lastItems = joined
+      lastHeader = screen.header
+      listSel = 0
+      enqueue(() =>
+        b.rebuildPageContainer(buildRebuild(screen)).then((ok) => {
+          if (!ok) console.error('rebuildPageContainer failed')
+        }),
+      )
+    }
+  }
 }
 
 // --- netsocket link ---
@@ -133,10 +138,8 @@ function applyLinkStatus(s: LinkStatus): void {
 
 function setAlerts(list: AlertItem[]): void {
   state.alerts = list.slice(0, 50)
-  state.alertsFocus = Math.max(0, Math.min(state.alertsFocus, state.alerts.length - 1))
   if (state.alertDetail !== null && state.alertDetail >= state.alerts.length) {
     state.alertDetail = null
-    state.detailPage = 0
   }
   state.lastRefresh = Date.now()
 }
@@ -166,25 +169,24 @@ let lastStreamRender = 0
 
 async function askAria(promptIndex: number): Promise<void> {
   const prompt = cfg.prompts[promptIndex]
-  if (!prompt) return
+  if (!prompt || !ariaConfigured(cfg)) return
   ariaAbort?.abort()
   ariaAbort = new AbortController()
   const ticket = ariaAbort
+  state.ariaPrompt = prompt
   state.ariaAsking = true
   state.ariaStreaming = true
   state.ariaError = ''
-  state.ariaPages = []
-  state.ariaPage = 0
+  state.ariaText = ''
   render()
   try {
     await sendPromptStream(
       cfg,
       prompt,
       (fullText) => {
-        // Deltas arrive faster than BLE can push tiles — throttle UI
-        // updates to ~4/sec and follow the tail while streaming.
-        state.ariaPages = paginateReply(fullText)
-        state.ariaPage = state.ariaPages.length - 1
+        // Deltas arrive faster than BLE drains — throttle upgrades to
+        // ~4/sec. Overflow scrolls natively; the user follows the tail.
+        state.ariaText = fullText
         const now = Date.now()
         if (now - lastStreamRender > 250) {
           lastStreamRender = now
@@ -193,7 +195,6 @@ async function askAria(promptIndex: number): Promise<void> {
       },
       ticket.signal,
     )
-    state.ariaPage = state.ariaPages.length - 1
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'aria failed'
     if (msg !== 'cancelled') state.ariaError = msg
@@ -207,91 +208,61 @@ async function askAria(promptIndex: number): Promise<void> {
 
 // --- Input ---
 
-function nextTab(): void {
+function setTab(tab: TabId): void {
   ariaAbort?.abort()
   state.ariaStreaming = false
-  const i = TABS.indexOf(state.tab)
-  state.tab = TABS[(i + 1) % TABS.length]
+  state.tab = tab
   state.alertDetail = null
-  state.detailPage = 0
-  if (state.tab === 'alerts') markAllSeen(state)
+  listSel = 0
+  if (tab === 'alerts') markAllSeen(state)
   render()
+}
+
+function nextTab(): void {
+  const i = TABS.indexOf(state.tab)
+  setTab(TABS[(i + 1) % TABS.length])
 }
 
 function inDetail(): boolean {
-  return (
-    state.alertDetail !== null ||
-    state.ariaPages.length > 0 ||
-    state.ariaAsking ||
-    state.ariaError !== ''
-  )
-}
-
-function detailPageCount(): number {
-  if (state.alertDetail !== null) {
-    const item = state.alerts[state.alertDetail]
-    return item ? paginateReply(item.text).length : 1
-  }
-  return Math.max(1, state.ariaPages.length)
-}
-
-function bumpDetailPage(dir: 1 | -1): void {
-  if (state.ariaStreaming) return
-  const count = detailPageCount()
-  if (state.alertDetail !== null) {
-    state.detailPage = (state.detailPage + dir + count) % count
-  } else {
-    state.ariaPage = (state.ariaPage + dir + count) % count
-  }
-  render()
+  return state.alertDetail !== null || ariaVisible(state)
 }
 
 function closeDetail(): void {
   ariaAbort?.abort()
   state.ariaStreaming = false
   state.alertDetail = null
-  state.detailPage = 0
-  state.ariaPages = []
-  state.ariaPage = 0
+  state.ariaPrompt = ''
   state.ariaAsking = false
   state.ariaError = ''
+  state.ariaText = ''
   render()
 }
 
-function moveFocus(dir: 1 | -1): void {
-  if (state.tab === 'alerts' && state.alerts.length > 0) {
-    state.alertsFocus = (state.alertsFocus + dir + state.alerts.length) % state.alerts.length
-    render()
-    return
-  }
-  if (state.tab === 'aria' && cfg.prompts.length > 0) {
-    state.ariaFocus = (state.ariaFocus + dir + cfg.prompts.length) % cfg.prompts.length
-    render()
-  }
-}
-
-function handleTap(): void {
-  // Main action per page. During a live stream taps are ignored so the
+function handleTap(listIndex: number | null): void {
+  // Main action per screen. During a live stream taps are ignored so the
   // reply isn't dismissed mid-sentence; back out with tab-cycle instead.
   if (state.ariaAsking || state.ariaStreaming) return
+  if (listIndex !== null) {
+    if (state.tab === 'alerts' && state.alertDetail === null && state.alerts.length > 0) {
+      if (listIndex >= 0 && listIndex < state.alerts.length) {
+        state.alertDetail = listIndex
+        markAllSeen(state)
+        render()
+      }
+      return
+    }
+    if (state.tab === 'aria' && !ariaVisible(state)) {
+      void askAria(listIndex)
+      return
+    }
+    return
+  }
   if (inDetail()) {
     closeDetail()
     return
   }
-  if (state.tab === 'status') {
-    void refreshAlerts()
-    return
-  }
-  if (state.tab === 'alerts') {
-    if (state.alerts.length > 0) {
-      state.alertDetail = state.alertsFocus
-      state.detailPage = 0
-      markAllSeen(state)
-      render()
-    }
-    return
-  }
-  void askAria(state.ariaFocus)
+  // Tab-level text screens: tap refreshes.
+  void refreshAlerts()
 }
 
 // --- Bridge boot ---
@@ -299,42 +270,17 @@ function handleTap(): void {
 async function initBridge(): Promise<void> {
   const b = await waitForEvenAppBridge()
   bridge = b
-  const eventLayer = new TextContainerProperty({
-    xPosition: 0,
-    yPosition: 0,
-    width: FRAME_W,
-    height: FRAME_H,
-    borderWidth: 0,
-    borderColor: 0,
-    paddingLength: 0,
-    containerID: 1,
-    containerName: 'eventLayer',
-    content: ' ',
-    isEventCapture: 1,
-  })
-  const tiles = TILES.map(
-    (t) =>
-      new ImageContainerProperty({
-        xPosition: t.x,
-        yPosition: t.y,
-        width: TILE_W,
-        height: TILE_H,
-        containerID: t.id,
-        containerName: t.name,
-      }),
-  )
-  const created = await b.createStartUpPageContainer(
-    new CreateStartUpPageContainer({
-      containerTotalNum: 1 + tiles.length,
-      textObject: [eventLayer],
-      imageObject: tiles,
-    }),
-  )
+  const screen = screenFor(state, cfg, Date.now())
+  const created = await b.createStartUpPageContainer(buildCreate(screen))
   if (created !== 0) {
     console.error('createStartUpPageContainer failed:', created)
     return
   }
-  render()
+  lastLayout = `${screen.kind}|${state.tab}|${detailKey()}`
+  lastHeader = screen.header
+  if (screen.kind === 'text') lastBody = screen.body
+  else lastItems = screen.items.join('\n')
+  renderMirror(screen)
 
   // CLICK_EVENT is 0 and protobuf omits zero-value fields, so a tap
   // arrives as an envelope with NO eventType field. Resolve the default
@@ -347,29 +293,44 @@ async function initBridge(): Promise<void> {
 
   let cleanedUp = false
   const unsubscribe = b.onEvenHubEvent((event) => {
+    const menuId = event.menuItemClickEvent?.itemID
+    if (menuId !== undefined) {
+      if (menuId === MENU_REFRESH) void refreshAlerts()
+      else if (menuId === MENU_STATUS) setTab('status')
+      else if (menuId === MENU_ALERTS) setTab('alerts')
+      else if (menuId === MENU_ARIA) setTab('aria')
+      return
+    }
+
     const sysType = eventTypeOf(event.sysEvent)
     const textType = eventTypeOf(event.textEvent)
+    const listType = eventTypeOf(event.listEvent)
     const isDouble =
-      sysType === OsEventTypeList.DOUBLE_CLICK_EVENT || textType === OsEventTypeList.DOUBLE_CLICK_EVENT
+      sysType === OsEventTypeList.DOUBLE_CLICK_EVENT ||
+      textType === OsEventTypeList.DOUBLE_CLICK_EVENT ||
+      listType === OsEventTypeList.DOUBLE_CLICK_EVENT
     const isLong =
-      sysType === OsEventTypeList.LONG_PRESS_EVENT || textType === OsEventTypeList.LONG_PRESS_EVENT
+      sysType === OsEventTypeList.LONG_PRESS_EVENT ||
+      textType === OsEventTypeList.LONG_PRESS_EVENT ||
+      listType === OsEventTypeList.LONG_PRESS_EVENT
 
     if (isDouble || isLong) {
       nextTab()
       return
     }
-    if (textType === OsEventTypeList.SCROLL_TOP_EVENT) {
-      if (inDetail()) bumpDetailPage(-1)
-      else moveFocus(-1)
-      return
-    }
-    if (textType === OsEventTypeList.SCROLL_BOTTOM_EVENT) {
-      if (inDetail()) bumpDetailPage(1)
-      else moveFocus(1)
-      return
-    }
-    if (sysType === OsEventTypeList.CLICK_EVENT || textType === OsEventTypeList.CLICK_EVENT) {
-      handleTap()
+    // Swipes scroll natively in firmware (lists and overflowing text) —
+    // nothing to route here.
+    const tapped =
+      sysType === OsEventTypeList.CLICK_EVENT ||
+      textType === OsEventTypeList.CLICK_EVENT ||
+      listType === OsEventTypeList.CLICK_EVENT
+    if (tapped) {
+      // A tap on the firmware-highlighted row. Indexed taps name the row;
+      // a bare tap confirms the current highlight, which the firmware
+      // selects implicitly (row 0 on a fresh list) — track it locally.
+      const rawIdx = event.listEvent?.currentSelectItemIndex
+      if (typeof rawIdx === 'number') listSel = rawIdx
+      handleTap(event.listEvent ? listSel : null)
       return
     }
     if (sysType === OsEventTypeList.SYSTEM_EXIT_EVENT || sysType === OsEventTypeList.ABNORMAL_EXIT_EVENT) {
@@ -393,26 +354,30 @@ function field(id: string, label: string, type: string, value: string, placehold
   return `<label>${label}<input id="${id}" type="${type}" value="${value.replace(/"/g, '&quot;')}" placeholder="${placeholder}" /></label>`
 }
 
+/** Mirror the exact strings pushed to the glasses containers. */
+function renderMirror(screen: Screen): void {
+  const header = document.querySelector('#mirror-header')
+  const body = document.querySelector('#mirror-body')
+  if (header) header.textContent = screen.header
+  if (body) {
+    body.textContent = screen.kind === 'text' ? screen.body : screen.items.map((item, i) => `${i + 1}. ${item}`).join('\n')
+  }
+  updateMirrorStatus()
+}
+
 function buildBrowserMirror(): void {
   const el = document.querySelector<HTMLDivElement>('#browser-mirror')
   if (!el) return
   el.innerHTML =
     `<h1>netsocket G2</h1>` +
-    `<p class="sub">Live canvas — this exact bitmap is pushed to the glasses</p>`
-  frameCanvas.className = 'frame'
-  el.appendChild(frameCanvas)
-  const status = document.createElement('p')
-  status.className = 'status'
-  status.id = 'mirror-status'
-  el.appendChild(status)
+    `<p class="sub">Native UI preview — these strings are what the glasses render</p>` +
+    `<div class="preview"><div class="preview-header" id="mirror-header"></div>` +
+    `<div class="preview-body" id="mirror-body"></div></div>` +
+    `<p class="status" id="mirror-status"></p>`
 
   const settings = document.createElement('div')
   settings.className = 'settings'
   settings.innerHTML =
-    `<h2>Display</h2>` +
-    `<label>black point <span id="set-threshold-val">${cfg.threshold}%</span>` +
-    `<input id="set-threshold" type="range" min="0" max="100" step="1" value="${cfg.threshold}" /></label>` +
-    `<p class="sub">Pixels at/below this brightness go black; the rest spread across the display's 16 green levels. Raise it when dim fringes blow out to bright green.</p>` +
     `<h2>Connection</h2>` +
     field('set-host', 'netsocket host', 'text', cfg.host, '192.168.1.50') +
     field('set-port', 'port (blank = default)', 'text', cfg.port, '') +
@@ -439,16 +404,6 @@ function buildBrowserMirror(): void {
   const get = (id: string): HTMLInputElement | null => document.querySelector(`#${id}`)
   const preset = document.querySelector<HTMLSelectElement>('#set-preset')
   if (preset) preset.value = cfg.preset
-
-  // Threshold slider: live-update the glasses as you drag.
-  const thresholdInput = document.querySelector<HTMLInputElement>('#set-threshold')
-  const thresholdVal = document.querySelector('#set-threshold-val')
-  thresholdInput?.addEventListener('input', () => {
-    cfg.threshold = Math.max(0, Math.min(100, Number(thresholdInput.value) || 0))
-    if (thresholdVal) thresholdVal.textContent = `${cfg.threshold}%`
-    saveConfig(cfg)
-    render()
-  })
 
   // Provider/model dropdowns fed by Load providers — exact IDs, no typos.
   const providerSelect = document.querySelector<HTMLSelectElement>('#set-provider')
@@ -506,7 +461,6 @@ function buildBrowserMirror(): void {
 
   document.querySelector('#set-save')?.addEventListener('click', () => {
     cfg = {
-      threshold: thresholdInput ? Math.max(0, Math.min(100, Number(thresholdInput.value) || 0)) : cfg.threshold,
       host: get('set-host')?.value ?? '',
       port: get('set-port')?.value ?? '',
       useHttps: get('set-https')?.checked ?? true,
@@ -561,7 +515,7 @@ function buildBrowserMirror(): void {
       if (out) out.textContent = err instanceof Error ? err.message : 'failed'
     }
   })
-  updateMirrorStatus()
+  renderMirror(screenFor(state, cfg, Date.now()))
 }
 
 function updateMirrorStatus(): void {
@@ -578,11 +532,11 @@ function main(): void {
   state.deviceId = getOrCreateDeviceId()
   state.deviceName = cfg.deviceName
   buildBrowserMirror()
-  renderCanvas()
-  // Geist + tab icon arrive async; re-render so the frame picks them up.
-  void Promise.all([loadFonts(), loadTabIcon()]).then(() => render())
-  // Footer clock: re-render on minute rollover only. Unchanged tiles are
-  // skipped by the dirty check, so idle ticks cost no BLE.
+  renderMirror(screenFor(state, cfg, Date.now()))
+  // Geist arrives async; the mirror picks it up once loaded.
+  void loadFonts()
+  // Header clock: re-render on minute rollover only. Unchanged content
+  // is skipped by the last* diff, so idle ticks cost no BLE.
   let lastClockMinute = new Date().getMinutes()
   window.setInterval(() => {
     const m = new Date().getMinutes()

@@ -1,4 +1,4 @@
-// Single mutable UI store. The canvas renderers read this; main.ts
+// Single mutable UI store. The glasses page builders read this; main.ts
 // mutates it on input events and network callbacks, then re-renders.
 
 export type TabId = 'status' | 'alerts' | 'aria'
@@ -25,16 +25,13 @@ export interface AppState {
   deviceId: string
   deviceName: string
   alerts: AlertItem[]
-  alertsFocus: number
   alertsSeen: number
   alertDetail: number | null
-  detailPage: number
-  ariaFocus: number
+  ariaPrompt: string
   ariaAsking: boolean
   ariaStreaming: boolean
   ariaError: string
-  ariaPages: string[][]
-  ariaPage: number
+  ariaText: string
   lastRefresh: number
 }
 
@@ -46,16 +43,13 @@ export function initialState(): AppState {
     deviceId: '',
     deviceName: '',
     alerts: [],
-    alertsFocus: 0,
     alertsSeen: 0,
     alertDetail: null,
-    detailPage: 0,
-    ariaFocus: 0,
+    ariaPrompt: '',
     ariaAsking: false,
     ariaStreaming: false,
     ariaError: '',
-    ariaPages: [],
-    ariaPage: 0,
+    ariaText: '',
     lastRefresh: 0,
   }
 }

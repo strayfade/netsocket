@@ -48,13 +48,29 @@ body {
   color: #9ca3af;
 }
 
-#browser-mirror .frame {
-  display: block;
-  width: 100%;
-  height: auto;
+#browser-mirror .preview {
   background: #000;
   border: 1px solid #1f2937;
   border-radius: 0;
+  padding: 0.7rem 0.9rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+#browser-mirror .preview-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4dff4d;
+  border-bottom: 1px solid #1f2937;
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.45rem;
+  white-space: pre-wrap;
+}
+
+#browser-mirror .preview-body {
+  font-size: 13px;
+  color: #e8e8e8;
+  white-space: pre-wrap;
+  min-height: 8em;
 }
 
 #browser-mirror .status {
@@ -108,18 +124,6 @@ body {
 #browser-mirror .settings input[type='checkbox'] {
   width: auto;
   accent-color: #4dff4d;
-}
-
-#browser-mirror .settings input[type='range'] {
-  display: block;
-  width: 100%;
-  margin-top: 0.4rem;
-  accent-color: #fff;
-}
-
-#browser-mirror .settings #set-threshold-val {
-  color: #e8e8e8;
-  font-weight: 500;
 }
 
 #browser-mirror .settings .btnrow {
