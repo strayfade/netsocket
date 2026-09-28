@@ -51,48 +51,76 @@ function renderCanvas(): void {
   updateMirrorStatus()
 }
 
-// --- Glasses tile push (serialized, dirty tiles skipped) ---
+// --- Glasses tile push (one frame at a time, dirty tiles skipped) ---
+//
+// The firmware lights each tile as its `updateImageRawData` lands — there
+// is no present/flush/vsync API, so a 4-tile frame is never atomic on the
+// glass. Two rules keep the tear window as small as the protocol allows
+// (docs: "No concurrent image sends", paced at 100ms, one frame >> 100ms
+// over BLE):
+// 1. Sends are strictly sequential (`await` each call, never parallel).
+// 2. Only one frame is ever in flight. A `render()` that lands mid-push
+//    sets `pushNeeded` and the in-flight frame aborts its remaining tiles
+//    so the loop can re-slice the *latest* canvas — tiles from two
+//    generations never interleave on the link.
 
 type Bridge = Awaited<ReturnType<typeof waitForEvenAppBridge>>
 let bridge: Bridge | null = null
-let rendering: Promise<unknown> = Promise.resolve()
 const lastTileBytes: (Uint8Array | null)[] = TILES.map(() => null)
+let pushInFlight = false
+let pushNeeded = false
 
-function pushTile(index: number, bytes: Uint8Array): void {
+async function pushCurrentFrame(): Promise<void> {
   const b = bridge
   if (!b) return
-  rendering = rendering
-    .then(async () => {
+  const tileCanvases = sliceTiles(frameCanvas)
+  const allBytes = await Promise.all(tileCanvases.map((c) => canvasToPngBytes(c)))
+  for (let i = 0; i < allBytes.length; i++) {
+    // A newer render() queued while we were encoding/sending — stop
+    // lighting stale tiles; the loop below re-slices the latest frame.
+    if (pushNeeded) break
+    const bytes = allBytes[i]
+    const prev = lastTileBytes[i]
+    if (prev && bytesEqual(prev, bytes)) continue
+    try {
       const result = await b.updateImageRawData(
         new ImageRawDataUpdate({
-          containerID: TILES[index].id,
-          containerName: TILES[index].name,
+          containerID: TILES[i].id,
+          containerName: TILES[i].name,
           imageData: bytes,
         }),
       )
       if (result !== 'success') {
-        console.error(`updateImageRawData ${TILES[index].name}:`, result)
+        console.error(`updateImageRawData ${TILES[i].name}:`, result)
+      } else {
+        lastTileBytes[i] = bytes
       }
-    })
-    .catch((err) => console.error('pushTile:', err))
+    } catch (err) {
+      console.error('pushTile:', err)
+    }
+  }
 }
 
-async function pushDirtyTiles(): Promise<void> {
+async function schedulePush(): Promise<void> {
   if (!bridge) return
-  const tileCanvases = sliceTiles(frameCanvas)
-  const allBytes = await Promise.all(tileCanvases.map((c) => canvasToPngBytes(c)))
-  allBytes.forEach((bytes, i) => {
-    const prev = lastTileBytes[i]
-    if (prev && bytesEqual(prev, bytes)) return
-    lastTileBytes[i] = bytes
-    pushTile(i, bytes)
-  })
-  await rendering
+  if (pushInFlight) {
+    pushNeeded = true
+    return
+  }
+  pushInFlight = true
+  try {
+    do {
+      pushNeeded = false
+      await pushCurrentFrame()
+    } while (pushNeeded)
+  } finally {
+    pushInFlight = false
+  }
 }
 
 function render(): void {
   renderCanvas()
-  void pushDirtyTiles().catch((err) => console.error('push:', err))
+  void schedulePush().catch((err) => console.error('push:', err))
 }
 
 // --- netsocket link ---
