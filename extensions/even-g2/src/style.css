@@ -1,0 +1,65 @@
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: #000;
+  color: #e8e8e8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+#app {
+  display: none;
+}
+
+#browser-mirror {
+  max-width: 480px;
+  margin: 2rem auto;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  background: #0a0a0a;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#browser-mirror h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+#browser-mirror .sub {
+  margin: 0.15rem 0 0.9rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+#browser-mirror .frame {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #000;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+}
+
+#browser-mirror .status {
+  margin: 0.8rem 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #4dff4d;
+}
+
+#browser-mirror .hint {
+  margin: 0.9rem 0 0;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+#browser-mirror code {
+  color: #7dd3fc;
+}

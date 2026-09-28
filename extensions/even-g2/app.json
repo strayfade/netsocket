@@ -1,0 +1,10 @@
+{
+  "package_id": "com.example.even-g2-example",
+  "name": "Even G2 Example",
+  "version": "0.1.0",
+  "edition": "202601",
+  "min_sdk_version": "0.0.16",
+  "entrypoint": "index.html",
+  "permissions": [],
+  "supported_languages": ["en"]
+}
