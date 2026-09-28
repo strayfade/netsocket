@@ -28,7 +28,10 @@ export function loadTabIcon(): Promise<void> {
       iconImg = img
       resolve()
     }
-    img.onerror = () => resolve()
+    img.onerror = () => {
+      console.warn('[netsocket-g2] tab icon failed to load:', img.src)
+      resolve()
+    }
     img.src = `${import.meta.env.BASE_URL}favicon.png`
   })
 }
