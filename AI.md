@@ -163,3 +163,4 @@ Before considering work complete, verify:
 
 - [README.md](./README.md) — install, Docker, basic usage
 - [NODES.md](./NODES.md) — node implementation guide, templates, and known pitfalls
+- [docs/AI/MCP_GRAPH.md](./docs/AI/MCP_GRAPH.md) — building nodegraph automations over MCP (graph CRUD, wiring, testing, screenshots)

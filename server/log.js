@@ -55,6 +55,14 @@ const logColors = Object.freeze({
 
 let onPushLog = null
 
+/** Additional fan-out listeners (e.g. MCP execute_graph_node capturing lines during a run). */
+const pushLogListeners = new Set()
+
+const addPushLogListener = (func) => {
+    if (typeof func === 'function') pushLogListeners.add(func)
+    return () => { pushLogListeners.delete(func) }
+}
+
 const logPriv = (string, colors = logColors.Default) => {
     const cC = (Code) => {
         return `\x1b[${Code}m`
@@ -63,6 +71,9 @@ const logPriv = (string, colors = logColors.Default) => {
     currentLog += `${string}\n`
     if (onPushLog)
         onPushLog(string)
+    for (const listener of [...pushLogListeners]) {
+        try { listener(string) } catch (_) { /* ignore listener errors */ }
+    }
     process.stdout.write(`\n${colors.fg ? cC(colors.fg) : ""}${colors.bg ? cC(colors.bg) : ""}${shouldBold ? cC(1) : ""}${string.toString()}${cC(0)}`)
 }
 
@@ -110,4 +121,4 @@ const getLines = (lineCount = 1) => {
     return lines.slice(-lineCount);
 }
 
-module.exports = { ColorsForeground, ColorsBackground, logColors, log, getLines, setOnPushLog };
+module.exports = { ColorsForeground, ColorsBackground, logColors, log, getLines, setOnPushLog, addPushLogListener };

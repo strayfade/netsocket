@@ -1232,7 +1232,7 @@ app.post('/v1/mcp/regenerate-token', async (req, res) => {
     }
 })
 
-require('./mcp/mount').mountMcpRoutes(app)
+require('./mcp/mount').mountMcpRoutes(app, { onGraphChanged: broadcastGraphToClients })
 
 app.get('/:page', (req, res) => {
     res.sendStatus(404)

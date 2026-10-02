@@ -290,6 +290,12 @@ const result = await runMcpAgent({
 });
 ```
 
+Graph authoring over MCP (nodes CRUD, wiring, align/groups, undo/redo,
+execute-by-id, logs, settings, canvas screenshots) is covered in
+[MCP_GRAPH.md](./MCP_GRAPH.md) — server implementation under `server/mcp/`
+(`graphStore.js`, `history.js`, `graphHandlers.js`, `systemHandlers.js`,
+`webmcpClient.js`, `canvasRender.js`).
+
 ### Webhook Handling
 ```js
 app.post('/v1/postNotification/:secret', async (req, res) => {
