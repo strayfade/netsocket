@@ -1,0 +1,28 @@
+{
+  "name": "netsocket-g2",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "netsocket companion for Even Realities G2: recent Alerts + Aria chat (Vite + TypeScript + Even Hub SDK)",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 5173",
+    "sim": "evenhub-simulator http://localhost:5173",
+    "sim:debug": "cross-env RUST_LOG=debug evenhub-simulator http://localhost:5173",
+    "sim:auto": "evenhub-simulator http://localhost:5173 --automation-port 9898",
+    "sim:test": "python scripts/test_simulator.py",
+    "qr": "evenhub qr --url"
+  },
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "^0.0.16",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "geist": "^1.7.2"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0"
+  }
+}

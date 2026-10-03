@@ -1,0 +1,15 @@
+{
+  "package_id": "com.netsocket.g2",
+  "name": "netsocket G2",
+  "version": "0.1.0",
+  "edition": "202601",
+  "min_sdk_version": "0.0.16",
+  "entrypoint": "index.html",
+  "permissions": [
+    {
+      "name": "network",
+      "whitelist": []
+    }
+  ],
+  "supported_languages": ["en"]
+}

@@ -1,0 +1,150 @@
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: #000;
+  color: #e8e8e8;
+  font-family: Geist, system-ui, sans-serif;
+  font-weight: 500;
+}
+
+#app {
+  display: none;
+}
+
+#browser-mirror {
+  max-width: 560px;
+  margin: 2rem auto;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #2a2a2a;
+  border-radius: 0;
+  background: #0a0a0a;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#browser-mirror h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+#browser-mirror h2 {
+  margin: 1.4rem 0 0.5rem;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+}
+
+#browser-mirror .sub {
+  margin: 0.15rem 0 0.9rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+#browser-mirror .frame {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #000;
+  border: 1px solid #1f2937;
+  border-radius: 0;
+}
+
+#browser-mirror .status {
+  margin: 0.8rem 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4dff4d;
+}
+
+#browser-mirror .hint {
+  margin: 0.9rem 0 0;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+#browser-mirror code {
+  color: #7dd3fc;
+}
+
+#browser-mirror .settings label {
+  display: block;
+  margin: 0.45rem 0;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+#browser-mirror .settings label.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #e8e8e8;
+}
+
+#browser-mirror .settings input[type='text'],
+#browser-mirror .settings input[type='password'],
+#browser-mirror .settings textarea,
+#browser-mirror .settings select {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.2rem;
+  padding: 0.45rem 0.6rem;
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 0;
+  color: #e8e8e8;
+  font: inherit;
+  font-size: 13px;
+}
+
+#browser-mirror .settings input[type='checkbox'] {
+  width: auto;
+  accent-color: #4dff4d;
+}
+
+#browser-mirror .settings input[type='range'] {
+  display: block;
+  width: 100%;
+  margin-top: 0.4rem;
+  accent-color: #fff;
+}
+
+#browser-mirror .settings #set-threshold-val {
+  color: #e8e8e8;
+  font-weight: 500;
+}
+
+#browser-mirror .settings .btnrow {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+#browser-mirror .settings button {
+  padding: 0.55rem 0.9rem;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 0;
+  color: #e8e8e8;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+#browser-mirror .settings button:hover {
+  border-color: #4dff4d;
+}
+
+#browser-mirror .devid {
+  font-size: 12px;
+  color: #9ca3af;
+}
