@@ -39,6 +39,7 @@ const DEVICE_PURPOSES = new Set([
     'reorderOtpAccounts',
     'getPanelGrants',
     'getRecentAlerts',
+    'getStatusSnapshot',
 ])
 
 const HANDSHAKE_PURPOSES = new Set([

@@ -381,6 +381,9 @@ const handleTrustedMessage = async (socket, message) => {
         case 'getRecentAlerts':
             require('./manager/alertApi.js').handleDeviceRecentAlerts(socket, message)
             break
+        case 'getStatusSnapshot':
+            await require('./manager/statusApi.js').handleDeviceStatusSnapshot(socket, message)
+            break
         case 'getSubgraphs': {
             if (!isEditorOrLegacy) break
             const subgraphStore = require('./manager/subgraphStore')
