@@ -10,7 +10,7 @@ class NodeDefinition {
         this.addOutput("", "boolean");
     }
 }
-NodeDefinition.prototype.title = "String/Equals"
+NodeDefinition.prototype.title = "String/String Equals"
 NodeDefinition.prototype.description = "Compares two strings for equality with optional case sensitivity and outputs \"true\" or \"false\" as a string."
 NodeDefinition.prototype.portMeta = {
 	inputs: {

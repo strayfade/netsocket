@@ -23,7 +23,7 @@ class NodeDefinition {
     this.addOutput('', 'string');
   }
 }
-NodeDefinition.prototype.title = 'String/Random'
+NodeDefinition.prototype.title = 'String/Random String'
 NodeDefinition.prototype.description = "Generates a cryptographically random string of a given length from a preset or custom character set."
 NodeDefinition.prototype.portMeta = {
 	inputs: {

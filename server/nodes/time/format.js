@@ -12,7 +12,7 @@ class NodeDefinition {
         this.addOutput("Text", "string");
     }
 }
-NodeDefinition.prototype.title = "Time/Format"
+NodeDefinition.prototype.title = "Time/Format Time"
 NodeDefinition.prototype.description = "Formats a timestamp using a pattern such as yyyy-MM-dd HH:mm:ss, optionally in a named time zone."
 NodeDefinition.prototype.color = "yellow"
 NodeDefinition.prototype.icon = "calendar_month"

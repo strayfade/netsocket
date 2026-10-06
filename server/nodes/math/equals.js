@@ -9,7 +9,7 @@ class NodeDefinition {
         this.addOutput("", "boolean");
     }
 }
-NodeDefinition.prototype.title = "Math/Equals"
+NodeDefinition.prototype.title = "Math/Number Equals"
 NodeDefinition.prototype.description = "Outputs true when two numbers are equal within an optional epsilon tolerance."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "calculate"

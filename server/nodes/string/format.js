@@ -10,7 +10,7 @@ class NodeDefinition {
         this.addOutput("Text", "string");
     }
 }
-NodeDefinition.prototype.title = "String/Format"
+NodeDefinition.prototype.title = "String/Format String"
 NodeDefinition.prototype.description = "Formats a template string by replacing {key} placeholders with values from a JSON object."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "format_shapes"

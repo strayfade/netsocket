@@ -9,7 +9,7 @@ class NodeDefinition {
         this.addOutput("", "number");
     }
 }
-NodeDefinition.prototype.title = "Math/Random"
+NodeDefinition.prototype.title = "Math/Random Number"
 NodeDefinition.prototype.description = "Outputs a random number in the half-open range [Min, Max)."
 NodeDefinition.prototype.color = "green"
 NodeDefinition.prototype.icon = "casino"

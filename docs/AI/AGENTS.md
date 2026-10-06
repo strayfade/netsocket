@@ -345,7 +345,7 @@ app.post('/v1/postNotification/:secret', async (req, res) => {
 - **Variables/Set Variable**: Only writes one output value while defining event + value outputs
 - **JSON nodes**: Overwrite computed outputs with empty arrays after mutation
 - **FlowControl/Sequence**: Triggers one branch twice
-- **String/Equals**: Declares boolean output but emits string values
+- **String/String Equals**: Declares boolean output but emits string values
 - **Mismatched populateNextNodeLinks**: Indexes don't align with output declaration order
 
 ### Pre-Submission Checklist
