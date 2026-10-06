@@ -30,6 +30,31 @@ function headers(cfg: G2Config): Record<string, string> {
   }
 }
 
+// The glasses pixel font covers printable ASCII + NBSP only — anything
+// else falls back to another font and lands off the pixel grid. Ask the
+// model to stay in-charset, and sanitize anyway (models don't always obey).
+const ASCII_RULE =
+  'Reply using only printable ASCII characters: no em dashes, smart quotes, ' +
+  'emoji, or other non-ASCII characters.'
+
+const ASCII_FIXES: Array<[RegExp, string | ((m: string) => string)]> = [
+  [/[\u2010\u2011\u2012\u2013\u2014\u2212]/g, '-'],
+  [/[\u2018\u2019\u201A]/g, "'"],
+  [/[\u201C\u201D\u201E\u00AB\u00BB]/g, '"'],
+  [/\u2026/g, '...'],
+  [/[\u00B7\u2022]/g, '-'],
+  [/[\u2190\u2192\u25B8]/g, (m) => (m === '\u2190' ? '<' : '>')],
+]
+
+/** Map common non-ASCII to ASCII; drop the rest (keep whitespace + NBSP). */
+export function sanitizeReply(text: string): string {
+  let out = text
+  for (const [re, sub] of ASCII_FIXES) {
+    out = typeof sub === 'function' ? out.replace(re, sub) : out.replace(re, sub)
+  }
+  return out.replace(/[^\x20-\x7E\xA0\t\n\r]/g, '')
+}
+
 /**
  * Streaming chat: resolves with the full reply, calling onText with the
  * accumulated text as deltas arrive so the UI renders progressively.
@@ -53,7 +78,7 @@ export async function sendPromptStream(
       headers: headers(cfg),
       signal: ctrl.signal,
       body: JSON.stringify({
-        message,
+        message: `${message}\n\n${ASCII_RULE}`,
         providerId: cfg.providerId,
         model: cfg.model,
         preset: cfg.preset,
@@ -87,13 +112,13 @@ export async function sendPromptStream(
           }
           if (event.type === 'text-delta' && typeof event.delta === 'string') {
             full += event.delta
-            onText(full)
+            onText(sanitizeReply(full))
           } else if (event.type === 'done') {
             const content =
               typeof event.message === 'string' ? event.message : event.message?.content
             if (content && content.trim()) {
               full = content.trim()
-              onText(full)
+              onText(sanitizeReply(full))
             }
           } else if (event.type === 'error' && event.message) {
             const msg = typeof event.message === 'string' ? event.message : JSON.stringify(event.message)
@@ -103,7 +128,7 @@ export async function sendPromptStream(
       }
     }
     if (!full.trim()) throw new Error('aria empty reply')
-    return full.trim()
+    return sanitizeReply(full.trim())
   } catch (err) {
     if (err instanceof Error && (err.name === 'AbortError' || ctrl.signal.aborted)) {
       throw new Error('cancelled')

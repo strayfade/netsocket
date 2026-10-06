@@ -4,7 +4,7 @@
 // exactly like extensions/android HostConnection.
 
 import type { G2Config } from '../config'
-import type { AlertItem } from '../state/store'
+import type { AlertItem, StatusSnapshot } from '../state/store'
 import {
   b64decode,
   buildChallengeMessage,
@@ -252,6 +252,41 @@ export class NetsocketLink {
         timer,
       })
       if (!this.sendApp({ broadcastPurpose: 'getRecentAlerts', requestId, broadcastData: { limit } })) {
+        this.pending.delete(requestId)
+        window.clearTimeout(timer)
+        reject(new Error('send failed'))
+      }
+    })
+  }
+
+  /** Fetch the status snapshot. Resolves null when the server has nothing
+   *  useful (never rejects for a well-formed empty snapshot). Coordinates
+   *  are already rounded to ~1km by the caller and never stored server-side. */
+  requestStatus(lat: number | null, lon: number | null, unit: 'f' | 'c'): Promise<StatusSnapshot | null> {
+    return new Promise((resolve, reject) => {
+      if (!this.approved) {
+        reject(new Error('not approved'))
+        return
+      }
+      const requestId = crypto.randomUUID()
+      const timer = window.setTimeout(() => {
+        this.pending.delete(requestId)
+        reject(new Error('timed out'))
+      }, REQUEST_TIMEOUT_MS)
+      this.pending.set(requestId, {
+        resolve: (data) => {
+          const snap = (data as { snapshot?: StatusSnapshot } | null)?.snapshot
+          resolve(snap && typeof snap === 'object' ? snap : null)
+        },
+        reject,
+        timer,
+      })
+      const broadcastData: Record<string, unknown> = { unit }
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        broadcastData.lat = lat
+        broadcastData.lon = lon
+      }
+      if (!this.sendApp({ broadcastPurpose: 'getStatusSnapshot', requestId, broadcastData })) {
         this.pending.delete(requestId)
         window.clearTimeout(timer)
         reject(new Error('send failed'))

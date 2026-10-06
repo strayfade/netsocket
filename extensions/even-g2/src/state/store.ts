@@ -18,6 +18,34 @@ export interface AlertItem {
   ts: number
 }
 
+export interface StatusWeather {
+  temp: number
+  unit: 'f' | 'c'
+  high: number
+  low: number
+  precipPct: number
+  code: number
+  label: string
+}
+
+export interface StatusEvent {
+  title: string
+  startTs: number
+}
+
+export interface StatusHome {
+  on: number
+  total: number
+}
+
+/** Device status snapshot from `getStatusSnapshot`. Every part degrades to null. */
+export interface StatusSnapshot {
+  fetchedAt: number
+  weather: StatusWeather | null
+  nextEvent: StatusEvent | null
+  home: StatusHome | null
+}
+
 export interface AppState {
   tab: TabId
   conn: ConnState
@@ -36,6 +64,9 @@ export interface AppState {
   ariaPages: string[][]
   ariaPage: number
   lastRefresh: number
+  status: StatusSnapshot | null
+  statusFetchedAt: number
+  statusBusy: boolean
 }
 
 export function initialState(): AppState {
@@ -57,6 +88,9 @@ export function initialState(): AppState {
     ariaPages: [],
     ariaPage: 0,
     lastRefresh: 0,
+    status: null,
+    statusFetchedAt: 0,
+    statusBusy: false,
   }
 }
 

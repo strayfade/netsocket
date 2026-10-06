@@ -34,11 +34,14 @@ export function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: 
 /** Single-line ellipsis truncation. Call with the final font set. */
 export function ellipsis(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
   if (ctx.measureText(text).width <= maxWidth) return text
+  // "..." not "…" (U+2026): the pixel font covers ASCII + NBSP only, so a
+  // real ellipsis would fall back to another font and throw the pen off the
+  // pixel grid for the glyph and everything after it.
   let out = text
-  while (out.length > 1 && ctx.measureText(`${out}…`).width > maxWidth) {
+  while (out.length > 1 && ctx.measureText(`${out}...`).width > maxWidth) {
     out = out.slice(0, -1)
   }
-  return `${out}…`
+  return `${out}...`
 }
 
 export function formatTime(ts: number): string {
@@ -81,14 +84,80 @@ export function paginate(text: string, font: string, maxWidth: number, perPage: 
   return pages.length > 0 ? pages : [['']]
 }
 
-const GEIST = 'Geist, system-ui, sans-serif'
+const GEIST = 'sfPixel'
 
-export const BODY_FONT = `500 17px ${GEIST}`
-export const SMALL_FONT = `500 14px ${GEIST}`
-export const STRONG_FONT = `500 17px ${GEIST}`
-export const DETAIL_FONT = `500 18px ${GEIST}`
-export const TAB_FONT_ACTIVE = `500 15px ${GEIST}`
-export const TAB_FONT_IDLE = `500 15px ${GEIST}`
-export const ASKING_FONT = `500 20px ${GEIST}`
+// sfPixel is drawn on a 3-units-per-pixel grid (unitsPerEm 92, all outline
+// coords + advances are multiples of 3, hhea ascent 54 / descent -15).
+// The current face uses 2px letter tracking (glyph advances are the 1px
+// face + 3 units). Space was additionally widened 2x in-file (hmtx 6 -> 12
+// units = 4px). All advances remain multiples of 3, so the grid holds — any
+// future advance edit must keep advances divisible by 3.
+// A CSS size of 92/3 px (= 30.666…px = exactly 23pt @ 96 DPI) maps 3 design
+// units onto 1 canvas pixel, so every glyph point lands on an integer pixel:
+// the hhea line box is then EXACTLY 23 canvas px tall (18px ascent + 5px
+// descent), ink (caps-to-descender) 21px. A literal `23px` font-size would
+// give a 17.25px line box and fractional pixels — blurry, not pixel-perfect.
+// Forcing ink to 23px (33.587px font-size) would likewise be a non-integer
+// scale (2.739 units/px) and blur. So every text style uses this one size.
+export const FONT_PX = 92 / 3
+/** hhea line box height at FONT_PX: exactly 23 canvas pixels. */
+export const LINE_PX = 23
+/** Ascent (baseline → line-box top) at FONT_PX: 54/3 = 18px. */
+export const ASCENT_PX = 18
+/** Descent (baseline → line-box bottom) at FONT_PX: 15/3 = 5px. */
+export const DESCENT_PX = 5
+/** Body rhythm: one 23px line box + 3px gap, keeps baselines on integers. */
+export const LINE_STEP = 26
 
+const PIXEL_FONT = `400 ${FONT_PX}px ${GEIST}`
 
+export const BODY_FONT = PIXEL_FONT
+export const SMALL_FONT = PIXEL_FONT
+export const STRONG_FONT = PIXEL_FONT
+export const DETAIL_FONT = PIXEL_FONT
+export const TAB_FONT_ACTIVE = PIXEL_FONT
+export const TAB_FONT_IDLE = PIXEL_FONT
+export const ASKING_FONT = PIXEL_FONT
+
+/** Round a canvas coordinate to the nearest device pixel. */
+export function snap(v: number): number {
+  return Math.round(v)
+}
+
+/** Fill text with the baseline snapped to whole pixels. */
+export function pixelText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number): void {
+  ctx.fillText(text, Math.round(x), Math.round(y))
+}
+
+/**
+ * Centered text with the pen snapped to whole pixels. Rounding the anchor
+ * is NOT enough with textAlign=center: the pen starts at anchor - width/2
+ * and the measured width is fractional at 92/3px, so the whole string lands
+ * half-off-grid. Measure with the final font set, snap the pen, draw left.
+ */
+export function pixelTextCenter(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  cx: number,
+  y: number,
+): void {
+  const w = ctx.measureText(text).width
+  const prev = ctx.textAlign
+  ctx.textAlign = 'left'
+  ctx.fillText(text, Math.round(cx - w / 2), Math.round(y))
+  ctx.textAlign = prev
+}
+
+/** Right-aligned text with the pen snapped to whole pixels (same reason). */
+export function pixelTextRight(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  rx: number,
+  y: number,
+): void {
+  const w = ctx.measureText(text).width
+  const prev = ctx.textAlign
+  ctx.textAlign = 'left'
+  ctx.fillText(text, Math.round(rx - w), Math.round(y))
+  ctx.textAlign = prev
+}

@@ -1,5 +1,5 @@
 // netsocket G2 companion: recent Alerts + Aria chat on a 576x288
-// canvas with a tab-bar footer (logo far-left, one pill per tab).
+// canvas with a tab-bar header (logo far-left, one pill per tab).
 //
 // Input map (no touch positions on the G2 — taps carry no coordinates):
 // - swipe up/down at tab level = switch tab (focus moves WITH the tab)
@@ -18,9 +18,10 @@ import {
 import './style.css'
 import { applyUrlConfig, encodeSideloadUrl, loadConfig, saveConfig, type G2Config } from './config'
 import { getOrCreateDeviceId, NetsocketLink, type LinkStatus } from './net/netsocket'
+import { getPhoneFix } from './net/location'
 import { fetchProviders, sendPromptStream, type AriaProvider } from './net/aria'
 import { TILES, TILE_W, TILE_H, quantizeFrame, sliceTiles, canvasToPngBytes, bytesEqual, FRAME_W, FRAME_H } from './image/tiles'
-import { drawFrameBase, drawTabBar, loadTabIcon } from './ui/chrome'
+import { drawFrameBase, connIconFrame, drawTabBar } from './ui/chrome'
 import { loadFonts } from './ui/font'
 import { drawAlerts, drawAria, drawStatus, paginateReply } from './ui/views'
 import { TABS, initialState, markAllSeen, unreadCount, type AlertItem, type AppState } from './state/store'
@@ -42,9 +43,13 @@ const link = new NetsocketLink()
 function renderCanvas(): void {
   const ctx = frameCanvas.getContext('2d')
   if (!ctx) return
+  // Pixel font: no smoothing on blits, alphabetic baselines everywhere so
+  // the 23px line boxes (18px ascent + 5px descent) stay on integer pixels.
+  ctx.imageSmoothingEnabled = false
+  ctx.textBaseline = 'alphabetic'
   drawFrameBase(ctx)
   if (state.tab === 'status') drawStatus(ctx, state, cfg)
-  else if (state.tab === 'alerts') drawAlerts(ctx, state)
+  else if (state.tab === 'alerts') drawAlerts(ctx, state, cfg)
   else drawAria(ctx, state, cfg)
   drawTabBar(ctx, state)
   quantizeFrame(frameCanvas, cfg.threshold)
@@ -129,6 +134,10 @@ function applyLinkStatus(s: LinkStatus): void {
   state.conn = s.state
   state.connDetail = s.detail
   render()
+  // Link just came up on the Status tab with nothing (fresh) to show.
+  if (s.state === 'approved' && state.tab === 'status' && statusNeedsRefresh()) {
+    void refreshStatus()
+  }
 }
 
 function setAlerts(list: AlertItem[]): void {
@@ -151,6 +160,44 @@ async function refreshAlerts(): Promise<void> {
     state.connDetail = err instanceof Error ? err.message : 'refresh failed'
   }
   render()
+}
+
+// Re-fetch Status if the snapshot is missing or older than this.
+const STATUS_STALE_MS = 5 * 60 * 1000
+
+function statusNeedsRefresh(): boolean {
+  return (
+    link.getStatus().state === 'approved' &&
+    !state.statusBusy &&
+    (!state.status || Date.now() - state.statusFetchedAt > STATUS_STALE_MS)
+  )
+}
+
+async function refreshStatus(): Promise<void> {
+  if (link.getStatus().state !== 'approved' || state.statusBusy) return
+  state.statusBusy = true
+  if (state.tab === 'status') render()
+  try {
+    // Phone fix first (rounded to ~1km inside getPhoneFix), manual mirror
+    // override second (simulator / denied permission), placeholder last.
+    const fix = await getPhoneFix(bridge)
+    let lat: number | null = fix?.lat ?? null
+    let lon: number | null = fix?.lon ?? null
+    if ((lat === null || lon === null) && cfg.wxLat && cfg.wxLon) {
+      lat = Number(cfg.wxLat)
+      lon = Number(cfg.wxLon)
+    }
+    const snap = await link.requestStatus(lat, lon, cfg.wxUnit)
+    if (snap) {
+      state.status = snap
+      state.statusFetchedAt = Date.now()
+    }
+  } catch {
+    // Keep the old snapshot (footer shows the stale marker); nothing to do.
+  } finally {
+    state.statusBusy = false
+    render()
+  }
 }
 
 function onOverlay(alert: AlertItem): void {
@@ -216,6 +263,10 @@ function nextTab(): void {
   state.detailPage = 0
   if (state.tab === 'alerts') markAllSeen(state)
   render()
+  // Entering Status with a missing/stale snapshot pulls a fresh one.
+  if (state.tab === 'status' && statusNeedsRefresh()) {
+    void refreshStatus()
+  }
 }
 
 function inDetail(): boolean {
@@ -280,6 +331,7 @@ function handleTap(): void {
   }
   if (state.tab === 'status') {
     void refreshAlerts()
+    void refreshStatus()
     return
   }
   if (state.tab === 'alerts') {
@@ -413,6 +465,9 @@ function buildBrowserMirror(): void {
     `<label>black point <span id="set-threshold-val">${cfg.threshold}%</span>` +
     `<input id="set-threshold" type="range" min="0" max="100" step="1" value="${cfg.threshold}" /></label>` +
     `<p class="sub">Pixels at/below this brightness go black; the rest spread across the display's 16 green levels. Raise it when dim fringes blow out to bright green.</p>` +
+    `<label>selection radius <span id="set-radius-val">${cfg.selectionRadius}px</span></label>` +
+    `<div class="btnrow"><button id="set-radius-down" type="button">- 1px</button><button id="set-radius-up" type="button">+ 1px</button></div>` +
+    `<p class="sub">Rounded corners on the prompt selection box, in canvas pixels (0 = sharp). Updates the glasses live.</p>` +
     `<h2>Connection</h2>` +
     field('set-host', 'netsocket host', 'text', cfg.host, '192.168.1.50') +
     field('set-port', 'port (blank = default)', 'text', cfg.port, '') +
@@ -428,6 +483,12 @@ function buildBrowserMirror(): void {
     `<label>preset<select id="set-preset"><option value="short">short</option><option value="ping">ping</option></select></label>` +
     `<div class="btnrow"><button id="set-load-models" type="button">Load providers</button></div>` +
     `<p class="sub" id="mirror-models"></p>` +
+    `<h2>Weather (Status tab)</h2>` +
+    `<p class="sub">Primary source is your phone's location (one-shot, city-level, asked once per refresh). These fields are the fallback for denied permission, the simulator, and this mirror page.</p>` +
+    field('set-wx-place', 'place label', 'text', cfg.wxPlace, 'Seattle') +
+    field('set-wx-lat', 'latitude override (blank = phone)', 'text', cfg.wxLat, '47.61') +
+    field('set-wx-lon', 'longitude override (blank = phone)', 'text', cfg.wxLon, '-122.33') +
+    `<label>unit<select id="set-wx-unit"><option value="f">F</option><option value="c">C</option></select></label>` +
     `<h2>Prompts (one per line)</h2>` +
     `<textarea id="set-prompts" rows="4">${cfg.prompts.join('\n').replace(/</g, '&lt;')}</textarea>` +
     `<div class="btnrow"><button id="set-save" type="button">Save + reconnect</button>` +
@@ -439,6 +500,8 @@ function buildBrowserMirror(): void {
   const get = (id: string): HTMLInputElement | null => document.querySelector(`#${id}`)
   const preset = document.querySelector<HTMLSelectElement>('#set-preset')
   if (preset) preset.value = cfg.preset
+  const wxUnit = document.querySelector<HTMLSelectElement>('#set-wx-unit')
+  if (wxUnit) wxUnit.value = cfg.wxUnit
 
   // Threshold slider: live-update the glasses as you drag.
   const thresholdInput = document.querySelector<HTMLInputElement>('#set-threshold')
@@ -447,6 +510,24 @@ function buildBrowserMirror(): void {
     cfg.threshold = Math.max(0, Math.min(100, Number(thresholdInput.value) || 0))
     if (thresholdVal) thresholdVal.textContent = `${cfg.threshold}%`
     saveConfig(cfg)
+    render()
+  })
+
+  // Radius stepper: live-update the glasses per press.
+  const radiusVal = document.querySelector('#set-radius-val')
+  const paintRadius = () => {
+    if (radiusVal) radiusVal.textContent = `${cfg.selectionRadius}px`
+  }
+  document.querySelector('#set-radius-down')?.addEventListener('click', () => {
+    cfg.selectionRadius = Math.max(0, cfg.selectionRadius - 1)
+    saveConfig(cfg)
+    paintRadius()
+    render()
+  })
+  document.querySelector('#set-radius-up')?.addEventListener('click', () => {
+    cfg.selectionRadius = Math.min(23, cfg.selectionRadius + 1)
+    saveConfig(cfg)
+    paintRadius()
     render()
   })
 
@@ -507,6 +588,7 @@ function buildBrowserMirror(): void {
   document.querySelector('#set-save')?.addEventListener('click', () => {
     cfg = {
       threshold: thresholdInput ? Math.max(0, Math.min(100, Number(thresholdInput.value) || 0)) : cfg.threshold,
+      selectionRadius: cfg.selectionRadius,
       host: get('set-host')?.value ?? '',
       port: get('set-port')?.value ?? '',
       useHttps: get('set-https')?.checked ?? true,
@@ -516,6 +598,10 @@ function buildBrowserMirror(): void {
       providerId: providerSelect?.value ?? '',
       model: modelSelect && modelSelect.style.display !== 'none' ? modelSelect.value : (get('set-model-custom')?.value ?? ''),
       preset: preset?.value === 'ping' ? 'ping' : 'short',
+      wxLat: get('set-wx-lat')?.value ?? '',
+      wxLon: get('set-wx-lon')?.value ?? '',
+      wxPlace: get('set-wx-place')?.value ?? '',
+      wxUnit: wxUnit?.value === 'c' ? 'c' : 'f',
       prompts: (document.querySelector<HTMLTextAreaElement>('#set-prompts')?.value ?? '')
         .split('\n')
         .map((s) => s.trim())
@@ -568,8 +654,13 @@ function updateMirrorStatus(): void {
   const el = document.querySelector('#mirror-status')
   if (!el) return
   const unread = unreadCount(state)
+  const wx = state.status?.weather
+    ? ` · wx:${state.status.weather.temp}${state.status.weather.unit.toUpperCase()} ${state.status.weather.label}`
+    : state.statusBusy
+      ? ' · wx:updating'
+      : ' · wx:-'
   el.textContent =
-    `${state.tab.toUpperCase()} · net:${state.conn} · alerts:${state.alerts.length}${unread > 0 ? ` (${unread} new)` : ''} · ${state.connDetail}`
+    `${state.tab.toUpperCase()} · net:${state.conn} · alerts:${state.alerts.length}${unread > 0 ? ` (${unread} new)` : ''}${wx} · ${state.connDetail}`
 }
 
 // --- Boot ---
@@ -579,18 +670,36 @@ function main(): void {
   state.deviceName = cfg.deviceName
   buildBrowserMirror()
   renderCanvas()
-  // Geist + tab icon arrive async; re-render so the frame picks them up.
-  void Promise.all([loadFonts(), loadTabIcon()]).then(() => render())
-  // Footer clock: re-render on minute rollover only. Unchanged tiles are
-  // skipped by the dirty check, so idle ticks cost no BLE.
+  // sfPixel arrives async; re-render so the frame picks it up.
+  void loadFonts().then(() => render())
+  // Header clock: re-render on minute rollover only. Unchanged tiles are
+  // skipped by the dirty check, so idle ticks cost no BLE. While the link
+  // is waiting (pending/connecting) the header shows a three-dot
+  // animation, and while Aria is asking the Aria tab shows the same dots
+  // centered — so tick fast enough to advance their ~2fps frames.
   let lastClockMinute = new Date().getMinutes()
+  let lastWaitingFrame = connIconFrame(state.conn, Date.now())
+  let lastDotFrame = Math.floor(Date.now() / 500) % 3
   window.setInterval(() => {
-    const m = new Date().getMinutes()
+    const now = Date.now()
+    const m = new Date(now).getMinutes()
+    let dirty = false
     if (m !== lastClockMinute) {
       lastClockMinute = m
-      render()
+      dirty = true
     }
-  }, 5000)
+    const frame = connIconFrame(state.conn, now)
+    if (state.conn === 'pending' || state.conn === 'connecting') {
+      if (frame !== lastWaitingFrame) dirty = true
+    }
+    lastWaitingFrame = frame
+    const dotFrame = Math.floor(now / 500) % 3
+    if (state.ariaAsking && state.tab === 'aria') {
+      if (dotFrame !== lastDotFrame) dirty = true
+    }
+    lastDotFrame = dotFrame
+    if (dirty) render()
+  }, 250)
   link.setHandlers(applyLinkStatus, onOverlay)
   link.start(cfg)
   // Bridge first, then containers + events. initBridge never rejects
@@ -600,6 +709,7 @@ function main(): void {
       console.log(`${READY_MARKER} tab=${state.tab}`)
       return refreshAlerts()
     })
+    .then(() => refreshStatus())
     .catch((err) => console.error('netsocket-g2 boot failed:', err))
 }
 

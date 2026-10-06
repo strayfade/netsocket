@@ -21,12 +21,29 @@ export interface G2Config {
   /** Canned prompts — the glasses have no keyboard, so these are the inputs */
   prompts: string[]
   /**
+   * Manual weather location override ("47.61", "-122.33"). Used when the
+   * phone fix is unavailable (denied, simulator, browser mirror). Blank =
+   * phone fix only.
+   */
+  wxLat: string
+  wxLon: string
+  /** Place label shown next to the temperature, e.g. "Seattle". */
+  wxPlace: string
+  /** Temperature unit for the Status weather card. */
+  wxUnit: 'f' | 'c'
+  /**
    * Black-point 0-100 (%). Frame pixels at/below it map to black, the
    * rest spread across the display's 16 green levels before tiles are
    * pushed — our own mapping beats the firmware's grey conversion.
    * Raise it when dim fringe pixels blow out to bright green.
    */
   threshold: number
+  /**
+   * Prompt selection border radius in canvas px (0-23, integer).
+   * 0 = sharp corners, 23 = fully rounded ends. Set from the mirror
+   * page stepper; rides along in the sideload link like everything else.
+   */
+  selectionRadius: number
 }
 
 export const DEFAULT_PROMPTS = [
@@ -48,7 +65,12 @@ export function defaultConfig(): G2Config {
     model: '',
     preset: 'short',
     prompts: [...DEFAULT_PROMPTS],
+    wxLat: '',
+    wxLon: '',
+    wxPlace: '',
+    wxUnit: 'f',
     threshold: 50,
+    selectionRadius: 4,
   }
 }
 
@@ -104,6 +126,11 @@ function sanitizeConfig(raw: Partial<G2Config>): G2Config {
   const prompts = Array.isArray(raw.prompts) && raw.prompts.length > 0
     ? raw.prompts.filter((p) => typeof p === 'string' && p.trim()).map((p) => p.trim().slice(0, 300)).slice(0, 6)
     : [...DEFAULT_PROMPTS]
+  const coord = (v: unknown, min: number, max: number): string => {
+    if (typeof v !== 'string' || !v.trim()) return ''
+    const n = Number(v.trim())
+    return Number.isFinite(n) && n >= min && n <= max ? String(n) : ''
+  }
   return {
     host: str(raw.host, base.host).replace(/^https?:\/\//, '').replace(/\/+$/, ''),
     port: str(raw.port, '').replace(/[^0-9]/g, '').slice(0, 5),
@@ -115,9 +142,17 @@ function sanitizeConfig(raw: Partial<G2Config>): G2Config {
     model: str(raw.model, ''),
     preset: raw.preset === 'ping' ? 'ping' : 'short',
     prompts,
+    wxLat: coord(raw.wxLat, -90, 90),
+    wxLon: coord(raw.wxLon, -180, 180),
+    wxPlace: str(raw.wxPlace, '').slice(0, 60),
+    wxUnit: raw.wxUnit === 'c' ? 'c' : 'f',
     threshold:
       typeof raw.threshold === 'number' && Number.isFinite(raw.threshold)
         ? Math.max(0, Math.min(100, Math.round(raw.threshold)))
         : base.threshold,
+    selectionRadius:
+      typeof raw.selectionRadius === 'number' && Number.isFinite(raw.selectionRadius)
+        ? Math.max(0, Math.min(23, Math.round(raw.selectionRadius)))
+        : base.selectionRadius,
   }
 }

@@ -9,6 +9,10 @@
     {
       "name": "network",
       "whitelist": []
+    },
+    {
+      "name": "location",
+      "desc": "Uses your phone's location once per Status refresh to fetch local weather."
     }
   ],
   "supported_languages": ["en"]

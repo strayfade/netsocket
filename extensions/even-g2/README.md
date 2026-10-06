@@ -11,7 +11,17 @@ What it does:
   12-hour clock far-right. No titles, no hint strips, no rounded
   corners. Swipe moves focus *with* the tab; the highlight always
   mirrors the visible content. All type is light-weight Geist.
-- **STATUS** — link state, Aria readiness, device ID, alert counts.
+- **STATUS** — hero + strip dashboard. Hero (left): clock/date (device
+  clock, always live), current weather, next event. Strip (right): ALERTS /
+  LINK / ARIA / HOME mini-cards. All containers are 1px bordered rounded
+  rects (radius follows the selection-radius setting, default 4px) with
+   pixel-drawn icons + Material Icons glyphs (`src/ui/icons.ts`). Tap refreshes alerts + snapshot;
+  entering the tab auto-refreshes when the snapshot is older than 5 min.
+  Data comes from a `getStatusSnapshot` device WS endpoint (approved
+  devices only): weather is fetched server-side from Open-Meteo
+  (free, keyless) using phone coordinates, so the glasses need no extra
+  network whitelist entries. Coordinates are rounded to ~1km on the
+  glasses and never stored server-side.
 - **ALERTS** — recent alerts (broadcast + targeted at this device), live
   over the device WebSocket plus pull-to-refresh. Tap = next, long-press
   = open detail, swipe = page, double-tap = back.
@@ -72,16 +82,22 @@ Open the dev URL in a browser (phone or laptop). Below the live canvas:
    The device ID is shown underneath; approve it in the netsocket
    dashboard → Settings → Devices.
 3. **Aria** — endpoint (host root; a trailing `/api/v1` is stripped
-   automatically), API key, provider + model (use *Load providers* to
-   discover IDs), preset (`short` fits the display, `ping` is terser).
-   The Aria host must serve CORS on `/api/v1/*` (added to Aria's
-   `next.config.ts` — redeploy Aria after pulling) or the glasses get
-   `failed to fetch` on preflight.
-4. **Prompts** — one canned question per line; these are the only inputs
-   the glasses can send.
-5. **Save + reconnect**, then **Copy sideload link** — the link encodes
-   everything in `?cfg=`, because the glasses WebView has no keyboard
-   and shares no storage with your phone browser.
+    automatically), API key, provider + model (use *Load providers* to
+    discover IDs), preset (`short` fits the display, `ping` is terser).
+    The Aria host must serve CORS on `/api/v1/*` (added to Aria's
+    `next.config.ts` — redeploy Aria after pulling) or the glasses get
+    `failed to fetch` on preflight.
+4. **Weather (Status tab)** — place label + unit. The primary source is
+    your phone's location: one-shot, city-level fix per refresh (needs
+    the `location` permission in `app.json`, already declared). The
+    latitude/longitude overrides are the fallback for denied permission,
+    the simulator (which cannot mock location), and this mirror page —
+    leave them blank on real glasses.
+5. **Prompts** — one canned question per line; these are the only inputs
+    the glasses can send.
+6. **Save + reconnect**, then **Copy sideload link** — the link encodes
+    everything in `?cfg=`, because the glasses WebView has no keyboard
+    and shares no storage with your phone browser.
 
 ## On real glasses (QR sideload)
 
@@ -100,6 +116,8 @@ Tap **Scan QR** in the Even Realities app → glasses render within a second.
 - `permissions` includes `network` with an **empty whitelist** (fail-closed).
   Before packing/sideloading against real hosts, add your netsocket and
   Aria hosts — otherwise WebSocket/fetch from the glasses is blocked.
+  The `location` permission (phone one-shot fix for Status weather) needs
+  no whitelist entry — it is a bridge API, not network.
 - For mic/voice input later, add the `g2-microphone` permission.
 
 ## Headless automation
@@ -124,9 +142,19 @@ this repo's server gained (with `node:test` coverage in
   at 2000 chars) + `getRecentAlerts(deviceId, limit)`. Broadcast and
   device-targeted entries are visible; conversation replies are excluded.
 - `server/utils/deviceAuth.js` — new `getRecentAlerts` device purpose.
+- `server/utils/deviceAuth.js` — new `getStatusSnapshot` device purpose.
 - `server/manager/alertApi.js` + dispatch case in `server/index.js` —
   approved-device-only WS handler replying `{ alerts }` newest-first
   (silent no-op otherwise, no auth oracle).
+- `server/manager/statusApi.js` + dispatch case in `server/index.js` —
+  approved-device-only WS handler replying `{ snapshot }`
+  (`{ fetchedAt, weather, nextEvent, home }`, silent no-op otherwise, no
+  auth oracle). Weather comes from Open-Meteo (10-min per-grid cache);
+  `nextEvent`/`home` come from state variables your automations maintain:
+  `g2.nextEvent` = JSON `{ title, startTs }` (e.g. Calendar node → Set
+  Variable), `g2.home` = JSON `{ on, total }` (e.g. Hue nodes → Set
+  Variable). Every field degrades to null. Coordinates are transient
+  (cache key + upstream fetch only, never persisted).
 
 ## Project layout
 
@@ -134,13 +162,15 @@ this repo's server gained (with `node:test` coverage in
 extensions/even-g2/
 ├── src/main.ts            ← boot + input map + bridge/tile push + mirror UI
 ├── src/config.ts          ← settings schema, localStorage, ?cfg= sideload
-├── src/state/store.ts     ← tabs, alerts, Aria reply pages, link state
+├── src/state/store.ts     ← tabs, alerts, Aria reply pages, link + status snapshot
 ├── src/crypto/device.ts   ← pairing crypto (noble curves + WebCrypto)
 ├── src/net/netsocket.ts   ← device WS client (hello/challenge/auth/ping)
 ├── src/net/aria.ts        ← Aria chat + model discovery
+├── src/net/location.ts    ← phone one-shot fix (Low accuracy, ~1km rounding)
 ├── src/image/tiles.ts     ← 2x2 tile slicing + PNG bytes + dirty compare
 ├── src/ui/chrome.ts       ← frame base, tab bar, title, hint
-├── src/ui/views.ts        ← status / alerts / Aria renderers
+├── src/ui/views.ts        ← status (hero + strip) / alerts / Aria renderers
+├── src/ui/icons.ts        ← pixel-drawn icons (fillRect, on-grid) + Material Icons helper
 ├── src/ui/text.ts         ← wrap, ellipsis, paginate, roundRect
 ├── src/style.css          ← browser mirror + settings form
 ├── app.json               ← Even Hub manifest (fill network whitelist!)
