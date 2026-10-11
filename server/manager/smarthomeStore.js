@@ -58,10 +58,11 @@ const resetForTests = () => {
     store = { version: 1, devices: {} }
 }
 
-const publicEntityView = (entity) => {
+const publicEntityView = (entity, deviceId) => {
     if (!entity) return null
     return {
         uniqueId: entity.uniqueId,
+        deviceId: deviceId || entity.deviceId || '',
         component: entity.component,
         objectId: entity.objectId || '',
         name: entity.name == null ? null : entity.name,
@@ -77,7 +78,7 @@ const publicEntityView = (entity) => {
 
 const publicDeviceView = (device) => {
     if (!device) return null
-    const entities = Object.values(device.entities || {}).map(publicEntityView)
+    const entities = Object.values(device.entities || {}).map((entity) => publicEntityView(entity, device.deviceId))
     return {
         deviceId: device.deviceId,
         friendlyName: device.friendlyName || '',
@@ -211,7 +212,7 @@ const getDevice = (deviceId) => {
 const getEntity = (uniqueId) => {
     const owner = findEntityOwner(uniqueId)
     if (!owner) return null
-    return publicEntityView(owner.entities[normalizeId(uniqueId)])
+    return publicEntityView(owner.entities[normalizeId(uniqueId)], owner.deviceId)
 }
 
 const listDevices = ({ status, room, capability } = {}) => {

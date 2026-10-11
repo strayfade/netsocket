@@ -53,6 +53,30 @@ let activeUrl = ''
 /** topic -> { kind: 'state', uniqueId } | { kind: 'availability', deviceId } */
 const topicIndex = new Map()
 
+/** Fire-and-forget subscribers for approved device state changes (trigger dispatch). */
+const stateListeners = []
+
+const addStateListener = (fn) => {
+    if (typeof fn === 'function' && !stateListeners.includes(fn)) stateListeners.push(fn)
+}
+
+const removeStateListener = (fn) => {
+    const idx = stateListeners.indexOf(fn)
+    if (idx !== -1) stateListeners.splice(idx, 1)
+}
+
+const notifyStateListeners = (event) => {
+    for (const fn of [...stateListeners]) {
+        try {
+            Promise.resolve()
+                .then(() => fn(event))
+                .catch((err) => log(`Smart Home state listener failed: ${err}`, logColors.Error))
+        } catch (err) {
+            log(`Smart Home state listener failed: ${err}`, logColors.Error)
+        }
+    }
+}
+
 const getMqttConfig = (settings) => {
     const get = settings && typeof settings.getSetting === 'function'
         ? (key) => settings.getSetting(key)
@@ -74,7 +98,9 @@ const rebuildTopicIndex = (storeLib) => {
     const lib = storeLib || store
     for (const device of lib.listDevices()) {
         for (const entity of device.entities || []) {
-            if (entity.stateTopic) topicIndex.set(entity.stateTopic, { kind: 'state', uniqueId: entity.uniqueId })
+            if (entity.stateTopic) {
+                topicIndex.set(entity.stateTopic, { kind: 'state', uniqueId: entity.uniqueId, deviceId: device.deviceId })
+            }
             if (entity.availabilityTopic) {
                 topicIndex.set(entity.availabilityTopic, { kind: 'availability', deviceId: device.deviceId })
             }
@@ -133,6 +159,7 @@ const handleMessage = (topic, payloadBuffer, deps) => {
     if (indexed.kind === 'state') {
         const { text } = parsePayloadJson(payloadBuffer)
         storeLib.updateState(indexed.uniqueId, text)
+        notifyStateListeners({ kind: 'state', uniqueId: indexed.uniqueId, deviceId: indexed.deviceId, state: text })
         return { routed: true, kind: 'state', uniqueId: indexed.uniqueId }
     }
     if (indexed.kind === 'availability') {
@@ -140,6 +167,7 @@ const handleMessage = (topic, payloadBuffer, deps) => {
         const value = text.trim().toLowerCase()
         if (value === 'online' || value === 'offline') {
             storeLib.updateAvailability(indexed.deviceId, value)
+            notifyStateListeners({ kind: 'availability', uniqueId: null, deviceId: indexed.deviceId, state: value })
             return { routed: true, kind: 'availability', deviceId: indexed.deviceId }
         }
         return { routed: true, kind: 'availability-ignored' }
@@ -219,6 +247,7 @@ const resetForTests = () => {
     connected = false
     activeUrl = ''
     topicIndex.clear()
+    stateListeners.length = 0
 }
 
 module.exports = {
@@ -228,5 +257,7 @@ module.exports = {
     publishCommand,
     getStatus,
     rebuildTopicIndex,
+    addStateListener,
+    removeStateListener,
     resetForTests,
 }
