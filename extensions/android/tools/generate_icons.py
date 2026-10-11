@@ -2,7 +2,7 @@ from PIL import Image
 from pathlib import Path
 
 src = Path(r"c:\Users\Noah\Documents\GitHub\netsocket\frontend\public\favicon.png")
-res = Path(r"c:\Users\Noah\Documents\GitHub\netsocket\extensions\AndroidNotification\app\src\main\res")
+res = Path(r"c:\Users\Noah\Documents\GitHub\netsocket\extensions\android\app\src\main\res")
 img = Image.open(src).convert("RGBA")
 pixels = list(img.getdata())
 
