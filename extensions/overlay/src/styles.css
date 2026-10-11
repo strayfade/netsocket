@@ -101,9 +101,10 @@ body,
 }
 
 .overlay-workspace.session .command-dock {
-  left: 19%;
-  width: min(420px, 34vw);
-  transform: translate(-50%, -50%) scale(1);
+  left: 50%;
+  top: calc(100% - 28px);
+  width: min(680px, 92vw);
+  transform: translate(-50%, -100%) scale(1);
 }
 
 .tile-region {
@@ -111,15 +112,23 @@ body,
   z-index: 1;
   pointer-events: none;
   opacity: 0;
-  transform: translateX(12px);
+  visibility: hidden;
+  transform: translateY(8px);
   transition:
     opacity var(--duration) var(--motion),
-    transform var(--duration) var(--motion);
+    transform var(--duration) var(--motion),
+    visibility 0s linear var(--duration);
 }
 
-.overlay-workspace.session .tile-region {
+.overlay.phase-showing .overlay-workspace.session .tile-region,
+.overlay.phase-shown .overlay-workspace.session .tile-region {
   opacity: 1;
-  transform: translateX(0);
+  visibility: visible;
+  transform: translateY(0);
+  transition:
+    opacity var(--duration) var(--motion),
+    transform var(--duration) var(--motion),
+    visibility 0s linear 0s;
 }
 
 .tile-slot {
@@ -520,32 +529,43 @@ body,
   opacity: 1;
 }
 
-.phase-showing .command-dock,
-.phase-shown .command-dock {
+.phase-showing .overlay-workspace.idle .command-dock,
+.phase-shown .overlay-workspace.idle .command-dock {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
 
+.phase-showing .overlay-workspace.session .command-dock,
 .phase-shown .overlay-workspace.session .command-dock {
-  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  transform: translate(-50%, -100%) scale(1);
 }
 
 .phase-hiding {
   opacity: 0;
 }
 
-.phase-hiding .command-dock {
+.phase-hiding .overlay-workspace.idle .command-dock {
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.98);
 }
 
-.phase-hiding .tile-region {
+.phase-hiding .overlay-workspace.session .command-dock {
   opacity: 0;
-  transform: translateX(8px);
+  transform: translate(-50%, -100%) scale(0.98);
+}
+
+.overlay.phase-hiding .tile-region,
+.overlay.phase-hidden .tile-region {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
 }
 
 .phase-hidden {
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
 }
 
@@ -593,6 +613,86 @@ body,
 .input-row {
   position: relative;
   width: 100%;
+}
+
+.query-field {
+  position: relative;
+  width: 100%;
+}
+
+.command-suggest-slot {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    grid-template-rows var(--duration) var(--motion),
+    opacity var(--duration) var(--motion);
+}
+
+.command-suggest-slot.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.command-suggest-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.command-suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.command-suggest-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.command-suggest-option.is-active {
+  background: var(--surface-variant);
+}
+
+.command-suggest-name {
+  flex-shrink: 0;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.command-suggest-match {
+  color: var(--text-muted);
+  font-weight: 650;
+}
+
+.command-suggest-rest {
+  font-weight: 400;
+}
+
+.command-suggest-desc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .query-input.loading {

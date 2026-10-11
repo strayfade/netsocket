@@ -781,6 +781,23 @@ app.get('/v1/panels/:panelId/config', (req, res) => panelApi.handleGetPanelConfi
 app.patch('/v1/panels/:panelId', (req, res) => panelApi.handleUpdatePanel(req, res))
 app.delete('/v1/panels/:panelId', (req, res) => panelApi.handleDeletePanel(req, res))
 app.post('/v1/panels/:panelId/execute', (req, res) => panelApi.handlePanelExecute(req, res))
+
+const {
+    INSTALLER_FILENAME,
+    INSTALLER_PATH,
+} = require('./manager/overlayInstaller.js')
+app.get('/downloads/overlay', requireUserSession, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store')
+    res.download(INSTALLER_PATH, INSTALLER_FILENAME, (error) => {
+        if (!error || res.headersSent) return
+        if (error.code === 'ENOENT') {
+            return res.status(404).type('text/plain').send('Overlay installer is not available.')
+        }
+        log(`overlay-download: ${error}`, logColors.Error)
+        return res.sendStatus(500)
+    })
+})
+
 app.use('/', express.static(path.join(__dirname, '../frontend/public')));
 app.get("/", (req, res) => {
     const target = resolveDefaultTabPath()

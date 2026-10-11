@@ -3,28 +3,13 @@
  * Entries that start with `/` are matched here and never sent to netsocket.
  */
 
-export function buildHelpMarkdown(commands) {
-  const lines = commands
-    .map((command) => `${command.name} — ${command.description}`)
-    .join("\n");
-  return `\n\`\`\`\n${lines}\n\`\`\`\n`;
-}
-
-export function createSlashCommands({ openSettings, showHelp, openOtp, clearPanels }) {
+export function createSlashCommands({ openSettings, openOtp, clearPanels, cancelQuery }) {
   return [
     {
       name: "/settings",
       description: "Open overlay settings",
       run: () => {
         openSettings();
-        return { handled: true };
-      },
-    },
-    {
-      name: "/?",
-      description: "Show this help menu",
-      run: ({ commands }) => {
-        showHelp(buildHelpMarkdown(commands));
         return { handled: true };
       },
     },
@@ -44,6 +29,14 @@ export function createSlashCommands({ openSettings, showHelp, openOtp, clearPane
         return { handled: true };
       },
     },
+    {
+      name: "/cancel",
+      description: "Stop the running query",
+      run: () => {
+        cancelQuery();
+        return { handled: true };
+      },
+    },
   ];
 }
 
@@ -53,6 +46,14 @@ export function matchSlashCommand(text, commands) {
 
   const token = trimmed.split(/\s+/)[0].toLowerCase();
   return commands.find((command) => command.name.toLowerCase() === token) || null;
+}
+
+export function suggestSlashCommands(text, commands) {
+  const raw = String(text || "");
+  if (!raw.startsWith("/") || /\s/.test(raw)) return [];
+
+  const token = raw.toLowerCase();
+  return commands.filter((command) => command.name.toLowerCase().startsWith(token));
 }
 
 export function unknownSlashHelp(commands) {

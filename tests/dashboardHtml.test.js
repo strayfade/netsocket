@@ -102,6 +102,19 @@ describe('dashboard shell pages', () => {
         assert.doesNotMatch(html, /renderAutomationsCard/);
     });
 
+    it('offers the overlay installer above Backup on every shell page', () => {
+        for (const name of ['dashboard.html', 'panels.html', 'editor.html']) {
+            const html = readFrontend(name);
+            const download = html.indexOf('id="download-overlay"');
+            const backup = html.indexOf('id="open-backup"');
+            assert.ok(download !== -1, `${name} is missing Download Overlay`);
+            assert.ok(backup !== -1, `${name} is missing Backup`);
+            assert.ok(download < backup, `${name}: Download Overlay should precede Backup`);
+            assert.match(html, /href="\/downloads\/overlay"/);
+            assert.match(html, />Download Overlay</);
+        }
+    });
+
     it('shell headers show the logo only, without brand text', () => {
         for (const name of ['dashboard.html', 'panels.html', 'editor.html']) {
             const html = readFrontend(name);

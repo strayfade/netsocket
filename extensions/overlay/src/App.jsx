@@ -6,6 +6,7 @@ import OtpPanel from "./OtpPanel";
 import {
   createSlashCommands,
   matchSlashCommand,
+  suggestSlashCommands,
   unknownSlashHelp,
 } from "./slashCommands.js";
 import {
@@ -192,13 +193,13 @@ export default function App() {
   const queryRef = useRef(null);
   const phaseRef = useRef("hidden");
   const pendingConversationRef = useRef(null);
+  const cancelledConversationIdsRef = useRef(new Set());
   const responseTimeoutRef = useRef(null);
   const flyInTimeoutRef = useRef(null);
   const flyInDismissTimeoutRef = useRef(null);
   const lastServerNotificationTextRef = useRef(null);
   const settingsRef = useRef(defaultSettings);
   const panelsRef = useRef([]);
-  const measureNodesRef = useRef(new Map());
   const lastRectsRef = useRef(new Map());
   const leaveTimeoutsRef = useRef(new Map());
   const settingsHydratedRef = useRef(false);
@@ -321,9 +322,6 @@ export default function App() {
   }, []);
 
   const removePanelNow = useCallback((panelId) => {
-    const entry = measureNodesRef.current.get(panelId);
-    entry?.observer?.disconnect?.();
-    measureNodesRef.current.delete(panelId);
     lastRectsRef.current.delete(panelId);
     const leaveTimeout = leaveTimeoutsRef.current.get(panelId);
     if (leaveTimeout) {
@@ -365,13 +363,8 @@ export default function App() {
     leaveTimeoutsRef.current.set(panelId, timeoutId);
   }, [removePanelNow, motionMs]);
 
-  const clearPanels = useCallback(() => {
+  const closeAllPanels = useCallback(() => {
     setCapturingHotkeyTarget(null);
-    setOtpNotice("");
-    setSaveNotice("");
-    setQuery("");
-    setSendError("");
-    requestAnimationFrame(resizeQueryInput);
 
     const current = panelsRef.current;
     if (!current.length) {
@@ -402,22 +395,14 @@ export default function App() {
     }
   }, [removePanelNow, motionMs]);
 
-  const updatePanelPreferred = useCallback((panelId, preferred) => {
-    setPanels((prev) =>
-      prev.map((panel) => {
-        if (panel.id !== panelId) return panel;
-        const width = Math.round(preferred.width);
-        const height = Math.round(preferred.height);
-        if (
-          panel.preferred?.width === width &&
-          panel.preferred?.height === height
-        ) {
-          return panel;
-        }
-        return { ...panel, preferred: { width, height } };
-      })
-    );
-  }, []);
+  const clearPanels = useCallback(() => {
+    setOtpNotice("");
+    setSaveNotice("");
+    setQuery("");
+    setSendError("");
+    requestAnimationFrame(resizeQueryInput);
+    closeAllPanels();
+  }, [closeAllPanels]);
 
   const appendResponsePanel = useCallback((text, { conversationId = null, title = "Response" } = {}) => {
     clearResponseTimeout();
@@ -494,16 +479,6 @@ export default function App() {
     openSingletonPanel("settings", PANEL_TITLES.settings);
   }, [openSingletonPanel]);
 
-  const showHelp = useCallback(
-    (markdown) => {
-      setQuery("");
-      setSendError("");
-      appendResponsePanel(markdown, { title: "Help" });
-      requestAnimationFrame(resizeQueryInput);
-    },
-    [appendResponsePanel]
-  );
-
   const showResponse = useCallback(
     (text) => {
       appendResponsePanel(text, { title: "Response" });
@@ -511,16 +486,58 @@ export default function App() {
     [appendResponsePanel]
   );
 
+  const cancelQuery = useCallback(() => {
+    const pendingId = pendingConversationRef.current;
+    if (pendingId) cancelledConversationIdsRef.current.add(pendingId);
+    pendingConversationRef.current = null;
+    clearResponseTimeout();
+    setIsLoading(false);
+    setSendError("");
+    clearAwaiting();
+    if (!isOverlayOpen()) {
+      api.hideNotification?.();
+    }
+    requestAnimationFrame(() => {
+      resizeQueryInput();
+      queryRef.current?.focus();
+    });
+  }, []);
+
   const slashCommands = useMemo(
     () =>
       createSlashCommands({
         openSettings,
-        showHelp,
         openOtp,
         clearPanels,
+        cancelQuery,
       }),
-    [openSettings, showHelp, openOtp, clearPanels]
+    [openSettings, openOtp, clearPanels, cancelQuery]
   );
+
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [suggestSuppressed, setSuggestSuppressed] = useState(false);
+  const [pinnedSuggestions, setPinnedSuggestions] = useState([]);
+  const [suggestQuery, setSuggestQuery] = useState(query);
+
+  if (query !== suggestQuery) {
+    setSuggestQuery(query);
+    setSuggestSuppressed(false);
+    setSuggestionIndex(0);
+  }
+
+  const slashSuggestions = useMemo(
+    () => (suggestSuppressed ? [] : suggestSlashCommands(query, slashCommands)),
+    [query, slashCommands, suggestSuppressed]
+  );
+
+  if (slashSuggestions.length > 0 && pinnedSuggestions !== slashSuggestions) {
+    setPinnedSuggestions(slashSuggestions);
+  }
+
+  const suggestOpen = slashSuggestions.length > 0;
+  const activeSuggestionIndex = suggestOpen
+    ? Math.min(Math.max(suggestionIndex, -1), slashSuggestions.length - 1)
+    : -1;
 
   const dismissFlyIn = async () => {
     clearFlyInTimeouts();
@@ -558,6 +575,7 @@ export default function App() {
 
   const startClose = useCallback(async () => {
     if (phaseRef.current === "hidden" || phaseRef.current === "hiding") return;
+    closeAllPanels();
     setPhase("hiding");
     closeTimeoutRef.current = setTimeout(async () => {
       setCapturingHotkeyTarget(null);
@@ -566,7 +584,7 @@ export default function App() {
       setPhase("hidden");
       await api.hideNow();
     }, motionMs(HIDE_ANIMATION_MS));
-  }, [motionMs]);
+  }, [motionMs, closeAllPanels]);
 
   const handleShow = useCallback(() => {
     if (closeTimeoutRef.current) {
@@ -578,14 +596,6 @@ export default function App() {
     setPhase("showing");
     setSendError("");
     setOtpNotice("");
-    // Keep panels, focus, and layout so reopening restores the session.
-    setPanels((prev) =>
-      prev.map((panel) =>
-        panel.phase === "entering" || panel.phase === "showing"
-          ? { ...panel, phase: "shown" }
-          : panel
-      )
-    );
     api.getConnectionState?.().then((state) => {
       if (state) setConnection((prev) => ({ ...prev, ...state }));
     });
@@ -616,6 +626,11 @@ export default function App() {
 
           const { text, conversationId, deviceId } = parseOverlayPayload(payload.broadcastData);
           if (!text) return;
+
+          if (conversationId && cancelledConversationIdsRef.current.has(conversationId)) {
+            cancelledConversationIdsRef.current.delete(conversationId);
+            return;
+          }
 
           const pendingId = pendingConversationRef.current;
           const isPendingReply = Boolean(
@@ -742,8 +757,8 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [capturingHotkeyTarget]);
 
-  const sendQuery = async () => {
-    const text = query.trim();
+  const sendQuery = async (overrideText) => {
+    const text = String(overrideText ?? query).trim();
     if (!text.length) {
       setSendError("");
       startClose();
@@ -763,6 +778,10 @@ export default function App() {
     }
 
     const conversationId = createConversationId();
+    const previousId = pendingConversationRef.current;
+    if (previousId && previousId !== conversationId) {
+      cancelledConversationIdsRef.current.add(previousId);
+    }
     pendingConversationRef.current = conversationId;
     setIsLoading(true);
     setSendError("");
@@ -793,9 +812,30 @@ export default function App() {
   };
 
   const onCommandKeyDown = async (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      if (!suggestOpen || event.altKey || event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      const last = slashSuggestions.length - 1;
+      setSuggestionIndex((current) => {
+        if (event.key === "ArrowDown") {
+          if (current >= last) return last;
+          return current + 1;
+        }
+        if (current <= 0) return -1;
+        return current - 1;
+      });
+      return;
+    }
+
     if (event.key === "Escape") {
       event.preventDefault();
       if (capturingHotkeyTarget) return;
+
+      if (suggestOpen) {
+        setSuggestSuppressed(true);
+        setSuggestionIndex(-1);
+        return;
+      }
 
       if (panelsRef.current.length > 0) {
         const latest =
@@ -831,7 +871,9 @@ export default function App() {
 
     if (event.key === "Enter") {
       event.preventDefault();
-      await sendQuery();
+      const selected =
+        activeSuggestionIndex >= 0 ? slashSuggestions[activeSuggestionIndex] : null;
+      await sendQuery(selected ? selected.name : undefined);
     }
   };
 
@@ -876,55 +918,6 @@ export default function App() {
     }
     return map;
   }, [tileRects]);
-
-  const registerMeasureNode = useCallback(
-    (panelId, node) => {
-      const existing = measureNodesRef.current.get(panelId);
-      if (existing?.observer) {
-        existing.observer.disconnect();
-      }
-      if (!node) {
-        measureNodesRef.current.delete(panelId);
-        return;
-      }
-
-      let frame = 0;
-      const measure = () => {
-        cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(() => {
-          // Prefer content scroll size; pad for tile chrome (header ~44px + padding).
-          const contentWidth = Math.max(node.scrollWidth, node.clientWidth);
-          const contentHeight = Math.max(node.scrollHeight, node.clientHeight);
-          const width = Math.max(320, Math.min(tileRegion.width, contentWidth + 36));
-          const height = Math.max(180, Math.min(tileRegion.height, contentHeight + 56));
-          const prev = panelsRef.current.find((panel) => panel.id === panelId)?.preferred;
-          if (
-            prev &&
-            Math.abs(prev.width - width) < 12 &&
-            Math.abs(prev.height - height) < 12
-          ) {
-            return;
-          }
-          updatePanelPreferred(panelId, { width, height });
-        });
-      };
-
-      const observer = new ResizeObserver(measure);
-      observer.observe(node);
-      measureNodesRef.current.set(panelId, { node, observer });
-      measure();
-    },
-    [tileRegion.width, tileRegion.height, updatePanelPreferred]
-  );
-
-  useEffect(() => {
-    return () => {
-      for (const entry of measureNodesRef.current.values()) {
-        entry.observer?.disconnect?.();
-      }
-      measureNodesRef.current.clear();
-    };
-  }, []);
 
   const workspaceClassName = [
     "overlay-workspace",
@@ -1119,16 +1112,73 @@ export default function App() {
           <div className="command-dock">
             <section className={`overlay-panel command-card ${isDisconnected ? "disconnected" : ""}`}>
               <div className="input-row">
-                <textarea
-                  ref={queryRef}
-                  value={query}
-                  className={`query-input modern-scrollbar ${isLoading ? "loading" : ""}`}
-                  onChange={(event) => setQuery(event.target.value)}
-                  onKeyDown={onCommandKeyDown}
-                  placeholder="Enter a command or /? for help..."
-                  rows={1}
-                />
-                {isLoading ? <span className="command-loader" aria-hidden="true" /> : null}
+                <div className="query-field">
+                  <textarea
+                    ref={queryRef}
+                    value={query}
+                    className={`query-input modern-scrollbar ${isLoading ? "loading" : ""}`}
+                    onChange={(event) => setQuery(event.target.value)}
+                    onKeyDown={onCommandKeyDown}
+                    placeholder="Enter a command..."
+                    rows={1}
+                    autoComplete="off"
+                    aria-autocomplete="list"
+                    aria-controls="command-suggest"
+                    aria-expanded={suggestOpen}
+                    aria-activedescendant={
+                      activeSuggestionIndex >= 0
+                        ? `command-suggest-${activeSuggestionIndex}`
+                        : undefined
+                    }
+                  />
+                  {isLoading ? <span className="command-loader" aria-hidden="true" /> : null}
+                </div>
+                <div
+                  className={`command-suggest-slot ${suggestOpen ? "is-open" : ""}`}
+                  aria-hidden={suggestOpen ? undefined : true}
+                  inert={!suggestOpen ? "" : undefined}
+                >
+                  <div className="command-suggest-clip">
+                    {pinnedSuggestions.length ? (
+                      <ul
+                        id="command-suggest"
+                        className="command-suggest"
+                        role="listbox"
+                        aria-label="Commands"
+                      >
+                        {pinnedSuggestions.map((command, index) => {
+                          const typedLength = query.length;
+                          const nameHead = command.name.slice(0, typedLength);
+                          const nameRest = command.name.slice(typedLength);
+                          const isActive = suggestOpen && index === activeSuggestionIndex;
+                          return (
+                            <li key={command.name} role="presentation">
+                              <button
+                                type="button"
+                                id={`command-suggest-${index}`}
+                                role="option"
+                                aria-selected={isActive}
+                                tabIndex={-1}
+                                className={`command-suggest-option ${isActive ? "is-active" : ""}`}
+                                onMouseEnter={() => setSuggestionIndex(index)}
+                                onMouseDown={(event) => {
+                                  event.preventDefault();
+                                  sendQuery(command.name);
+                                }}
+                              >
+                                <span className="command-suggest-name">
+                                  <span className="command-suggest-match">{nameHead}</span>
+                                  <span className="command-suggest-rest">{nameRest}</span>
+                                </span>
+                                <span className="command-suggest-desc">{command.description}</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : null}
+                  </div>
+                </div>
               </div>
 
               {sendError ? <div className="error-row">{sendError}</div> : null}
@@ -1201,14 +1251,7 @@ export default function App() {
                           ×
                         </button>
                       </header>
-                      <div
-                        className="tile-body modern-scrollbar"
-                        ref={(node) => {
-                          if (panel.kind === "response" || panel.kind === "settings") {
-                            registerMeasureNode(panel.id, node);
-                          }
-                        }}
-                      >
+                      <div className="tile-body modern-scrollbar">
                         {panel.kind === "response" ? (
                           <ResponseMarkdown text={panel.text} onOpenLink={openResponseLink} />
                         ) : null}
