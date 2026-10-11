@@ -1192,6 +1192,143 @@ dialog#panel-edit-dialog[open] {
     margin-top: 8px;
 }
 
+.panel-device-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.panel-device-search {
+    position: relative;
+}
+
+.panel-device-results {
+    max-height: 240px;
+    overflow: auto;
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius);
+    background: var(--shell-input-bg);
+}
+
+.panel-device-results[hidden] {
+    display: none;
+}
+
+.panel-device-group {
+    padding: 8px 12px 2px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--shell-faint);
+}
+
+.panel-device-option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    color: inherit;
+    border: none;
+    border-top: 1px solid var(--shell-border);
+    padding: 8px 12px;
+    cursor: pointer;
+    font: inherit;
+}
+
+.panel-device-option:hover,
+.panel-device-option.is-active {
+    background: var(--shell-surface-raised);
+}
+
+.panel-device-option-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.panel-device-option-meta,
+.panel-device-row-meta,
+.panel-device-result-empty {
+    font-size: 0.75rem;
+    color: var(--shell-muted);
+    font-family: var(--shell-mono);
+}
+
+.panel-device-result-empty {
+    margin: 0;
+    padding: 12px;
+}
+
+.panel-device-assigned {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow: auto;
+}
+
+.panel-device-assigned:empty {
+    display: none;
+}
+
+.panel-device-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius);
+    padding: 8px 8px 8px 12px;
+    background: var(--shell-input-bg);
+}
+
+.panel-device-row-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.panel-device-row-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.panel-device-row-meta {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.panel-device-remove {
+    appearance: none;
+    border: 1px solid var(--shell-border);
+    background: transparent;
+    color: var(--shell-text);
+    border-radius: var(--shell-radius);
+    min-height: 32px;
+    padding: 0 10px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.75rem;
+}
+
+.panel-device-remove:hover {
+    background: var(--shell-surface-raised);
+}
+
+#edit-panel-device-count {
+    font-weight: 500;
+    margin: 0;
+}
+
+#edit-panel-device-count:not(:empty)::before {
+    content: "· ";
+}
+
 .dialog-close-btn {
     appearance: none;
     border: none;

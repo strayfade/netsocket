@@ -128,9 +128,18 @@
                     <button class="shell-btn" id="panel-add-widget-open" type="button"><span class="material-symbols-outlined" aria-hidden="true">add</span> Add widget</button>
                 </div>
             </div>
-            <div class="admin-field">
-                <label>Paired devices (open this panel from the app)</label>
-                <div class="admin-check-row" id="edit-panel-devices" style="flex-direction: column; align-items: stretch;"></div>
+            <div class="admin-field" style="margin: 0;">
+                <label for="edit-panel-device-search">Devices that show this panel <span class="shell-stat-sub" id="edit-panel-device-count"></span></label>
+                <p class="shell-stat-sub" style="margin: 0 0 8px;">Search by name, platform, device ID, or another panel. Only assigned devices stay in the list.</p>
+                <div class="panel-device-picker" id="edit-panel-devices">
+                    <div class="panel-device-search">
+                        <input class="admin-input" id="edit-panel-device-search" type="text" placeholder="Search devices to add…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="edit-panel-device-results" aria-autocomplete="list">
+                        <div class="panel-device-results" id="edit-panel-device-results" role="listbox" hidden></div>
+                    </div>
+                    <p class="shell-stat-sub" id="edit-panel-device-empty">No devices assigned. Search to add one.</p>
+                    <ul class="panel-device-assigned" id="edit-panel-device-assigned"></ul>
+                    <p class="shell-stat-sub" id="edit-panel-device-note" hidden></p>
+                </div>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
                 <button class="shell-btn shell-btn-secondary" id="edit-panel-close" type="button">Cancel</button>
@@ -234,13 +243,20 @@
     <script src="/vendor/gridstack-all.js"></script>
     <script src="/js/widgets.js"></script>
     <script src="/js/widgetEditor.js"></script>
+    <script src="/js/panelDevicePicker.js"></script>
     <script>
         (function () {
             ShellLogic.markActiveTab(document);
 
             var allAutomations = [];
             var allDevices = [];
+            var allPanels = [];
             var editingPanelId = null;
+            var devicePicker = PanelDevicePicker.attach(document.getElementById('edit-panel-devices'), {
+                getDevices: function () { return allDevices; },
+                getPanels: function () { return allPanels; },
+                getPanelId: function () { return editingPanelId; },
+            });
             var editingWidgets = [];
             var panelVariables = {};
 
@@ -367,6 +383,7 @@
                     }
                     var data = await res.json();
                     var panels = Array.isArray(data.panels) ? data.panels : [];
+                    allPanels = panels;
                     list.innerHTML = '';
                     empty.hidden = panels.length > 0;
                     panels.forEach(renderPanelRow);
@@ -490,37 +507,7 @@
                 });
                 panelVariables = {};
                 // Ensure grid shows even though dialog is still hidden (GridStack needs visible container; rebuild after showModal)
-                var deviceBox = document.getElementById('edit-panel-devices');
-                deviceBox.innerHTML = '';
-                var granted = new Set((panel.deviceIds || []).map(String));
-                var approvedDevices = allDevices.filter(function (d) { return d && d.status === 'approved'; });
-                if (!approvedDevices.length) {
-                    var noDevices = document.createElement('p');
-                    noDevices.className = 'shell-stat-sub';
-                    noDevices.textContent = 'No approved devices. Pair the Android app first, then approve it under Automate settings.';
-                    deviceBox.appendChild(noDevices);
-                }
-                approvedDevices.forEach(function (device) {
-                    var label = document.createElement('label');
-                    label.className = 'admin-check';
-                    var box = document.createElement('input');
-                    box.type = 'checkbox';
-                    box.value = device.deviceId;
-                    box.checked = granted.has(String(device.deviceId));
-                    label.appendChild(box);
-                    label.appendChild(document.createTextNode(
-                        (device.name || device.deviceId) + ' (' + device.deviceId + ')'
-                    ));
-                    deviceBox.appendChild(label);
-                });
-                granted.forEach(function (deviceId) {
-                    if (approvedDevices.some(function (d) { return String(d.deviceId) === deviceId; })) return;
-                    var keep = document.createElement('input');
-                    keep.type = 'hidden';
-                    keep.value = deviceId;
-                    keep.setAttribute('data-kept-device', '');
-                    deviceBox.appendChild(keep);
-                });
+                devicePicker.setSelected(panel.deviceIds || []);
 
                 var dialog = document.getElementById('panel-edit-dialog');
                 if (typeof dialog.showModal === 'function') {
@@ -544,6 +531,11 @@
                 var d = document.getElementById('panel-edit-dialog');
                 if (typeof d.close === 'function') { try { d.close(); } catch (_) { d.removeAttribute('open'); } } else d.removeAttribute('open');
             });
+            document.getElementById('panel-edit-dialog').addEventListener('cancel', function (e) {
+                if (!devicePicker.isOpen()) return;
+                e.preventDefault();
+                devicePicker.close();
+            });
             document.getElementById('panel-edit-dialog').addEventListener('click', function (e) {
                 if (e.target === this) {
                     if (typeof this.close === 'function') { try { this.close(); } catch (_) { this.removeAttribute('open'); } } else this.removeAttribute('open');
@@ -554,13 +546,7 @@
                 if (!editingPanelId) return;
                 var btn = this;
                 btn.disabled = true;
-                var deviceIds = Array.prototype.map.call(
-                    document.querySelectorAll('#edit-panel-devices input[type="checkbox"]:checked'),
-                    function (el) { return el.value; }
-                ).concat(Array.prototype.map.call(
-                    document.querySelectorAll('#edit-panel-devices input[data-kept-device]'),
-                    function (el) { return el.value; }
-                ));
+                var deviceIds = devicePicker.getDeviceIds();
                 // Ensure current grid positions are saved before saving metadata
                 if (editor.isEditing()) editor.setEditing(false);
                 try {

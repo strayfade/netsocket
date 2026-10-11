@@ -76,6 +76,10 @@ describe('panel pages', () => {
             'edit-panel-room',
             'edit-panel-borders',
             'edit-panel-devices',
+            'edit-panel-device-search',
+            'edit-panel-device-results',
+            'edit-panel-device-assigned',
+            'edit-panel-device-empty',
         ]) {
             assert.match(html, new RegExp(`id="${id}"`));
         }
@@ -97,6 +101,10 @@ describe('panel pages', () => {
         assert.match(html, /<script src="\/js\/widgets\.js"><\/script>/);
         assert.match(html, /<link rel="stylesheet" href="\/vendor\/gridstack\.min\.css">/);
         assert.match(html, /WidgetEditor\.attach/);
+        assert.match(html, /<script src="\/js\/panelDevicePicker\.js"><\/script>/);
+        assert.match(html, /PanelDevicePicker\.attach/);
+        assert.match(html, /devicePicker\.getDeviceIds/);
+        assert.doesNotMatch(html, /edit-panel-devices input\[type="checkbox"\]/);
         assert.match(html, /panel-edit-grid/);
     });
 });
