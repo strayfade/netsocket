@@ -35,7 +35,16 @@ describe('mqttClient TLS options', () => {
         assert.equal(built.url, 'mqtt://broker:1883');
         assert.equal(built.options.username, 'u');
         assert.equal(built.options.password, 'p');
+        assert.equal(built.options.clean, false);
+        assert.equal(built.options.clientId, 'netsocket-server');
         assert.equal(built.options.rejectUnauthorized, undefined);
+    });
+
+    it('allows a custom client id', () => {
+        const built = mqttClient.buildMqttOptions({
+            url: 'mqtt://broker:1883', clientId: 'custom-id', tls: false,
+        }, () => '');
+        assert.equal(built.options.clientId, 'custom-id');
     });
 
     it('upgrades to mqtts and loads the CA when TLS is on', () => {

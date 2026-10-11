@@ -164,7 +164,13 @@ const getMqttConfig = (settings) => {
 // `readFile` is injectable; a TLS connection with an unreadable CA fails
 // closed rather than silently downgrading to an unverified socket.
 const buildMqttOptions = (cfg, readFile) => {
-    const options = { reconnectPeriod: 5000, connectTimeout: 10000, clean: false }
+    // mqtt.js requires a clientId whenever clean is false (persistent session).
+    const options = {
+        reconnectPeriod: 5000,
+        connectTimeout: 10000,
+        clean: false,
+        clientId: cfg.clientId || 'netsocket-server',
+    }
     if (cfg.username) options.username = cfg.username
     if (cfg.password) options.password = cfg.password
     let url = cfg.url
