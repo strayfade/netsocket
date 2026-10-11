@@ -32,7 +32,7 @@ Netsocket is a self-hosted home-automation hub and nodegraph runtime. The server
 | `frontend/public/js/widgets.js` | Shared grid-widget renderer (UMD, tested) | Hub frontend |
 | `frontend/public/vendor/gridstack-*` | Vendored GridStack 13.3.0 (pinned; approved dep, upgrade deliberately) | Hub frontend |
 | `tests/` | Automated tests | Testing |
-| `extensions/` | Optional integrations (overlay, mirror, etc.) | Extras |
+| `extensions/` | Optional integrations (overlay, etc.) | Extras |
 
 ## 2. Agent-Specific Coding Guidelines
 

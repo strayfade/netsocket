@@ -9,7 +9,7 @@ The repository is organized as follows:
   - `utils/`: Shared helpers (auth, parsing, triggers)
 - `frontend/`: Static UI components (editor.html, index.html)
 - `tests/`: Automated tests (Node.js built-in test runner)
-- `extensions/`: Optional integrations (overlays, mirrors)
+- `extensions/`: Optional integrations (overlays)
 - `NODES.md`: Node authoring reference
 ```
 

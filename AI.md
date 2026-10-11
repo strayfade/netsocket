@@ -27,7 +27,7 @@ Stack: Node.js (CommonJS), Express, WebSockets, native `node:test` runner. Licen
 | `frontend/public/css/shell.css` | Shared Dashboard/Panels theme tokens (OLED-black, 8px radius, card/grid/tab primitives) |
 | `frontend/public/js/shell.js` | Shared tab/session/toast logic (UMD, unit-tested in `tests/shell.test.js`) |
 | `tests/` | Automated tests |
-| `extensions/` | Optional integrations (overlay, mirror, etc.) |
+| `extensions/` | Optional integrations (overlay, etc.) |
 | `NODES.md` | Node authoring reference and known edge cases |
 
 ## Required: tests for server-side changes

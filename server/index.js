@@ -653,11 +653,6 @@ app.get("/v1/google/auth/callback", async (req, res) => {
     }
 })
 
-// MagicMirror
-app.get("/v1/mirror", (req, res) => {
-    res.status(200).sendFile(path.join(__dirname, "../extensions/mirror/index.html"))
-})
-
 // Web
 const { populateUsers, flushUsersSync } = require('./manager/saveUsers.js')
 const {
