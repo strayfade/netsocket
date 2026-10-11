@@ -7,11 +7,26 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     'use strict';
 
+    var MAX_PRESET_SPAN = 4;
+
+    function buildSizePresets(maxSpan) {
+        var span = maxSpan || MAX_PRESET_SPAN;
+        var presets = [];
+        for (var w = 1; w <= span; w++) {
+            for (var h = 1; h <= span; h++) {
+                presets.push({ w: w, h: h });
+            }
+        }
+        return presets;
+    }
+
+    var ALL_SIZE_PRESETS = buildSizePresets(MAX_PRESET_SPAN);
+
     var WIDGET_PRESETS = {
-        button: [{ w: 1, h: 1 }, { w: 1, h: 2 }, { w: 2, h: 1 }, { w: 2, h: 2 }, { w: 3, h: 2 }, { w: 3, h: 3 }],
-        clock: [{ w: 4, h: 2 }, { w: 2, h: 1 }],
-        markdown: [{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }],
-        html: [{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }],
+        button: ALL_SIZE_PRESETS,
+        clock: ALL_SIZE_PRESETS,
+        markdown: ALL_SIZE_PRESETS,
+        html: ALL_SIZE_PRESETS,
     };
 
     function sortedPresets(type) {

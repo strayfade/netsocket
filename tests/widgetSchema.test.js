@@ -42,9 +42,15 @@ describe('widgetSchema', () => {
             /too_many_widgets/
         );
         assert.deepEqual(schema.presetFor('button'), { w: 1, h: 1 });
-        assert.deepEqual(schema.TYPE_PRESETS.clock, [{ w: 4, h: 2 }, { w: 2, h: 1 }]);
-        assert.equal(schema.TYPE_PRESETS.markdown.length, 4);
-        assert.equal(schema.TYPE_PRESETS.html.length, 4);
+        assert.equal(schema.TYPE_PRESETS.button.length, 16);
+        assert.equal(schema.TYPE_PRESETS.clock.length, 16);
+        assert.equal(schema.TYPE_PRESETS.markdown.length, 16);
+        assert.equal(schema.TYPE_PRESETS.html.length, 16);
+        assert.deepEqual(schema.TYPE_PRESETS.clock[0], { w: 1, h: 1 });
+        assert.deepEqual(schema.TYPE_PRESETS.clock[15], { w: 4, h: 4 });
+        assert.ok(schema.TYPE_PRESETS.markdown.some((p) => p.w === 1 && p.h === 3));
+        assert.ok(schema.TYPE_PRESETS.html.some((p) => p.w === 3 && p.h === 1));
+        assert.ok(!schema.TYPE_PRESETS.markdown.some((p) => p.w === 6));
     });
 
     it('packs positions without overlap', () => {

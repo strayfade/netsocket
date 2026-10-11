@@ -5,24 +5,35 @@
 // button (automationId) and markdown/html (variable) types.
 //
 // Fixed size presets (w x h in grid units, 12-column grid):
-//   button:            1x1, 1x2, 2x1, 2x2, 3x2, 3x3, etc.
-//   clock:             4x2, 2x1
-//   markdown / html:   2x2, 4x2, 4x3, 6x4
+//   every widget type: 1x1 … 4x4 (all width/height pairs)
 
 const GRID_COLUMNS = 12
 const MAX_ROW_SPAN = 12
 const MAX_WIDGETS = 100
 const MAX_VARIABLE_LENGTH = 128
 const MAX_AUTOMATION_ID_LENGTH = 128
+const MAX_PRESET_SPAN = 4
 
 const WIDGET_TYPES = Object.freeze(['button', 'clock', 'markdown', 'html'])
 const VARIABLE_WIDGET_TYPES = Object.freeze(['markdown', 'html'])
 
+const buildSizePresets = (maxSpan = MAX_PRESET_SPAN) => {
+    const presets = []
+    for (let w = 1; w <= maxSpan; w++) {
+        for (let h = 1; h <= maxSpan; h++) {
+            presets.push(Object.freeze({ w, h }))
+        }
+    }
+    return Object.freeze(presets)
+}
+
+const ALL_SIZE_PRESETS = buildSizePresets()
+
 const TYPE_PRESETS = Object.freeze({
-    button: Object.freeze([{ w: 1, h: 1 }, { w: 1, h: 2 }, { w: 2, h: 1 }, { w: 2, h: 2 }, { w: 3, h: 2 }, { w: 3, h: 3 }]),
-    clock: Object.freeze([{ w: 4, h: 2 }, { w: 2, h: 1 }]),
-    markdown: Object.freeze([{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }]),
-    html: Object.freeze([{ w: 2, h: 2 }, { w: 4, h: 2 }, { w: 4, h: 3 }, { w: 6, h: 4 }]),
+    button: ALL_SIZE_PRESETS,
+    clock: ALL_SIZE_PRESETS,
+    markdown: ALL_SIZE_PRESETS,
+    html: ALL_SIZE_PRESETS,
 })
 
 const DEFAULT_CLOCK_SIZE = Object.freeze({ w: 4, h: 2 })

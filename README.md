@@ -77,9 +77,10 @@ npm start
   - Press the "button" section of the Button node, and you will see a "Hello, world!" printed to the **netsocket Log** at the bottom of the page. Hovering over this log will expand it to show more lines.
 ### Widgets (grid layout)
   Everything is a widget on a 12-column drag-drop grid (GridStack, vendored — no CDN needed):
-  - **Run button** (1x1) — runs one allowlisted automation. Add from the Dashboard editor or a panel's edit dialog.
-  - **Clock** (4x2 or 2x1).
-  - **Markdown / HTML** (2x2, 4x2, 4x3, 6x4) — bound to a Variable name. Store text with the **Variables/Set Variable** node (values persist across restarts and push live updates). Markdown is rendered safely; HTML is sandboxed with scripts blocked.
+  - **Run button** — runs one allowlisted automation. Add from the Dashboard editor or a panel's edit dialog.
+  - **Clock**.
+  - **Markdown / HTML** — bound to a Variable name. Store text with the **Variables/Set Variable** node (values persist across restarts and push live updates). Markdown is rendered safely; HTML is sandboxed with scripts blocked.
+  - Every widget type can use any size from **1x1** through **4x4**.
   - On the **Dashboard**, press **Edit layout** and drag widgets by their handle; sizes come from fixed presets.
   - Upgrading from older versions migrates existing layouts automatically (`stats`/`weather` widgets are dropped — you'll get a one-time toast listing what was removed).
 ### Wall panels (touch surfaces)
