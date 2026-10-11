@@ -36,6 +36,7 @@ const defaultSettings = {
   activeProfile: "production",
   responseTimeoutSeconds: DEFAULT_RESPONSE_TIMEOUT_SECONDS,
   deviceId: "",
+  deviceName: "",
   animationsEnabled: true,
   profiles: {
     production: { url: "ws://127.0.0.1:4675", secret: "" },
@@ -1032,9 +1033,35 @@ export default function App() {
         </section>
 
         <section className="settings-field">
+          <label className="settings-field-label" htmlFor="settings-device-name">
+            Device name
+          </label>
+          <p className="settings-desc">
+            Shown in the dashboard Devices list. A blank name uses Desktop overlay and the active
+            profile. Pairing and alert routing use the device ID below.
+          </p>
+          <input
+            id="settings-device-name"
+            className="settings-input"
+            value={draftSettings.deviceName || ""}
+            maxLength={120}
+            onChange={(event) =>
+              setDraftSettings((prev) => ({
+                ...prev,
+                deviceName: event.target.value,
+              }))
+            }
+            placeholder="Desktop overlay"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </section>
+
+        <section className="settings-field">
           <div className="settings-field-label">Device ID</div>
           <p className="settings-desc">
-            Shown in the dashboard Devices list. Used for pairing and alert routing.
+            Stable identifier for pairing and alert routing. Approve it in the dashboard under
+            Settings → Devices.
           </p>
           <div className="settings-readonly" title="Stable identifier used for pairing and alert routing">
             {deviceId || "Not assigned yet"}

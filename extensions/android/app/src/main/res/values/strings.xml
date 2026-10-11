@@ -44,7 +44,7 @@
     <string name="authenticator_camera_denied">Camera permission is required to scan QR codes</string>
     <string name="authenticator_camera_failed">Could not open the camera</string>
     <string name="settings_general">General</string>
-    <string name="settings_general_desc">Host, port, HTTPS/WSS, device ID, and launch mode</string>
+    <string name="settings_general_desc">Host, port, HTTPS/WSS, device name, and launch mode</string>
     <string name="settings_command">Command palette</string>
     <string name="settings_command_desc">Pairing uses your device key — approve this phone in the netsocket dashboard under Settings → Devices. Legacy secret is optional for older servers.</string>
     <string name="command_secret_hint">Legacy secret (optional)</string>
@@ -106,6 +106,8 @@
     <string name="forwarding_enabled">Forward notifications</string>
     <string name="endpoint_label">Notification endpoint</string>
     <string name="ws_endpoint_label">WebSocket</string>
+    <string name="device_name_hint">Device name</string>
+    <string name="device_name_helper">Shown in the dashboard Devices list. Pairing and alert routing use the device ID below.</string>
     <string name="device_id_label">Device ID</string>
     <string name="save_settings">Save settings</string>
     <string name="settings_saved">Settings saved</string>

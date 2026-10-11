@@ -52,6 +52,14 @@ class Prefs(context: Context) {
         get() = prefs.getString(KEY_SELECTED_PANEL, "")?.trim().orEmpty()
         set(value) = prefs.edit { putString(KEY_SELECTED_PANEL, value.trim()) }
 
+    /**
+     * Display name sent with device hello. The device ID stays the stable identifier.
+     * Blank values fall back to [DEFAULT_DEVICE_NAME].
+     */
+    var deviceName: String
+        get() = normalizeDeviceName(prefs.getString(KEY_DEVICE_NAME, DEFAULT_DEVICE_NAME))
+        set(value) = prefs.edit { putString(KEY_DEVICE_NAME, normalizeDeviceName(value)) }
+
     /** When true, the app opens the voice dictation screen instead of the text chat. */
     var voiceModeDefault: Boolean
         get() = prefs.getBoolean(KEY_VOICE_MODE_DEFAULT, false)
@@ -118,6 +126,7 @@ class Prefs(context: Context) {
         const val KEY_IDENTITY_PUBLIC = "identity_public_key"
         const val KEY_IDENTITY_PRIVATE = "identity_private_key"
         const val KEY_PINNED_SERVER = "pinned_server_identity_public_key"
+        const val KEY_DEVICE_NAME = "device_name"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
         const val KEY_VOICE_MODE_DEFAULT = "voice_mode_default"
         const val KEY_RESPONSE_TIMEOUT = "response_timeout_seconds"
@@ -126,9 +135,16 @@ class Prefs(context: Context) {
         /** Pre-chat-app key; migrated into [KEY_NOTIFICATION_SECRET]. */
         private const val KEY_SECRET_LEGACY = "secret"
         const val DEFAULT_HOST = "netsocket.strayfade.com"
+        const val DEFAULT_DEVICE_NAME = "Android"
+        const val MAX_DEVICE_NAME_LENGTH = 120
         const val DEFAULT_RESPONSE_TIMEOUT_SECONDS = 120
         const val MIN_RESPONSE_TIMEOUT_SECONDS = 5
         const val MAX_RESPONSE_TIMEOUT_SECONDS = 300
+
+        fun normalizeDeviceName(value: String?): String {
+            val trimmed = value?.trim().orEmpty().take(MAX_DEVICE_NAME_LENGTH)
+            return trimmed.ifEmpty { DEFAULT_DEVICE_NAME }
+        }
 
         fun buildEndpointUrl(
             host: String,

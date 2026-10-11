@@ -6,6 +6,7 @@ pub const DEFAULT_COPY_LAST_RESPONSE_HOTKEY: &str = "Alt+Shift+C";
 pub const DEFAULT_TYPE_LAST_RESPONSE_HOTKEY: &str = "Alt+Shift+T";
 pub const DEFAULT_PROFILE: &str = "production";
 pub const DEFAULT_RESPONSE_TIMEOUT_SECONDS: u32 = 120;
+pub const MAX_DEVICE_NAME_LEN: usize = 120;
 pub const MIN_RESPONSE_TIMEOUT_SECONDS: u32 = 5;
 pub const MAX_RESPONSE_TIMEOUT_SECONDS: u32 = 300;
 pub const RECONNECT_DELAY_MS: u64 = 1750;
@@ -49,6 +50,9 @@ pub struct Settings {
     pub profiles: HashMap<String, ProfileConfig>,
     #[serde(default)]
     pub deviceId: String,
+    /// Display name sent with device hello. Blank keeps the profile default.
+    #[serde(default)]
+    pub deviceName: String,
     #[serde(default)]
     pub identityPublicKey: String,
     #[serde(default)]
@@ -74,6 +78,7 @@ impl Default for Settings {
             responseTimeoutSeconds: DEFAULT_RESPONSE_TIMEOUT_SECONDS,
             profiles,
             deviceId: String::new(),
+            deviceName: String::new(),
             identityPublicKey: String::new(),
             identityPrivateKey: String::new(),
             pinnedServerIdentityPublicKey: String::new(),
@@ -160,11 +165,27 @@ impl Settings {
                 profiles
             },
             deviceId: raw.deviceId.trim().to_string(),
+            deviceName: Self::normalize_device_name(&raw.deviceName),
             identityPublicKey: raw.identityPublicKey.trim().to_string(),
             identityPrivateKey: raw.identityPrivateKey.trim().to_string(),
             pinnedServerIdentityPublicKey: raw.pinnedServerIdentityPublicKey.trim().to_string(),
             animationsEnabled: raw.animationsEnabled,
         }
+    }
+
+    /// Trims and caps a display name. An empty result means "use the profile default".
+    pub fn normalize_device_name(value: &str) -> String {
+        value.trim().chars().take(MAX_DEVICE_NAME_LEN).collect()
+    }
+
+    /// Name announced to the host. A custom name replaces the profile default.
+    pub fn display_name(&self) -> String {
+        let custom = Self::normalize_device_name(&self.deviceName);
+        if !custom.is_empty() {
+            return custom;
+        }
+        let (profile, _, _) = self.active_connection();
+        format!("Desktop overlay ({profile})")
     }
 
     /// Ensures a durable device ID exists. Returns true when a new ID was generated.
@@ -384,6 +405,30 @@ mod tests {
             Settings::normalize_overlay_hotkey("Alt+Space"),
             DEFAULT_HOTKEY
         );
+    }
+
+    #[test]
+    fn device_name_is_trimmed_and_falls_back_to_profile() {
+        let mut settings = Settings::default();
+        assert_eq!(settings.display_name(), "Desktop overlay (production)");
+
+        settings.deviceName = "  Living room  ".to_string();
+        settings = Settings::from_saved(settings);
+        assert_eq!(settings.deviceName, "Living room");
+        assert_eq!(settings.display_name(), "Living room");
+
+        settings.deviceName = "   ".to_string();
+        settings = Settings::from_saved(settings);
+        assert_eq!(settings.deviceName, "");
+        assert_eq!(settings.display_name(), "Desktop overlay (production)");
+    }
+
+    #[test]
+    fn device_name_caps_at_120_chars() {
+        let mut settings = Settings::default();
+        settings.deviceName = "a".repeat(200);
+        settings = Settings::from_saved(settings);
+        assert_eq!(settings.deviceName.chars().count(), MAX_DEVICE_NAME_LEN);
     }
 
     #[test]

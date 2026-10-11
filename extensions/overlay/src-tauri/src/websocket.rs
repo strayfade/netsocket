@@ -146,6 +146,7 @@ async fn ws_loop(
         let snapshot = settings.get();
         let (profile, url, secret) = snapshot.active_connection();
         let device_id = snapshot.deviceId.clone();
+        let device_name = snapshot.display_name();
         let identity = DeviceIdentity::from_stored(
             &snapshot.identityPublicKey,
             &snapshot.identityPrivateKey,
@@ -256,7 +257,7 @@ async fn ws_loop(
                 "identityPublicKey": identity.public_key_b64,
                 "ecdhPublicKey": ecdh.public_key_b64,
                 "platform": "overlay",
-                "name": format!("Desktop overlay ({profile})"),
+                "name": device_name,
             }
         });
         if write

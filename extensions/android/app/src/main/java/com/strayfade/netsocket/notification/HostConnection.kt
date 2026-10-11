@@ -287,7 +287,7 @@ object HostConnection {
                             .put("identityPublicKey", identityKeys.publicKeyB64)
                             .put("ecdhPublicKey", ecdh.publicKeyB64)
                             .put("platform", "android")
-                            .put("name", "Android")
+                            .put("name", prefs.deviceName)
                     )
                 sendRaw(hello.toString())
                 mainHandler.post(pingRunnable)
