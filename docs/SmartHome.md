@@ -81,12 +81,26 @@ See `firmware/esp32c3/README.md`. The discovery payload shapes the firmware
 emits are asserted against the server parser in
 `tests/smarthomeFirmwareContract.test.js`, so firmware/server drift fails CI.
 
+## Hardening (P6)
+
+- **Offline command queue.** Commands issued while the broker is unreachable are
+  held in a bounded (100) in-memory queue and flushed on reconnect. `Device
+  Command` reports `{ ok: false, queued: true }` in that case; `getStatus()`
+  exposes the pending count.
+- **TLS.** Set Preferences → Smart Home → `MQTT TLS` = `true` to connect over
+  `mqtts` (a plain `mqtt://` URL is upgraded). `MQTT CA File` pins the broker CA;
+  an unreadable CA fails closed rather than downgrading. `MQTT Verify TLS` = false
+  is available for self-signed bring-up only.
+- **Per-device auth + ACL.** `mosquitto/mosquitto.conf` carries the commented
+  TLS listener and auth block; `mosquitto/acl.example` scopes each device to its
+  own subtree. Enable once you move off the trusted-LAN default.
+- **Firmware TLS + OTA.** The C3 sketches accept a TLS broker (set at the captive
+  portal) and expose ArduinoOTA as `netsocket-<id>` on the LAN.
+
 ## Known limitations (v1)
 
-- Zigbee2MQTT entities often report JSON state (e.g. `{"state":"ON","brightness":120}`);
-  netsocket stores the raw payload. Parse it with the JSON nodes when you need a
-  field, or map only `state` for now.
-- TLS (8883) and per-device broker ACLs are not wired yet; the default broker
-  allows anonymous LAN access for bring-up.
-- No offline command queue — commands fail cleanly when the broker is down.
+- Zigbee2MQTT JSON state is handled when the entity declares a single-key
+  `value_template` (`{{ value_json.state }}`); other templates fall back to the
+  raw payload text. Parse fuller payloads with the JSON nodes.
+- The offline queue is in-memory and per-process — it does not survive a restart.
 - The firmware sketches are reference code and have not been compiled in this repo.

@@ -47,6 +47,16 @@ const hasKey = (payload, key) => {
     return payload[key] != null && cleanString(payload[key]) !== ''
 }
 
+// ZMQ/HA entities often report JSON state (e.g. {"state":"ON","brightness":120})
+// and select one field with a template like `{{ value_json.state }}`. We only
+// support that single-key form; anything else falls back to raw payload text.
+const parseValueTemplate = (template) => {
+    const raw = cleanString(template)
+    if (!raw) return null
+    const match = raw.match(/\{\{\s*value_json\.([A-Za-z0-9_]+)\s*\}\}/)
+    return match ? match[1] : null
+}
+
 const deriveCapabilities = (component, payload) => {
     const caps = []
     if (component === 'switch' || component === 'light') {
@@ -104,6 +114,7 @@ const parseDiscoveryPayload = (component, nodeId, objectId, payload) => {
         commandTopic: commandTopic || null,
         availabilityTopic: cleanString(payload.availability_topic) || null,
         deviceClass: cleanString(payload.device_class) || null,
+        statePath: parseValueTemplate(payload.value_template),
         capabilities: deriveCapabilities(component, payload),
     }
     const device = {
@@ -121,4 +132,5 @@ module.exports = {
     parseDiscoveryTopic,
     parseDiscoveryPayload,
     deriveCapabilities,
+    parseValueTemplate,
 }

@@ -70,8 +70,8 @@ Re-provisioning: hold a factory reset (or clear NVS) to reopen the portal.
 
 - **Not compile-verified in this repo** (no Arduino toolchain here). Review
   against your board before flashing.
-- TLS (8883) and per-device broker credentials are Phase 6; the portal
-  currently takes host/port/user/pass over the LAN broker (anonymous by
-  default in `mosquitto/mosquitto.conf`).
+- **TLS:** set the portal's "MQTT TLS" field to `true` for an 8883 broker. The
+  sketches use `WiFiClientSecure.setInsecure()` by default (accept any cert) —
+  pin a CA with `setCACert(...)` before trusting it past a lab LAN.
+- **OTA:** ArduinoOTA is enabled as hostname `netsocket-<id>` on the LAN.
 - The switch accepts `ON` / `OFF` / `TOGGLE`. Unknown payloads are ignored.
-- OTA is included as a library but not yet wired into `setup()`.

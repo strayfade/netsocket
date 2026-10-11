@@ -2,8 +2,10 @@
 // long-press events. Buttons are stateless — events are published
 // non-retained so a stale press never replays after a broker restart.
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 
 #include "common/netsocket_device.h"
 
@@ -12,8 +14,9 @@ constexpr int kButtonPin = 5;  // momentary, to GND, INPUT_PULLUP
 constexpr char kEntity[] = "btn0";
 constexpr unsigned long kLongPressMs = 700;
 
-WiFiClient wifiClient;
-PubSubClient mqtt(wifiClient);
+WiFiClient plainClient;
+WiFiClientSecure secureClient;
+PubSubClient mqtt(plainClient);
 netsocket::DeviceConfig cfg;
 netsocket::Device* device = nullptr;
 
@@ -40,6 +43,10 @@ void setup() {
     cfg = netsocket::loadConfig();
     netsocket::connectWifi(cfg);
 
+    mqtt.setClient(cfg.tls ? (Client&)secureClient : (Client&)plainClient);
+    if (cfg.tls) {
+        secureClient.setInsecure();  // bring-up default; pin a CA before shipping
+    }
     mqtt.setServer(cfg.mqttHost.c_str(), cfg.mqttPort);
     mqtt.setBufferSize(1024);
     mqtt.setCallback(onMqttMessage);
@@ -47,10 +54,14 @@ void setup() {
     static netsocket::Device dev(mqtt, cfg);
     device = &dev;
     device->setAnnounceHandler(announce);
+
+    ArduinoOTA.setHostname((String("netsocket-") + netsocket::deviceId()).c_str());
+    ArduinoOTA.begin();
 }
 
 void loop() {
     device->maintain();
+    ArduinoOTA.handle();
 
     int reading = digitalRead(kButtonPin);
     if (reading == LOW && !pressed) {

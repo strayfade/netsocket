@@ -20,6 +20,7 @@ struct DeviceConfig {
     uint16_t mqttPort;
     String mqttUser;
     String mqttPass;
+    bool tls;
     String room;
     String friendlyName;
 };

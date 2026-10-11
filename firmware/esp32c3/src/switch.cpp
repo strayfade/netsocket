@@ -5,8 +5,10 @@
 // powering on (captive portal collects WiFi + broker + room/name), then
 // appears in netsocket's Smart Home inbox for approval.
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 
 #include "common/netsocket_device.h"
 
@@ -16,8 +18,9 @@ constexpr int kButtonPin = 5;   // physical toggle (to GND, INPUT_PULLUP)
 constexpr char kEntity[] = "relay0";
 constexpr char kModel[] = "C3-switch-v1";
 
-WiFiClient wifiClient;
-PubSubClient mqtt(wifiClient);
+WiFiClient plainClient;
+WiFiClientSecure secureClient;
+PubSubClient mqtt(plainClient);
 netsocket::DeviceConfig cfg;
 netsocket::Device* device = nullptr;
 
@@ -60,6 +63,13 @@ void setup() {
     cfg = netsocket::loadConfig();
     netsocket::connectWifi(cfg);
 
+    // Pick the transport after the portal so TLS can be configured on first boot.
+    mqtt.setClient(cfg.tls ? (Client&)secureClient : (Client&)plainClient);
+    if (cfg.tls) {
+        // Bring-up default: accept the broker cert without pinning a CA.
+        // Add secureClient.setCACert(...) before shipping past a lab LAN.
+        secureClient.setInsecure();
+    }
     mqtt.setServer(cfg.mqttHost.c_str(), cfg.mqttPort);
     mqtt.setBufferSize(1024);
     mqtt.setCallback(onMqttMessage);
@@ -68,10 +78,14 @@ void setup() {
     device = &dev;
     device->addCommandEntity(kEntity);
     device->setAnnounceHandler(announce);
+
+    ArduinoOTA.setHostname((String("netsocket-") + netsocket::deviceId()).c_str());
+    ArduinoOTA.begin();
 }
 
 void loop() {
     device->maintain();
+    ArduinoOTA.handle();
 
     int reading = digitalRead(kButtonPin);
     if (reading != lastButtonReading) lastDebounceAt = millis();

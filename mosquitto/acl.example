@@ -1,0 +1,17 @@
+# Example per-device ACL for netsocket's Mosquitto broker.
+# Enable it from mosquitto.conf (`acl_file /mosquitto/config/acl`) together
+# with `allow_anonymous false` and a `password_file`.
+#
+# Convention: each device authenticates with its own username equal to its
+# device id (e.g. `c3-a4cf12ab34`), and %u expands to that username.
+
+# The netsocket server needs to see discovery and all device state.
+user netsocket-server
+topic readwrite #
+
+# Bespoke devices: full access to their own subtree only.
+user c3-a4cf12ab34
+topic readwrite netsocket/dev/c3-a4cf12ab34/#
+
+# Repeat per device. Zigbee2MQTT has its own broker user with access to
+# zigbee2mqtt/# and homeassistant/# on the Z2M config side.

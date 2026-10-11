@@ -25,6 +25,7 @@ DeviceConfig loadConfig() {
     cfg.mqttPort = (uint16_t)prefs.getUShort("mqtt_port", 1883);
     cfg.mqttUser = prefs.getString("mqtt_user", "");
     cfg.mqttPass = prefs.getString("mqtt_pass", "");
+    cfg.tls = prefs.getBool("mqtt_tls", false);
     cfg.room = prefs.getString("room", "");
     cfg.friendlyName = prefs.getString("name", "");
     prefs.end();
@@ -38,6 +39,7 @@ void saveConfig(const DeviceConfig& cfg) {
     prefs.putUShort("mqtt_port", cfg.mqttPort);
     prefs.putString("mqtt_user", cfg.mqttUser);
     prefs.putString("mqtt_pass", cfg.mqttPass);
+    prefs.putBool("mqtt_tls", cfg.tls);
     prefs.putString("room", cfg.room);
     prefs.putString("name", cfg.friendlyName);
     prefs.end();
@@ -113,12 +115,14 @@ String discoveryButton(const char* entity, const char* subtype) {
     WiFiManagerParameter p_port("port", "MQTT broker port", String(cfg.mqttPort).c_str(), 6);
     WiFiManagerParameter p_user("user", "MQTT username (optional)", cfg.mqttUser.c_str(), 64);
     WiFiManagerParameter p_pass("pass", "MQTT password (optional)", cfg.mqttPass.c_str(), 64, "type=\"password\"");
+    WiFiManagerParameter p_tls("tls", "MQTT TLS (true/false)", cfg.tls ? "true" : "false", 6);
     WiFiManagerParameter p_room("room", "Room (optional)", cfg.room.c_str(), 40);
     WiFiManagerParameter p_name("name", "Device name (optional)", cfg.friendlyName.c_str(), 40);
     wm.addParameter(&p_host);
     wm.addParameter(&p_port);
     wm.addParameter(&p_user);
     wm.addParameter(&p_pass);
+    wm.addParameter(&p_tls);
     wm.addParameter(&p_room);
     wm.addParameter(&p_name);
 
@@ -132,6 +136,10 @@ String discoveryButton(const char* entity, const char* subtype) {
     cfg.mqttPort = parsedPort ? parsedPort : 1883;
     cfg.mqttUser = String(p_user.getValue());
     cfg.mqttPass = String(p_pass.getValue());
+    String tlsValue = String(p_tls.getValue());
+    tlsValue.trim();
+    tlsValue.toLowerCase();
+    cfg.tls = (tlsValue == "true" || tlsValue == "1" || tlsValue == "yes");
     cfg.room = String(p_room.getValue());
     cfg.friendlyName = String(p_name.getValue());
     saveConfig(cfg);
