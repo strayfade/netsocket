@@ -881,6 +881,11 @@
                             window.__netsocketOnDevicesChanged(parsedMessage.broadcastData?.devices || []);
                         }
                         break;
+                    case "smartHomeChanged":
+                        if (typeof window.__netsocketOnSmartHomeChanged === 'function') {
+                            window.__netsocketOnSmartHomeChanged(parsedMessage.broadcastData?.devices || []);
+                        }
+                        break;
                     case "populateLog":
                         log.innerHTML = (() => {
                             let newText = ""

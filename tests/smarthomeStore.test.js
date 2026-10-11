@@ -68,8 +68,7 @@ describe('smarthomeStore', () => {
         assert.equal(store.updateState('missing-id', 'ON'), null);
     });
 
-    it('filters listings by status, room, and capability', () => {
-        store.upsertFromDiscovery(disc());
+    it('filters listings by status, room, and capability', () => {        store.upsertFromDiscovery(disc());
         store.rename('netsocket-c3-a4cf12ab', { room: 'Kitchen' });
         store.setStatus('netsocket-c3-a4cf12ab', 'approved');
         assert.equal(store.listDevices({ status: 'pending' }).length, 0);
@@ -78,5 +77,15 @@ describe('smarthomeStore', () => {
         assert.equal(store.listDevices({ capability: 'cover_set' }).length, 0);
         assert.equal(store.setStatus('netsocket-c3-a4cf12ab', 'bogus'), null);
         assert.equal(store.upsertFromDiscovery({ device: {}, entity: {} }), null);
+    });
+
+    it('removes devices and drops their entities', () => {
+        store.upsertFromDiscovery(disc());
+        assert.equal(store.removeDevice('missing'), false);
+        assert.equal(store.removeDevice('netsocket-c3-a4cf12ab'), true);
+        assert.equal(store.getDevice('netsocket-c3-a4cf12ab'), null);
+        assert.equal(store.getEntity('c3-a4cf12ab-relay0'), null);
+        assert.deepEqual(store.listDevices(), []);
+        assert.equal(store.removeDevice('netsocket-c3-a4cf12ab'), false);
     });
 });

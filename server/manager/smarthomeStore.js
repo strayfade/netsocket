@@ -209,6 +209,14 @@ const getDevice = (deviceId) => {
     return publicDeviceView(store.devices[key])
 }
 
+const removeDevice = (deviceId) => {
+    const key = normalizeId(deviceId)
+    if (!key || !store.devices[key]) return false
+    delete store.devices[key]
+    persist()
+    return true
+}
+
 const getEntity = (uniqueId) => {
     const owner = findEntityOwner(uniqueId)
     if (!owner) return null
@@ -238,6 +246,7 @@ module.exports = {
     updateAvailability,
     getDevice,
     getEntity,
+    removeDevice,
     listDevices,
     resetForTests,
     load,

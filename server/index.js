@@ -65,6 +65,8 @@ let connectedClients = [];
 // Store connected clients
 const { setWsServerConnectedClients, registerConversation, registerDevice, unregisterSocket, normalizeId } = require('./utils/alert.js')
 const deviceRegistry = require('./manager/deviceRegistry')
+const smarthomeStore = require('./manager/smarthomeStore')
+const smarthomeApi = require('./manager/smarthomeApi')
 const deviceAuth = require('./utils/deviceAuth')
 const { executeGraph } = require('./manager/execute')
 const { setLinkActivityBroadcaster } = require('./manager/linkDebug')
@@ -93,6 +95,15 @@ const broadcastDevicesChanged = () => {
         broadcastPurpose: 'devicesChanged',
         broadcastData: {
             devices: deviceRegistry.listDevices(),
+        },
+    })
+}
+
+const broadcastSmartHomeChanged = () => {
+    broadcastToEditorClients({
+        broadcastPurpose: 'smartHomeChanged',
+        broadcastData: {
+            devices: smarthomeStore.listDevices(),
         },
     })
 }
@@ -908,6 +919,23 @@ app.delete('/v1/devices/:deviceId', (req, res) => {
     return res.sendStatus(204)
 })
 
+// MARK: Smart home registry (session-authenticated only)
+app.get('/v1/smarthome/devices', (req, res) => {
+    smarthomeApi.handleListDevices(req, res)
+})
+
+app.post('/v1/smarthome/devices/:deviceId/:action', (req, res) => {
+    smarthomeApi.handleSetDeviceStatus(req, res, { onChanged: broadcastSmartHomeChanged })
+})
+
+app.patch('/v1/smarthome/devices/:deviceId', (req, res) => {
+    smarthomeApi.handleRenameDevice(req, res, { onChanged: broadcastSmartHomeChanged })
+})
+
+app.delete('/v1/smarthome/devices/:deviceId', (req, res) => {
+    smarthomeApi.handleRemoveDevice(req, res, { onChanged: broadcastSmartHomeChanged })
+})
+
 // MARK: Preferences (REST mirror of WS getPreferences/saveSetting) — allows Settings modal on any tab
 app.get('/v1/preferences', (req, res) => {
     if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
@@ -1274,6 +1302,7 @@ const { killProcessOnPort } = require('./utils/killProcessOnPort');
         startGoogleTriggerPoller()
         try {
             require('./utils/mqttClient').initSmartHomeMqtt()
+            require('./utils/mqttClient').setRegistryChangeListener(broadcastSmartHomeChanged)
         } catch (e) {
             log(`Smart Home MQTT init error: ${e}`, logColors.Error)
         }

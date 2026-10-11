@@ -165,7 +165,7 @@
             return field;
         };
 
-        var renderPreferences = function (list, devicesList) {
+        var renderPreferences = function (list, devicesList, smartHomeDevicesList) {
             tabsContainerEl.innerHTML = '';
             panelsScrollEl.innerHTML = '';
             var prefs = Array.isArray(list) ? list : [];
@@ -185,6 +185,7 @@
             var iconForCategory = function (cat) {
                 var map = {
                     'Devices': 'devices',
+                    'Smart Home': 'home',
                     'AI Providers': 'smart_toy',
                     'Rendering': 'tune',
                     'Email': 'mail',
@@ -221,6 +222,13 @@
                 var s = String(id || '');
                 if (s.length <= 18) return s;
                 return s.slice(0, 8) + '…' + s.slice(-6);
+            };
+            var escHtml = function (value) {
+                return String(value == null ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
             };
             var deviceAction = async function (deviceId, action) {
                 var url = action === 'remove' ? '/v1/devices/' + encodeURIComponent(deviceId) : '/v1/devices/' + encodeURIComponent(deviceId) + '/' + action;
@@ -353,6 +361,207 @@
                 panelsScrollEl.appendChild(devicesPanelEl);
                 panels.push(devicesPanelEl);
                 renderDevicesPanel(devicesList || []);
+            })();
+
+            // Smart Home tab (MQTT registry: pairing inbox, naming, removal)
+            var smartHomePanelEl = null;
+            var smartHomeAction = async function (deviceId, action) {
+                var url = action === 'remove'
+                    ? '/v1/smarthome/devices/' + encodeURIComponent(deviceId)
+                    : '/v1/smarthome/devices/' + encodeURIComponent(deviceId) + '/' + action;
+                var method = action === 'remove' ? 'DELETE' : 'POST';
+                var res = await fetch(url, { method: method, credentials: 'same-origin' });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                if (action !== 'remove') {
+                    var json = await res.json().catch(function () { return {}; });
+                    return json.device;
+                }
+                return null;
+            };
+            var saveSmartHomeIdentity = async function (deviceId, friendlyName, room) {
+                var res = await fetch('/v1/smarthome/devices/' + encodeURIComponent(deviceId), {
+                    method: 'PATCH',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ friendlyName: friendlyName, room: room })
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                var json = await res.json().catch(function () { return {}; });
+                return json.device;
+            };
+            var fetchSmartHomeDevices = async function () {
+                var res = await fetch('/v1/smarthome/devices', { credentials: 'same-origin' });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                var json = await res.json();
+                return Array.isArray(json.devices) ? json.devices : [];
+            };
+            var renderSmartHomePanel = function (devices) {
+                if (!smartHomePanelEl) return;
+                smartHomePanelEl.innerHTML = '';
+                var groups = [
+                    { key: 'pending', title: 'Pending approval', empty: 'No smart-home devices waiting. Power on a device and it appears here.' },
+                    { key: 'approved', title: 'Approved', empty: 'No approved smart-home devices yet.' },
+                    { key: 'denied', title: 'Denied', empty: 'No denied devices.' }
+                ];
+                var list = Array.isArray(devices) ? devices : [];
+                for (var gi = 0; gi < groups.length; gi++) {
+                    var group = groups[gi];
+                    var section = document.createElement('div');
+                    section.className = 'devices-section';
+                    var heading = document.createElement('h3');
+                    heading.textContent = group.title;
+                    section.appendChild(heading);
+                    var matching = list.filter(function (d) { return d.status === group.key; });
+                    if (!matching.length) {
+                        var empty = document.createElement('p');
+                        empty.className = 'devices-empty';
+                        empty.textContent = group.empty;
+                        section.appendChild(empty);
+                    } else {
+                        for (var di = 0; di < matching.length; di++) {
+                            section.appendChild(renderSmartHomeCard(matching[di]));
+                        }
+                    }
+                    smartHomePanelEl.appendChild(section);
+                }
+            };
+            var renderSmartHomeCard = function (device) {
+                var card = document.createElement('div');
+                card.className = 'device-card device-card-' + device.status;
+                var top = document.createElement('div');
+                top.className = 'device-card-top';
+                var title = document.createElement('div');
+                title.className = 'device-card-title';
+                title.textContent = device.friendlyName || device.deviceId;
+                var badge = document.createElement('span');
+                badge.className = 'device-status-badge device-status-' + device.status;
+                badge.textContent = device.status;
+                top.appendChild(title);
+                top.appendChild(badge);
+                card.appendChild(top);
+                var entities = Array.isArray(device.entities) ? device.entities : [];
+                var modelText = ((device.manufacturer || '') + ' ' + (device.model || '')).trim() || '—';
+                var meta = document.createElement('div');
+                meta.className = 'device-card-meta';
+                meta.innerHTML = [
+                    '<div><span>Device ID</span><code title="' + escHtml(device.deviceId) + '">' + escHtml(shortId(device.deviceId)) + '</code></div>',
+                    '<div><span>Room</span><code>' + escHtml(device.room || '—') + '</code></div>',
+                    '<div><span>Source</span><code>' + escHtml(device.source || 'bespoke') + '</code></div>',
+                    '<div><span>Model</span><code>' + escHtml(modelText) + '</code></div>',
+                    '<div><span>Availability</span><code>' + escHtml(device.availability || 'unknown') + '</code></div>',
+                    '<div><span>Last seen</span><code>' + escHtml(formatTime(device.lastSeenAt)) + '</code></div>'
+                ].join('');
+                card.appendChild(meta);
+                if (entities.length) {
+                    var entWrap = document.createElement('div');
+                    entWrap.className = 'device-card-meta';
+                    for (var ei = 0; ei < entities.length; ei++) {
+                        var ent = entities[ei];
+                        var row = document.createElement('div');
+                        var caps = Array.isArray(ent.capabilities) ? ent.capabilities.join(', ') : '';
+                        row.innerHTML = '<div><span>Entity</span><code></code></div>';
+                        row.querySelector('code').textContent =
+                            (ent.component || '?') + ' · ' + (ent.objectId || ent.uniqueId) +
+                            (caps ? ' · ' + caps : '') +
+                            (ent.lastState != null && ent.lastState !== '' ? ' · last: ' + ent.lastState : '');
+                        entWrap.appendChild(row);
+                    }
+                    card.appendChild(entWrap);
+                }
+                var nameRow = document.createElement('div');
+                nameRow.className = 'settings-field-row';
+                var nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.placeholder = 'Friendly name';
+                nameInput.value = device.friendlyName || '';
+                nameInput.setAttribute('aria-label', 'Friendly name');
+                var roomInput = document.createElement('input');
+                roomInput.type = 'text';
+                roomInput.placeholder = 'Room';
+                roomInput.value = device.room || '';
+                roomInput.setAttribute('aria-label', 'Room');
+                var saveBtn = document.createElement('button');
+                saveBtn.type = 'button';
+                saveBtn.textContent = 'Save';
+                nameRow.appendChild(nameInput);
+                nameRow.appendChild(roomInput);
+                nameRow.appendChild(saveBtn);
+                card.appendChild(nameRow);
+                var refreshSmartHome = async function () {
+                    renderSmartHomePanel(await fetchSmartHomeDevices());
+                };
+                saveBtn.addEventListener('click', async function () {
+                    try {
+                        await saveSmartHomeIdentity(device.deviceId, nameInput.value, roomInput.value);
+                        saveBtn.textContent = 'Saved';
+                        setTimeout(function () { saveBtn.textContent = 'Save'; }, 1400);
+                        await refreshSmartHome();
+                    } catch (err) {
+                        console.warn('Smart Home rename failed', err);
+                        window.alert('Could not save name and room.');
+                    }
+                });
+                var actions = document.createElement('div');
+                actions.className = 'device-card-actions';
+                (function (dev) {
+                    var run = async function (action, label) {
+                        try {
+                            await smartHomeAction(dev.deviceId, action);
+                            await refreshSmartHome();
+                        } catch (err) {
+                            console.warn('Smart Home ' + label + ' failed', err);
+                            window.alert('Could not ' + label + ' device.');
+                        }
+                    };
+                    if (dev.status === 'pending' || dev.status === 'denied') {
+                        var approveBtn = document.createElement('button');
+                        approveBtn.type = 'button';
+                        approveBtn.textContent = 'Approve';
+                        approveBtn.addEventListener('click', function () { run('approve', 'approve'); });
+                        actions.appendChild(approveBtn);
+                    }
+                    if (dev.status === 'pending' || dev.status === 'approved') {
+                        var denyBtn = document.createElement('button');
+                        denyBtn.type = 'button';
+                        denyBtn.className = 'device-btn-danger';
+                        denyBtn.textContent = 'Deny';
+                        denyBtn.addEventListener('click', function () { run('deny', 'deny'); });
+                        actions.appendChild(denyBtn);
+                    }
+                    if (dev.status === 'approved') {
+                        var pendingBtn = document.createElement('button');
+                        pendingBtn.type = 'button';
+                        pendingBtn.textContent = 'Revoke';
+                        pendingBtn.addEventListener('click', function () { run('pending', 'revoke'); });
+                        actions.appendChild(pendingBtn);
+                    }
+                    var removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'device-btn-muted';
+                    removeBtn.textContent = 'Remove';
+                    removeBtn.addEventListener('click', function () {
+                        if (!window.confirm('Remove this device permanently? It will need to pair again.')) return;
+                        run('remove', 'remove');
+                    });
+                    actions.appendChild(removeBtn);
+                })(device);
+                card.appendChild(actions);
+                return card;
+            };
+            (function () {
+                var tab = document.createElement('div');
+                tab.className = 'settings-tab';
+                tab.innerHTML = tabWithIcon('Smart Home');
+                var tabIndex = tabs.length;
+                tab.addEventListener('click', function () { showTab(tabIndex); });
+                tabsContainerEl.appendChild(tab);
+                tabs.push(tab);
+                smartHomePanelEl = document.createElement('div');
+                smartHomePanelEl.className = 'settings-panel';
+                smartHomePanelEl.style.display = 'none';
+                panelsScrollEl.appendChild(smartHomePanelEl);
+                panels.push(smartHomePanelEl);
+                renderSmartHomePanel(smartHomeDevicesList || []);
             })();
 
             // AI Providers
@@ -711,6 +920,11 @@
                     renderDevicesPanel(devices);
                 }
             };
+            window.__netsocketOnSmartHomeChanged = function (devices) {
+                if (settingsModal.style.display === 'block') {
+                    renderSmartHomePanel(devices);
+                }
+            };
         };
 
         // Expose for manual refresh
@@ -728,8 +942,16 @@
                     devices = Array.isArray(json.devices) ? json.devices : [];
                 }
             } catch (err) { console.warn('Failed to load devices', err); }
+            var smartHomeDevices = [];
+            try {
+                var shRes = await fetch('/v1/smarthome/devices', { credentials: 'same-origin' });
+                if (shRes.ok) {
+                    var shJson = await shRes.json();
+                    smartHomeDevices = Array.isArray(shJson.devices) ? shJson.devices : [];
+                }
+            } catch (err) { console.warn('Failed to load smart-home devices', err); }
             var prefs = await fetchPreferences();
-            renderPreferences(prefs, devices);
+            renderPreferences(prefs, devices, smartHomeDevices);
         };
 
         openSettingsBtns.forEach(function (btn) {

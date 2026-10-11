@@ -138,4 +138,32 @@ describe('mqttClient', () => {
         });
         assert.equal(offline.ok, false);
     });
+
+    it('notifies the registry listener only for brand-new entities', async () => {
+        let notifications = 0;
+        mqttClient.setRegistryChangeListener(() => { notifications += 1; });
+        const payload = {
+            device: { identifiers: ['d9'], name: 'New Device' },
+            unique_id: 'e9',
+            state_topic: 'netsocket/dev/d9/state',
+        };
+        const deps = {
+            store: {
+                listDevices: () => [],
+                upsertFromDiscovery: () => ({ deviceId: 'd9', created: true }),
+            },
+            discovery,
+            discoveryPrefix: 'homeassistant',
+        };
+        mqttClient.handleMessage('homeassistant/switch/n/e/config', Buffer.from(JSON.stringify(payload)), deps);
+        await new Promise((resolve) => setImmediate(resolve));
+        assert.equal(notifications, 1);
+        const repeat = {
+            ...deps,
+            store: { ...deps.store, upsertFromDiscovery: () => ({ deviceId: 'd9', created: false }) },
+        };
+        mqttClient.handleMessage('homeassistant/switch/n/e/config', Buffer.from(JSON.stringify(payload)), repeat);
+        await new Promise((resolve) => setImmediate(resolve));
+        assert.equal(notifications, 1);
+    });
 });

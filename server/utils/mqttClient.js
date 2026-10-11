@@ -56,6 +56,24 @@ const topicIndex = new Map()
 /** Fire-and-forget subscribers for approved device state changes (trigger dispatch). */
 const stateListeners = []
 
+/** Notified when a discovery message registers a brand-new entity (live inbox). */
+let registryChangeListener = null
+
+const setRegistryChangeListener = (fn) => {
+    registryChangeListener = typeof fn === 'function' ? fn : null
+}
+
+const notifyRegistryChanged = () => {
+    if (!registryChangeListener) return
+    try {
+        Promise.resolve()
+            .then(() => registryChangeListener())
+            .catch((err) => log(`Smart Home registry listener failed: ${err}`, logColors.Error))
+    } catch (err) {
+        log(`Smart Home registry listener failed: ${err}`, logColors.Error)
+    }
+}
+
 const addStateListener = (fn) => {
     if (typeof fn === 'function' && !stateListeners.includes(fn)) stateListeners.push(fn)
 }
@@ -152,6 +170,7 @@ const handleMessage = (topic, payloadBuffer, deps) => {
             source: detectSource(result.entity.stateTopic),
         })
         rebuildTopicIndex(storeLib)
+        if (outcome && outcome.created) notifyRegistryChanged()
         return { routed: true, kind: 'discovery', deviceId: outcome && outcome.deviceId }
     }
     const indexed = topicIndex.get(cleanTopic)
@@ -248,6 +267,7 @@ const resetForTests = () => {
     activeUrl = ''
     topicIndex.clear()
     stateListeners.length = 0
+    registryChangeListener = null
 }
 
 module.exports = {
@@ -259,5 +279,6 @@ module.exports = {
     rebuildTopicIndex,
     addStateListener,
     removeStateListener,
+    setRegistryChangeListener,
     resetForTests,
 }
