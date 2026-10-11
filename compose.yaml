@@ -23,6 +23,23 @@ services:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mosquitto-data:/mosquitto/data
     restart: always
+  # Optional off-the-shelf Zigbee bridge. Requires a USB coordinator; start
+  # with: docker compose --profile zigbee up -d
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:latest
+    container_name: netsocket-z2m
+    profiles: ["zigbee"]
+    ports:
+      - 8080:8080
+    volumes:
+      - ./z2m/configuration.yaml:/app/configuration.yaml
+      - z2m-data:/app/data
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0 # change to your coordinator path
+    depends_on:
+      - mosquitto
+    restart: always
 volumes:
   netsocket-data:
   mosquitto-data:
+  z2m-data:

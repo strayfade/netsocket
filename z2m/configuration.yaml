@@ -1,0 +1,33 @@
+# Zigbee2MQTT sidecar config for netsocket.
+#
+# Off-the-shelf Zigbee blinds/switches/outlets pair in Z2M and are exposed
+# to netsocket through the SAME Home Assistant discovery dialect the
+# bespoke ESP32-C3 devices use, so they land in the same Smart Home inbox.
+#
+# Run with:  docker compose --profile zigbee up -d
+# Set the serial port/adapter to match your coordinator (see below).
+
+mqtt:
+  server: mqtt://mosquitto:1883
+  base_topic: zigbee2mqtt
+
+serial:
+  # Common coordinator paths: /dev/ttyUSB0 (CC2652/Sonoff), /dev/ttyACM0 (Conbee/SkyConnect).
+  port: /dev/ttyUSB0
+  adapter: zstack # zstack | ember | deconz | zigate | znp
+
+frontend:
+  port: 8080
+
+# Emit Home Assistant discovery payloads to homeassistant/<component>/...
+# netsocket subscribes to <discoveryPrefix>/# and ingests them unchanged.
+homeassistant:
+  enabled: true
+  discovery_topic: homeassistant
+
+advanced:
+  # Keep retained state so netsocket's cache is correct after its restarts.
+  last_seen: ISO_8601
+  transmit_power: 14
+
+permit_join: false
