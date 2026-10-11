@@ -1272,6 +1272,11 @@ const { killProcessOnPort } = require('./utils/killProcessOnPort');
     }
     server.listen(PORT, HOSTNAME, () => {
         startGoogleTriggerPoller()
+        try {
+            require('./utils/mqttClient').initSmartHomeMqtt()
+        } catch (e) {
+            log(`Smart Home MQTT init error: ${e}`, logColors.Error)
+        }
         log(`Imported ${require('./manager/nodeImporter').getNumNodesImported()} nodes`)
         log(`Server running on http://127.0.0.1:${PORT}`)
         log(`Dashboard URL: http://127.0.0.1:${PORT}/dashboard`)

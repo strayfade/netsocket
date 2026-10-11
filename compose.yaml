@@ -11,6 +11,18 @@ services:
       - DATA_DIR=/netsocket/data
     volumes:
       - netsocket-data:/netsocket/data
+    depends_on:
+      - mosquitto
+    restart: always
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: netsocket-mosquitto
+    ports:
+      - 1883:1883
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
     restart: always
 volumes:
   netsocket-data:
+  mosquitto-data:
