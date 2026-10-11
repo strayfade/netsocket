@@ -31,16 +31,20 @@ const listSettings = () => {
     return {
         success: true,
         count: defs.length,
-        settings: defs.map((pref) => ({
-            category: pref.category,
-            id: pref.id,
-            displayName: pref.displayName,
-            type: pref.type,
-            defaultVal: pref.defaultVal,
-            description: pref.description || '',
-            secret: isSecretPref(pref.id),
-            ...maskPrefValue(pref, settingsManager.getStoredValue(pref.id)),
-        })),
+        settings: defs.map((pref) => {
+            const entry = {
+                category: pref.category,
+                id: pref.id,
+                displayName: pref.displayName,
+                type: pref.type,
+                defaultVal: pref.defaultVal,
+                description: pref.description || '',
+                secret: isSecretPref(pref.id),
+                ...maskPrefValue(pref, settingsManager.getStoredValue(pref.id)),
+            }
+            if (Array.isArray(pref.options) && pref.options.length) entry.options = pref.options
+            return entry
+        }),
     }
 }
 

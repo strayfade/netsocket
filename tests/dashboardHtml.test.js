@@ -11,6 +11,18 @@ const readFrontend = (name) => fs.readFileSync(
 );
 
 describe('dashboard shell pages', () => {
+    it('puts Automate first in the sidebar on every shell page', () => {
+        for (const name of ['dashboard.html', 'panels.html', 'editor.html']) {
+            const html = readFrontend(name);
+            const automate = html.indexOf('data-shell-tab="automate"');
+            const dashboard = html.indexOf('data-shell-tab="dashboard"');
+            const panels = html.indexOf('data-shell-tab="panels"');
+            assert.ok(automate !== -1 && dashboard !== -1 && panels !== -1);
+            assert.ok(automate < dashboard, `${name}: Automate should precede Dashboard`);
+            assert.ok(dashboard < panels, `${name}: Dashboard should precede Panels`);
+        }
+    });
+
     it('dashboard.html renders a GridStack grid with safe content slots', () => {
         const html = readFrontend('dashboard.html');
         const editorJs = readFrontend('public/js/widgetEditor.js');

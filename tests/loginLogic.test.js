@@ -161,9 +161,9 @@ describe('loginLogic', () => {
     });
 
     describe('resolveRedirectTarget', () => {
-        it('defaults to dashboard when redirect is missing', () => {
-            assert.equal(resolveRedirectTarget(null), '/dashboard');
-            assert.equal(resolveRedirectTarget(undefined), '/dashboard');
+        it('defaults to / so the server can apply the configured default tab', () => {
+            assert.equal(resolveRedirectTarget(null), '/');
+            assert.equal(resolveRedirectTarget(undefined), '/');
         });
 
         it('allows same-origin relative paths', () => {
@@ -172,9 +172,9 @@ describe('loginLogic', () => {
         });
 
         it('blocks protocol-relative and external redirects', () => {
-            assert.equal(resolveRedirectTarget('//evil.example'), '/dashboard');
-            assert.equal(resolveRedirectTarget('https://evil.example'), '/dashboard');
-            assert.equal(resolveRedirectTarget('dashboard'), '/dashboard');
+            assert.equal(resolveRedirectTarget('//evil.example'), '/');
+            assert.equal(resolveRedirectTarget('https://evil.example'), '/');
+            assert.equal(resolveRedirectTarget('dashboard'), '/');
         });
     });
 

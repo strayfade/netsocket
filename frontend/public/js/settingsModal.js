@@ -137,7 +137,19 @@
             var row3 = document.createElement('div');
             row3.className = 'settings-field-row';
             var control3;
-            if (pref.type === 'number') {
+            if (pref.type === 'select') {
+                control3 = document.createElement('select');
+                var current = pref.value != null ? String(pref.value) : '';
+                var selectOpts = Array.isArray(pref.options) ? pref.options : [];
+                for (var oi = 0; oi < selectOpts.length; oi++) {
+                    var optDef = selectOpts[oi] || {};
+                    var opt = document.createElement('option');
+                    opt.value = optDef.value != null ? String(optDef.value) : '';
+                    opt.textContent = optDef.label != null ? String(optDef.label) : opt.value;
+                    if (opt.value === current) opt.selected = true;
+                    control3.appendChild(opt);
+                }
+            } else if (pref.type === 'number') {
                 control3 = document.createElement('input');
                 control3.type = 'number';
                 control3.value = pref.value != null ? String(pref.value) : '';
@@ -188,6 +200,7 @@
                     'Smart Home': 'home',
                     'AI Providers': 'smart_toy',
                     'Rendering': 'tune',
+                    'Interface': 'space_dashboard',
                     'Email': 'mail',
                     'Google': 'cloud',
                     'Philips Hue': 'lightbulb',

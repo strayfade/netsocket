@@ -127,7 +127,8 @@
             && !redirectParam.startsWith('//')) {
             return redirectParam;
         }
-        return '/dashboard';
+        // Let the server apply the configured default tab (Dashboard/Automate/Panels).
+        return '/';
     }
 
     function getNoticeVariantForError(status, errorCode) {

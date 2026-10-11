@@ -51,6 +51,7 @@ const { reloadVars, getVarsSnapshot, replaceVarsAndPersist, onVarsChanged } = re
 const { reloadMcpAgentMemory } = require('./utils/mcpAgentMemory.js')
 const nodePreferencesRegistry = require('./manager/nodePreferencesRegistry')
 require('./utils/mcpAgentSettings')
+const { resolveDefaultTabPath } = require('./manager/uiPreferences')
 const { SCOPES, buildOAuthClient, getStoredTokens, mergeTokenSets, persistOAuthSession, CONNECTED_EMAIL_KEY } = require('./utils/googleAuth')
 const { startGoogleTriggerPoller } = require('./utils/googleTriggerPoller')
 const providerManager = require('./manager/providerManager')
@@ -269,7 +270,7 @@ const handleTrustedMessage = async (socket, message) => {
                     stored = email !== undefined ? email : stored
                 }
                 const fallback = p.defaultVal != null && p.defaultVal !== '' ? String(p.defaultVal) : ''
-                return {
+                const entry = {
                     category: p.category,
                     id: p.id,
                     displayName: p.displayName,
@@ -278,6 +279,8 @@ const handleTrustedMessage = async (socket, message) => {
                     description: p.description || '',
                     value: stored !== undefined ? stored : fallback,
                 }
+                if (Array.isArray(p.options) && p.options.length) entry.options = p.options
+                return entry
             })
             socket.send(JSON.stringify({
                 broadcastPurpose: 'getPreferences',
@@ -780,7 +783,11 @@ app.delete('/v1/panels/:panelId', (req, res) => panelApi.handleDeletePanel(req, 
 app.post('/v1/panels/:panelId/execute', (req, res) => panelApi.handlePanelExecute(req, res))
 app.use('/', express.static(path.join(__dirname, '../frontend/public')));
 app.get("/", (req, res) => {
-    res.redirect(302, "/login");
+    const target = resolveDefaultTabPath()
+    if (authSkipped() || hasUserSession(req, res)) {
+        return res.redirect(302, target)
+    }
+    return res.redirect(302, `/login?redirect=${encodeURIComponent(target)}`)
 });
 const { onNewCommand } = require('./utils/waitForCommands.js')
 
@@ -947,7 +954,7 @@ app.get('/v1/preferences', (req, res) => {
             stored = email !== undefined ? email : stored
         }
         const fallback = p.defaultVal != null && p.defaultVal !== '' ? String(p.defaultVal) : ''
-        return {
+        const entry = {
             category: p.category,
             id: p.id,
             displayName: p.displayName,
@@ -956,6 +963,8 @@ app.get('/v1/preferences', (req, res) => {
             description: p.description || '',
             value: stored !== undefined ? stored : fallback,
         }
+        if (Array.isArray(p.options) && p.options.length) entry.options = p.options
+        return entry
     })
     return res.status(200).json({ preferences: withValues })
 })
@@ -1102,8 +1111,8 @@ app.post("/login", loginRateLimit, async (req, res) => {
     }
 })
 app.get("/login", (req, res) => {
-    if (hasUserSession(req, res)) {
-        return res.redirect(302, "/dashboard");
+    if (authSkipped() || hasUserSession(req, res)) {
+        return res.redirect(302, resolveDefaultTabPath());
     }
     res.status(200).sendFile(path.join(__dirname, "../frontend/index.html"));
 });

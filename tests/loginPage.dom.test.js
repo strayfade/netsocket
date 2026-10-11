@@ -149,7 +149,7 @@ describe('loginPage DOM integration', () => {
         dom.window.document.getElementById('password').value = 'secret-pass';
         await page.login(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
 
-        assert.equal(redirectedTo, '/dashboard');
+        assert.equal(redirectedTo, '/');
     });
 
     it('surfaces API password validation errors during registration', async () => {
