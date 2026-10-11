@@ -236,6 +236,28 @@
             }
         }
 
+        const GRID_CONTRAST_STORAGE_KEY = "netsocket:gridContrast";
+        const readStoredGridContrast = () => {
+            try {
+                const raw = localStorage.getItem(GRID_CONTRAST_STORAGE_KEY);
+                if (raw != null) return LGraphCanvas.clampBackgroundContrast(raw);
+            } catch (e) { /* ignore */ }
+            return LGraphCanvas.BACKGROUND_CONTRAST_DEFAULT;
+        };
+        const writeStoredGridContrast = (percent) => {
+            try {
+                localStorage.setItem(GRID_CONTRAST_STORAGE_KEY, String(percent));
+            } catch (e) { /* ignore */ }
+        };
+        window.setNetsocketGridContrast = (percent) => {
+            const applied = canvas.setBackgroundContrast(percent);
+            writeStoredGridContrast(applied);
+            return applied;
+        };
+        window.getNetsocketGridContrast = () =>
+            canvas.background_contrast != null ? canvas.background_contrast : readStoredGridContrast();
+        window.setNetsocketGridContrast(readStoredGridContrast());
+
         // Persist the viewport pan/zoom (canvas.ds.offset + canvas.ds.scale) per view so
         // reloading the page restores where the user was looking instead of resetting.
         // The active view is keyed: "main" for the top-level graph, "subgraph:<id>" for each

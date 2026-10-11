@@ -610,12 +610,12 @@ export default function App() {
   }, [handleShow]);
 
   useEffect(() => {
-    let isMounted = true;
+    let cancelled = false;
     let unbindEvents = () => {};
     let unlistenFocus = () => {};
 
     const init = async () => {
-      unbindEvents = await api.bindOverlayEvents({
+      const unbind = await api.bindOverlayEvents({
         onShow: handleShow,
         onHideIntent: startClose,
         onConnectionState: (nextState) => {
@@ -663,19 +663,27 @@ export default function App() {
           setTimeout(() => setSaveNotice(""), 1800);
         },
       });
-
-      if (!isMounted) return;
+      if (cancelled) {
+        unbind();
+        return;
+      }
+      unbindEvents = unbind;
 
       try {
-        unlistenFocus = await getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+        const unlisten = await getCurrentWindow().onFocusChanged(({ payload: focused }) => {
           if (focused) syncInteractiveState();
         });
+        if (cancelled) {
+          unlisten();
+          return;
+        }
+        unlistenFocus = unlisten;
       } catch {
         // Browser preview fallback.
       }
 
       const loaded = await api.getSettings();
-      if (!isMounted) return;
+      if (cancelled) return;
       const safe = loaded || defaultSettings;
       settingsHydratedRef.current = false;
       setSettings(safe);
@@ -686,14 +694,14 @@ export default function App() {
       });
 
       await api.notifyReady?.();
-      if (!isMounted) return;
+      if (cancelled) return;
       await syncInteractiveState();
     };
 
     init();
 
     return () => {
-      isMounted = false;
+      cancelled = true;
       if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
       clearResponseTimeout();
       clearFlyInTimeouts();

@@ -905,6 +905,74 @@
                 });
                 resField.appendChild(resPresets);
                 panel.appendChild(resField);
+                var contrastMin = (window.LGraphCanvas && LGraphCanvas.BACKGROUND_CONTRAST_MIN != null) ? LGraphCanvas.BACKGROUND_CONTRAST_MIN : 0;
+                var contrastMax = (window.LGraphCanvas && LGraphCanvas.BACKGROUND_CONTRAST_MAX != null) ? LGraphCanvas.BACKGROUND_CONTRAST_MAX : 200;
+                var contrastDefault = (window.LGraphCanvas && LGraphCanvas.BACKGROUND_CONTRAST_DEFAULT != null) ? LGraphCanvas.BACKGROUND_CONTRAST_DEFAULT : 100;
+                var GRID_CONTRAST_STORAGE_KEY = 'netsocket:gridContrast';
+                var clampContrast = function (value) {
+                    if (window.LGraphCanvas && typeof LGraphCanvas.clampBackgroundContrast === 'function') {
+                        return LGraphCanvas.clampBackgroundContrast(value);
+                    }
+                    var n = Math.round(Number(value));
+                    if (!isFinite(n)) return contrastDefault;
+                    return Math.max(contrastMin, Math.min(contrastMax, n));
+                };
+                var readGridContrast = function () {
+                    if (typeof window.getNetsocketGridContrast === 'function') return clampContrast(window.getNetsocketGridContrast());
+                    try {
+                        var raw = localStorage.getItem(GRID_CONTRAST_STORAGE_KEY);
+                        if (raw != null && raw !== '') return clampContrast(raw);
+                    } catch (e) { /* ignore */ }
+                    return contrastDefault;
+                };
+                var contrastField = document.createElement('div');
+                contrastField.className = 'settings-field';
+                var contrastTitle = document.createElement('div');
+                contrastTitle.className = 'settings-label-block';
+                contrastTitle.textContent = 'Grid contrast';
+                contrastField.appendChild(contrastTitle);
+                var contrastRow = document.createElement('div');
+                contrastRow.className = 'settings-field-row settings-render-resolution';
+                var contrastRange = document.createElement('input');
+                contrastRange.type = 'range';
+                contrastRange.min = String(contrastMin);
+                contrastRange.max = String(contrastMax);
+                contrastRange.step = '5';
+                contrastRange.setAttribute('aria-label', 'Grid contrast');
+                contrastRange.value = String(readGridContrast());
+                var contrastValue = document.createElement('span');
+                contrastValue.className = 'settings-render-resolution-value';
+                var syncContrastLabel = function () { contrastValue.textContent = contrastRange.value + '%'; };
+                syncContrastLabel();
+                var applyContrast = function () {
+                    var applied = clampContrast(contrastRange.value);
+                    if (typeof window.setNetsocketGridContrast === 'function') {
+                        applied = window.setNetsocketGridContrast(applied);
+                    } else {
+                        try { localStorage.setItem(GRID_CONTRAST_STORAGE_KEY, String(applied)); } catch (e) { /* ignore */ }
+                    }
+                    contrastRange.value = String(applied);
+                    syncContrastLabel();
+                };
+                contrastRange.addEventListener('input', applyContrast);
+                contrastRow.appendChild(contrastRange);
+                contrastRow.appendChild(contrastValue);
+                contrastField.appendChild(contrastRow);
+                var contrastPresets = document.createElement('div');
+                contrastPresets.className = 'settings-field-row settings-quality-presets';
+                [50, 100, 200].forEach(function (pct) {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'settings-quality-btn';
+                    btn.textContent = pct + '%';
+                    btn.addEventListener('click', function () {
+                        contrastRange.value = String(pct);
+                        applyContrast();
+                    });
+                    contrastPresets.appendChild(btn);
+                });
+                contrastField.appendChild(contrastPresets);
+                panel.appendChild(contrastField);
                 panelsScrollEl.appendChild(panel);
                 panels.push(panel);
             })();

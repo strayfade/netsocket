@@ -5520,6 +5520,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.force_simple_shapes = false; // treat all nodes as low-quality shapes
         this.render_quality = "medium";
         this.render_resolution = 100; // percent of CSS size × devicePixelRatio for the backing store
+        this.background_contrast = 100; // 100 = shipped grid; 0 hides it, higher makes the grid stronger
         this.editor_alpha = 1; //used for transition
         this.pause_rendering = false;
         this.clear_background = true;
@@ -5609,6 +5610,39 @@ LGraphNode.prototype.executeAction = function(action)
     global.LGraphCanvas = LiteGraph.LGraphCanvas = LGraphCanvas;
 
     LGraphCanvas.DEFAULT_BACKGROUND_IMAGE = "/graph-background.png";
+
+    /** Settings slider range for the nodegraph grid. 100 matches the source tile. */
+    LGraphCanvas.BACKGROUND_CONTRAST_MIN = 0;
+    LGraphCanvas.BACKGROUND_CONTRAST_MAX = 200;
+    LGraphCanvas.BACKGROUND_CONTRAST_DEFAULT = 100;
+
+    LGraphCanvas.clampBackgroundContrast = function (percent) {
+        var p = Math.round(Number(percent));
+        if (!isFinite(p)) return LGraphCanvas.BACKGROUND_CONTRAST_DEFAULT;
+        return Math.max(
+            LGraphCanvas.BACKGROUND_CONTRAST_MIN,
+            Math.min(LGraphCanvas.BACKGROUND_CONTRAST_MAX, p)
+        );
+    };
+
+    /**
+     * Maps the settings percent onto a scale for each pixel's distance from the
+     * canvas background color. The source grid is only a few levels off that
+     * color, so values above 100 grow faster than linear or the increase is
+     * too faint to see. 0 flattens the grid, 100 leaves the tile unchanged.
+     */
+    LGraphCanvas.backgroundContrastFactor = function (percent) {
+        var t = LGraphCanvas.clampBackgroundContrast(percent) / 100;
+        if (t <= 1) return t;
+        return t * t * t;
+    };
+
+    LGraphCanvas.parseHexColor = function (hex) {
+        var m = /^#([0-9a-f]{6})$/i.exec(String(hex || "").trim());
+        if (!m) return null;
+        var n = parseInt(m[1], 16);
+        return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    };
 
     LGraphCanvas.link_type_colors = {
         "-1": LiteGraph.EVENT_LINK_COLOR,
@@ -6126,6 +6160,65 @@ LGraphNode.prototype.executeAction = function(action)
         this.render_resolution = p;
         this.setDirty(true, true);
         return p;
+    };
+
+    /**
+     * Sets grid-background contrast (0–200). 100 is the source tile.
+     * Rebuilds the repeated background pattern on the next draw.
+     * @method setBackgroundContrast
+     */
+    LGraphCanvas.prototype.setBackgroundContrast = function (percent) {
+        var p = LGraphCanvas.clampBackgroundContrast(percent);
+        if (this.background_contrast === p) return p;
+        this.background_contrast = p;
+        this._pattern = null;
+        this._pattern_source = null;
+        this.setDirty(true, true);
+        return p;
+    };
+
+    /**
+     * Source for the repeated grid tile. At 100% this is the image itself so
+     * the default pixels stay exact. Otherwise a canvas with the grid marks
+     * pushed toward or away from the flat background color.
+     * @method _buildBackgroundPatternSource
+     */
+    LGraphCanvas.prototype._buildBackgroundPatternSource = function (img, percent) {
+        if (LGraphCanvas.backgroundContrastFactor(percent) === 1) return img;
+        var w = img.naturalWidth || img.width;
+        var h = img.naturalHeight || img.height;
+        if (!w || !h) return img;
+        var canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        var c = canvas.getContext("2d", { willReadFrequently: true });
+        if (!c) return img;
+        c.drawImage(img, 0, 0);
+        var factor = LGraphCanvas.backgroundContrastFactor(percent);
+        var base = LGraphCanvas.parseHexColor(this.clear_background_color) || [42, 42, 42];
+        var imageData;
+        try {
+            imageData = c.getImageData(0, 0, w, h);
+        } catch (err) {
+            return img;
+        }
+        var data = imageData.data;
+        var br = base[0];
+        var bg = base[1];
+        var bb = base[2];
+        var clampByte = function (v) {
+            v = Math.round(v);
+            if (v < 0) return 0;
+            if (v > 255) return 255;
+            return v;
+        };
+        for (var i = 0; i < data.length; i += 4) {
+            data[i] = clampByte(br + (data[i] - br) * factor);
+            data[i + 1] = clampByte(bg + (data[i + 1] - bg) * factor);
+            data[i + 2] = clampByte(bb + (data[i + 2] - bb) * factor);
+        }
+        c.putImageData(imageData, 0, 0);
+        return canvas;
     };
 
     /**
@@ -9026,9 +9119,18 @@ LGraphNode.prototype.executeAction = function(action)
                 }
 
                 var pattern = null;
-                if (this._pattern == null && this._bg_img.width > 0) {
-                    pattern = ctx.createPattern(this._bg_img, "repeat");
+                var contrast = this.background_contrast != null ? this.background_contrast : 100;
+                if (
+                    this._bg_img.width > 0 &&
+                    (this._pattern == null ||
+                        this._pattern_img !== this._bg_img ||
+                        this._pattern_contrast !== contrast)
+                ) {
+                    var patternSource = this._buildBackgroundPatternSource(this._bg_img, contrast);
+                    pattern = ctx.createPattern(patternSource, "repeat");
                     this._pattern_img = this._bg_img;
+                    this._pattern_contrast = contrast;
+                    this._pattern_source = patternSource;
                     this._pattern = pattern;
                 } else {
                     pattern = this._pattern;

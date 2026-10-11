@@ -1750,6 +1750,26 @@ dialog#panel-edit-dialog[open] {
     filter: brightness(0.92);
 }
 
+#settings-modal .settings-render-resolution {
+    gap: 12px;
+}
+
+#settings-modal .settings-render-resolution input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    accent-color: #c8c8c8;
+}
+
+#settings-modal .settings-render-resolution-value {
+    flex-shrink: 0;
+    min-width: 3.2em;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 600;
+    color: #e8e8e8;
+    font-variant-numeric: tabular-nums;
+}
+
 #settings-modal .settings-quality-presets {
     display: flex;
     gap: 8px;
