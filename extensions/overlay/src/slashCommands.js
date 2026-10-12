@@ -3,7 +3,7 @@
  * Entries that start with `/` are matched here and never sent to netsocket.
  */
 
-export function createSlashCommands({ openSettings, openOtp, clearPanels, cancelQuery }) {
+export function createSlashCommands({ openSettings, openOtp, openHistory, clearPanels, cancelQuery }) {
   return [
     {
       name: "/settings",
@@ -18,6 +18,14 @@ export function createSlashCommands({ openSettings, openOtp, clearPanels, cancel
       description: "Show authenticator OTP codes",
       run: () => {
         openOtp();
+        return { handled: true };
+      },
+    },
+    {
+      name: "/history",
+      description: "Show recent received alerts",
+      run: () => {
+        openHistory();
         return { handled: true };
       },
     },

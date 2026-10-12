@@ -25,7 +25,45 @@ pub fn register_all_hotkeys(app: &AppHandle, settings: &Settings) -> Result<(), 
     register_if_set(app, &settings.copyLastResponseHotkey)?;
     register_if_set(app, &settings.typeLastResponseHotkey)?;
 
+    // unregister_all above drops the temporary Escape binding used to dismiss alerts.
+    #[cfg(not(windows))]
+    sync_escape_dismiss_shortcut(app)?;
+
     Ok(())
+}
+
+/// Register or release the plain Escape shortcut used to dismiss a visible alert.
+/// Windows uses a low-level keyboard hook instead; RegisterHotKey cannot reliably
+/// claim Escape while other apps are focused.
+#[cfg(not(windows))]
+pub fn sync_escape_dismiss_shortcut(app: &AppHandle) -> Result<(), String> {
+    let armed = app.state::<OverlayHandle>().lock().escape_dismiss_armed;
+    let gs = app.global_shortcut();
+    if armed {
+        if !gs.is_registered("Escape") {
+            gs.register("Escape").map_err(|e| e.to_string())?;
+        }
+        return Ok(());
+    }
+    if gs.is_registered("Escape") && !settings_bind_escape(app) {
+        gs.unregister("Escape").map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn settings_bind_escape(app: &AppHandle) -> bool {
+    let settings = app.state::<SettingsHandle>().get();
+    let Ok(escape) = Shortcut::from_str("Escape") else {
+        return false;
+    };
+    [
+        settings.hotkey.as_str(),
+        settings.copyLastResponseHotkey.as_str(),
+        settings.typeLastResponseHotkey.as_str(),
+    ]
+    .into_iter()
+    .any(|stored| hotkey_matches(stored, &escape))
 }
 
 fn register_if_set(app: &AppHandle, hotkey: &str) -> Result<(), String> {
@@ -145,5 +183,13 @@ mod tests {
         let shortcut = Shortcut::from_str("Alt+Space").unwrap();
         assert!(hotkey_matches("Alt+Space", &shortcut));
         assert!(hotkey_matches("alt+space", &shortcut));
+    }
+
+    #[test]
+    fn hotkey_matches_plain_escape_only() {
+        let escape = Shortcut::from_str("Escape").unwrap();
+        assert!(hotkey_matches("Escape", &escape));
+        assert!(!hotkey_matches("Ctrl+Escape", &escape));
+        assert!(!hotkey_matches("", &escape));
     }
 }

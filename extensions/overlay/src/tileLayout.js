@@ -16,6 +16,7 @@ export const DOCK_RESERVE = 128;
 export const DEFAULT_PREFERRED = {
   settings: { width: 640, height: 560 },
   otp: { width: 520, height: 440 },
+  history: { width: 560, height: 480 },
   response: { width: 560, height: 360 },
 };
 

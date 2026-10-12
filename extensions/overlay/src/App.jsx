@@ -3,12 +3,14 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { overlayApi as tauriOverlayApi } from "./overlayApi.js";
 import ResponseMarkdown from "./ResponseMarkdown";
 import OtpPanel from "./OtpPanel";
+import HistoryPanel from "./HistoryPanel";
 import {
   createSlashCommands,
   matchSlashCommand,
   suggestSlashCommands,
   unknownSlashHelp,
 } from "./slashCommands.js";
+import { recordReceivedAlert } from "./alertHistory.js";
 import {
   DEFAULT_PREFERRED,
   computeTileRects,
@@ -26,6 +28,7 @@ const DEFAULT_RESPONSE_TIMEOUT_SECONDS = 120;
 const PANEL_TITLES = {
   settings: "Settings",
   otp: "Authenticator",
+  history: "Alerts",
   response: "Response",
 };
 
@@ -53,11 +56,13 @@ const fallbackApi = {
   getConnectionState: async () => ({ connected: false, connecting: false }),
   sendCommand: async () => ({ ok: true }),
   getOtpAccounts: async () => ({ ok: false, error: "Not connected" }),
+  getRecentAlerts: async () => ({ ok: false, error: "Not connected" }),
   reorderOtpAccounts: async () => ({ ok: false, error: "Not connected" }),
   writeClipboard: async () => ({ ok: true }),
   hideNow: async () => ({ ok: true }),
   showForNotification: async () => ({ ok: true }),
   hideNotification: async () => ({ ok: true }),
+  setEscapeDismiss: async () => ({ ok: true }),
   clearAwaiting: async () => ({ ok: true }),
   setIgnoreMouse: async () => ({ ok: true }),
   openExternal: async () => ({ ok: true }),
@@ -184,6 +189,7 @@ export default function App() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [flyIn, setFlyIn] = useState(null);
+  const [historyEpoch, setHistoryEpoch] = useState(0);
   const [viewport, setViewport] = useState({
     width: typeof window !== "undefined" ? window.innerWidth : 1280,
     height: typeof window !== "undefined" ? window.innerHeight : 720,
@@ -197,7 +203,18 @@ export default function App() {
   const responseTimeoutRef = useRef(null);
   const flyInTimeoutRef = useRef(null);
   const flyInDismissTimeoutRef = useRef(null);
+  const flyInShowIdRef = useRef(0);
+  const flyInRef = useRef(null);
+  const dismissFlyInRef = useRef(async () => {});
+  const capturingHotkeyTargetRef = useRef(null);
+  flyInRef.current = flyIn;
+  capturingHotkeyTargetRef.current = capturingHotkeyTarget;
   const lastServerNotificationTextRef = useRef(null);
+  const noteReceivedAlertRef = useRef(() => {});
+  noteReceivedAlertRef.current = (text) => {
+    recordReceivedAlert({ text, ts: Date.now() });
+    setHistoryEpoch((epoch) => epoch + 1);
+  };
   const settingsRef = useRef(defaultSettings);
   const panelsRef = useRef([]);
   const lastRectsRef = useRef(new Map());
@@ -479,6 +496,11 @@ export default function App() {
     openSingletonPanel("settings", PANEL_TITLES.settings);
   }, [openSingletonPanel]);
 
+  const openHistory = useCallback(() => {
+    setHistoryEpoch((epoch) => epoch + 1);
+    openSingletonPanel("history", PANEL_TITLES.history);
+  }, [openSingletonPanel]);
+
   const showResponse = useCallback(
     (text) => {
       appendResponsePanel(text, { title: "Response" });
@@ -508,10 +530,11 @@ export default function App() {
       createSlashCommands({
         openSettings,
         openOtp,
+        openHistory,
         clearPanels,
         cancelQuery,
       }),
-    [openSettings, openOtp, clearPanels, cancelQuery]
+    [openSettings, openOtp, openHistory, clearPanels, cancelQuery]
   );
 
   const [suggestionIndex, setSuggestionIndex] = useState(0);
@@ -540,9 +563,12 @@ export default function App() {
     : -1;
 
   const dismissFlyIn = async () => {
+    const current = flyInRef.current;
+    if (!current || current.phase === "leaving") return;
+    flyInRef.current = { ...current, phase: "leaving" };
     clearFlyInTimeouts();
     clearAwaiting();
-    setFlyIn((prev) => (prev ? { ...prev, phase: "leaving" } : null));
+    setFlyIn({ ...current, phase: "leaving" });
     flyInDismissTimeoutRef.current = setTimeout(async () => {
       setFlyIn(null);
       if (!isOverlayOpen()) {
@@ -552,19 +578,28 @@ export default function App() {
       }
     }, motionMs(FLY_IN_ANIMATION_MS));
   };
+  dismissFlyInRef.current = dismissFlyIn;
 
   const showFlyInNotification = async (text) => {
     clearResponseTimeout();
     pendingConversationRef.current = null;
     setIsLoading(false);
     clearAwaiting();
-    await api.showForNotification?.();
     clearFlyInTimeouts();
-    setFlyIn({ text, phase: "entering" });
+    const showId = ++flyInShowIdRef.current;
+    const nextFlyIn = { text, phase: "entering" };
+    flyInRef.current = nextFlyIn;
+    setFlyIn(nextFlyIn);
+    await api.showForNotification?.();
+    if (showId !== flyInShowIdRef.current || flyInRef.current?.phase === "leaving") return;
     setTimeout(() => {
-      setFlyIn((prev) => (prev ? { ...prev, phase: "visible" } : null));
+      if (showId !== flyInShowIdRef.current) return;
+      setFlyIn((prev) =>
+        prev && prev.phase === "entering" ? { ...prev, phase: "visible" } : prev
+      );
     }, 16);
     flyInTimeoutRef.current = setTimeout(() => {
+      if (showId !== flyInShowIdRef.current) return;
       dismissFlyIn();
     }, FLY_IN_AUTO_DISMISS_MS);
   };
@@ -591,6 +626,8 @@ export default function App() {
       clearTimeout(closeTimeoutRef.current);
       closeTimeoutRef.current = null;
     }
+    flyInShowIdRef.current += 1;
+    flyInRef.current = null;
     clearFlyInTimeouts();
     setFlyIn(null);
     setPhase("showing");
@@ -643,12 +680,19 @@ export default function App() {
 
           storeServerNotificationText(text);
 
+          if (!conversationId) {
+            noteReceivedAlertRef.current(text);
+          }
+
           if (isOverlayOpen()) {
             showResponse(text);
             return;
           }
 
           showFlyInNotification(text);
+        },
+        onDismissNotification: () => {
+          dismissFlyInRef.current();
         },
         onHotkeyCaptured: (result) => {
           setCapturingHotkeyTarget(null);
@@ -764,6 +808,31 @@ export default function App() {
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [capturingHotkeyTarget]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key !== "Escape" || event.repeat) return;
+      const current = flyInRef.current;
+      if (!current || current.phase === "leaving") return;
+      if (capturingHotkeyTargetRef.current) return;
+      event.preventDefault();
+      event.stopPropagation();
+      dismissFlyInRef.current();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, []);
+
+  useEffect(() => {
+    const enabled = Boolean(flyIn && flyIn.phase !== "leaving");
+    api.setEscapeDismiss?.(enabled)?.catch?.(() => {});
+  }, [flyIn]);
+
+  useEffect(() => {
+    return () => {
+      api.setEscapeDismiss?.(false)?.catch?.(() => {});
+    };
+  }, []);
 
   const sendQuery = async (overrideText) => {
     const text = String(overrideText ?? query).trim();
@@ -1275,6 +1344,14 @@ export default function App() {
                                 setTimeout(() => setOtpNotice(""), 1800);
                               }
                             }}
+                          />
+                        ) : null}
+                        {panel.kind === "history" ? (
+                          <HistoryPanel
+                            api={api}
+                            connected={connection.connected}
+                            epoch={historyEpoch}
+                            onOpenLink={openResponseLink}
                           />
                         ) : null}
                         {panel.kind === "settings" ? renderSettingsBody() : null}

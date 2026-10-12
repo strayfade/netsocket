@@ -15,6 +15,7 @@ export async function bindOverlayEvents(handlers) {
     subscribe("overlay:connection", (payload) => handlers.onConnectionState?.(payload)),
     subscribe("overlay:server-message", (payload) => handlers.onServerMessage?.(payload)),
     subscribe("overlay:hotkey-captured", (payload) => handlers.onHotkeyCaptured?.(payload)),
+    subscribe("overlay:dismiss-notification", () => handlers.onDismissNotification?.()),
   ]);
 
   return () => {
@@ -35,6 +36,10 @@ export const overlayApi = {
   sendRequest: (payload) => invoke("request_send", { payload }),
   getOtpAccounts: () =>
     invoke("request_send", { payload: { purpose: "getOtpAccounts" } }),
+  getRecentAlerts: (limit = 50) =>
+    invoke("request_send", {
+      payload: { purpose: "getRecentAlerts", data: { limit } },
+    }),
   reorderOtpAccounts: (keys) =>
     invoke("request_send", {
       payload: { purpose: "reorderOtpAccounts", data: { keys } },
@@ -43,6 +48,7 @@ export const overlayApi = {
   hideNow: () => invoke("overlay_hide_now"),
   showForNotification: () => invoke("overlay_show_for_notification"),
   hideNotification: () => invoke("overlay_hide_notification"),
+  setEscapeDismiss: (enabled) => invoke("overlay_set_escape_dismiss", { enabled }),
   clearAwaiting: () => invoke("overlay_clear_awaiting"),
   setIgnoreMouse: (ignore) => invoke("overlay_set_ignore_mouse", { ignore }),
   notifyReady: () => invoke("overlay_notify_ready"),

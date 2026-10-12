@@ -18,6 +18,8 @@ pub struct OverlayState {
     pub hotkey_capture_active: bool,
     pub hotkey_capture_target: String,
     pub hotkey_suppress_until: i64,
+    /// Plain Escape dismisses the top-right alert while this is set.
+    pub escape_dismiss_armed: bool,
 }
 
 impl Default for OverlayState {
@@ -32,6 +34,7 @@ impl Default for OverlayState {
             hotkey_capture_active: false,
             hotkey_capture_target: "hotkey".to_string(),
             hotkey_suppress_until: 0,
+            escape_dismiss_armed: false,
         }
     }
 }

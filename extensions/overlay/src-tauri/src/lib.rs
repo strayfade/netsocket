@@ -16,7 +16,7 @@ use overlay::{
     set_awaiting_response, OverlayHandle,
 };
 use settings_store::{save_settings, SettingsHandle};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::ShortcutState;
 use websocket::{emit_connection, WsCommand, WsRuntime};
 
@@ -243,6 +243,16 @@ fn overlay_show_for_notification(app: AppHandle) -> OkPayload {
 }
 
 #[tauri::command]
+fn overlay_set_escape_dismiss(app: AppHandle, enabled: bool) -> Result<OkPayload, String> {
+    crate::platform::set_notification_escape_dismiss(&app, enabled)?;
+    Ok(OkPayload {
+        ok: true,
+        error: None,
+        conversationId: None,
+    })
+}
+
+#[tauri::command]
 fn overlay_hide_notification(app: AppHandle) -> OkPayload {
     {
         let handle = app.state::<OverlayHandle>();
@@ -342,6 +352,14 @@ pub fn run() {
                     if overlay_state.lock().hotkey_capture_active {
                         return;
                     }
+                    if overlay_state.lock().escape_dismiss_armed
+                        && hotkey_matches("Escape", shortcut)
+                    {
+                        if let Some(window) = main_window(app) {
+                            let _ = window.emit("overlay:dismiss-notification", ());
+                        }
+                        return;
+                    }
                     let settings = app.state::<SettingsHandle>().get();
                     if hotkey_matches(&settings.hotkey, shortcut) {
                         overlay::toggle_overlay(app);
@@ -400,6 +418,7 @@ pub fn run() {
             overlay_hide_now,
             overlay_show_for_notification,
             overlay_hide_notification,
+            overlay_set_escape_dismiss,
             overlay_clear_awaiting,
             overlay_set_ignore_mouse,
             overlay_notify_ready,
