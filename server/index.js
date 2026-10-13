@@ -713,6 +713,7 @@ app.get('/v1/dashboard/summary', (req, res) => {
             devices: deviceRegistry.listDevices(),
         })
         summary.layout = dashboardLayout.getLayout()
+        summary.now = Date.now()
         summary.variables = {}
         for (const name of dashboardLayout.boundVariableNames()) {
             const entry = varList.find((v) => v && v.name === name)
@@ -781,6 +782,10 @@ app.get('/v1/panels/:panelId/config', (req, res) => panelApi.handleGetPanelConfi
 app.patch('/v1/panels/:panelId', (req, res) => panelApi.handleUpdatePanel(req, res))
 app.delete('/v1/panels/:panelId', (req, res) => panelApi.handleDeletePanel(req, res))
 app.post('/v1/panels/:panelId/execute', (req, res) => panelApi.handlePanelExecute(req, res))
+
+// MARK: Server time (central clock for widgets; session-gated like other private APIs)
+const serverTime = require('./manager/serverTime.js')
+app.get('/v1/time', (req, res) => serverTime.handleGetServerTime(req, res))
 
 const {
     INSTALLER_FILENAME,

@@ -67,8 +67,19 @@
                 if (id) document.getElementById('panel-content').hidden = true;
             }
 
+            // Clock widgets paint the central server's time (synced in
+            // loadConfig), falling back to the local clock before sync.
+            function serverDateNow() {
+                try {
+                    if (window.ShellLogic && typeof window.ShellLogic.serverNow === 'function') {
+                        return window.ShellLogic.serverNow();
+                    }
+                } catch (_) { /* fall through to local clock */ }
+                return Date.now();
+            }
+
             function tickClock() {
-                var now = new Date();
+                var now = new Date(serverDateNow());
                 var h = now.getHours();
                 h = h % 12;
                 if (h === 0) h = 12;
@@ -87,6 +98,18 @@
             }
             tickClock();
             setInterval(tickClock, 15000);
+
+            // Sync clock widgets to the central server's time; re-paint once
+            // the offset lands so the first paint isn't local time.
+            async function syncServerTime() {
+                try {
+                    var timeRes = await fetch('/v1/time', { credentials: 'same-origin' });
+                    if (!timeRes.ok) return;
+                    var timeData = await timeRes.json();
+                    if (window.ShellLogic) window.ShellLogic.setServerTime(timeData.now);
+                    tickClock();
+                } catch (_) { /* keep local clock */ }
+            }
 
             async function loadConfig() {
                 var ok = await ShellLogic.ensureSession();
@@ -113,6 +136,7 @@
                     return;
                 }
                 var data = await res.json();
+                if (window.ShellLogic) window.ShellLogic.setServerTime(data.now);
                 renderConfig(data);
                 connectPanelSocket();
             }
@@ -328,6 +352,7 @@
                 show('panel-not-found');
             } else {
                 loadConfig();
+                syncServerTime();
                 setInterval(loadConfig, 60000);
             }
         })();

@@ -31,6 +31,31 @@
         return '/login?redirect=' + encodeURIComponent(target);
     }
 
+    // Offset between the central server clock and this device's clock, in
+    // milliseconds. Pages sync it from GET /v1/time and from the `now`
+    // field on dashboard-summary / panel-config payloads, then paint clock
+    // widgets with serverNow() instead of local time.
+    var serverTimeOffsetMs = 0;
+
+    function setServerTime(serverNowMs, nowMs) {
+        var server = Number(serverNowMs);
+        if (!isFinite(server)) return serverTimeOffsetMs;
+        var local = nowMs === undefined ? Date.now() : Number(nowMs);
+        if (!isFinite(local)) return serverTimeOffsetMs;
+        serverTimeOffsetMs = server - local;
+        return serverTimeOffsetMs;
+    }
+
+    function serverNow(nowMs) {
+        var local = nowMs === undefined ? Date.now() : Number(nowMs);
+        if (!isFinite(local)) local = Date.now();
+        return local + serverTimeOffsetMs;
+    }
+
+    function getServerTimeOffset() {
+        return serverTimeOffsetMs;
+    }
+
     async function ensureSession(fetcher, redirectFn) {
         var runFetch = fetcher || (typeof fetch !== 'undefined' ? fetch : null);
         if (!runFetch) return false;
@@ -340,6 +365,9 @@
         getTabHref: getTabHref,
         buildLoginRedirect: buildLoginRedirect,
         ensureSession: ensureSession,
+        setServerTime: setServerTime,
+        serverNow: serverNow,
+        getServerTimeOffset: getServerTimeOffset,
         showToast: showToast,
         markActiveTab: markActiveTab,
         initSidebar: initSidebar,

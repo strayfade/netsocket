@@ -42,8 +42,20 @@
         return copy;
     }
 
+    // Clock widgets paint the central server's time, falling back to the
+    // local clock when no sync has happened yet (or outside a browser).
+    function serverDateNow() {
+        try {
+            if (typeof window !== 'undefined' && window.ShellLogic &&
+                typeof window.ShellLogic.serverNow === 'function') {
+                return window.ShellLogic.serverNow();
+            }
+        } catch (_) { /* fall through to local clock */ }
+        return Date.now();
+    }
+
     function tickClock() {
-        var now = new Date();
+        var now = new Date(serverDateNow());
         var h = now.getHours();
         h = h % 12;
         if (h === 0) h = 12;

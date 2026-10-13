@@ -69,8 +69,11 @@ describe('dashboard shell pages', () => {
         assert.match(html, /\/v1\/dashboard\/summary/);
         assert.match(html, /\/v1\/dashboard\/run/);
         assert.match(html, /\/v1\/dashboard\/layout/);
+        assert.match(html, /\/v1\/time/);
+        assert.match(html, /setServerTime/);
         assert.match(html, /WidgetEditor\.attach/);
         assert.match(html, /WidgetEditor\.tickClock/);
+        assert.match(editorJs, /serverNow/);
         assert.match(editorJs, /GridStack\.init/);
         assert.match(editorJs, /staticGrid/);
         assert.match(editorJs, /setStatic/);

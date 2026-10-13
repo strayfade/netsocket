@@ -194,6 +194,18 @@
             WidgetEditor.tickClock();
             setInterval(WidgetEditor.tickClock, 15000);
 
+            // Sync clock widgets to the central server's time; re-paint once
+            // the offset lands so the first paint isn't local time.
+            async function syncServerTime() {
+                try {
+                    var timeRes = await fetch('/v1/time', { credentials: 'same-origin' });
+                    if (!timeRes.ok) return;
+                    var timeData = await timeRes.json();
+                    ShellLogic.setServerTime(timeData.now);
+                    WidgetEditor.tickClock();
+                } catch (_) { /* keep local clock */ }
+            }
+
             async function saveLayout(widgets) {
                 try {
                     var res = await fetch('/v1/dashboard/layout', {
@@ -288,6 +300,7 @@
                         var res = await fetch('/v1/dashboard/summary', { credentials: 'same-origin' });
                         if (!res.ok) return;
                         var data = await res.json();
+                        ShellLogic.setServerTime(data.now);
                         liveAutomations = Array.isArray(data.automations) ? data.automations : liveAutomations;
                         liveVariables = data.variables || liveVariables;
                     } catch (_) { /* ignore */ }
@@ -371,6 +384,7 @@
                         return;
                     }
                     var data = await res.json();
+                    ShellLogic.setServerTime(data.now);
                     lastSummary = data;
                     renderWidgets(data);
                 } catch (e) {
@@ -379,6 +393,7 @@
             }
 
             loadSummary();
+            syncServerTime();
             setInterval(loadSummary, 60000);
         })();
     </script>

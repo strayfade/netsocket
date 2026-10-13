@@ -25,6 +25,22 @@ describe('shell tab logic', () => {
         assert.equal(ShellLogic.buildLoginRedirect('/automate'), '/login?redirect=%2Fautomate');
     });
 
+    it('tracks the central server clock offset for clock widgets', () => {
+        assert.equal(ShellLogic.getServerTimeOffset(), 0);
+        assert.equal(ShellLogic.serverNow(1000), 1000);
+        // Server is 1s ahead of this device.
+        assert.equal(ShellLogic.setServerTime(2000, 1000), 1000);
+        assert.equal(ShellLogic.getServerTimeOffset(), 1000);
+        assert.equal(ShellLogic.serverNow(1000), 2000);
+        // Invalid payloads leave the offset untouched.
+        assert.equal(ShellLogic.setServerTime('bogus', 1000), 1000);
+        assert.equal(ShellLogic.setServerTime(3000, 'bogus'), 1000);
+        assert.equal(ShellLogic.setServerTime(undefined), 1000);
+        assert.equal(ShellLogic.getServerTimeOffset(), 1000);
+        // Reset so other tests see a zero offset.
+        assert.equal(ShellLogic.setServerTime(5000, 5000), 0);
+    });
+
     it('ensureSession returns false without navigating when no fetcher exists', async () => {
         const originalFetch = globalThis.fetch;
         try {

@@ -45,6 +45,9 @@ describe('panel pages', () => {
         assert.match(html, /refreshVarContent/);
         assert.match(html, /varsChanged/);
         assert.match(html, /new WebSocket/);
+        assert.match(html, /\/v1\/time/);
+        assert.match(html, /setServerTime/);
+        assert.match(html, /serverNow/);
         assert.doesNotMatch(html, /widget-automations/);
         assert.doesNotMatch(html, /widget-weather/);
         assert.doesNotMatch(html, /renderButtons/);
@@ -118,6 +121,8 @@ describe('panel pages', () => {
         assert.match(html, /renderPanelCard/);
         assert.match(html, /loadPreviewConfig/);
         assert.match(html, /runPreviewAutomation/);
+        assert.match(html, /\/v1\/time/);
+        assert.match(html, /setServerTime/);
         // The inline "New panel" card is gone; creation lives in the dialog.
         assert.doesNotMatch(html, /aria-label="Create panel"/);
         assert.match(html, /aria-label="New panel"/);

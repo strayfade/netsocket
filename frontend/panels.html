@@ -315,6 +315,18 @@
             WidgetEditor.tickClock();
             setInterval(WidgetEditor.tickClock, 15000);
 
+            // Sync clock widgets to the central server's time; re-paint once
+            // the offset lands so the first paint isn't local time.
+            async function syncServerTime() {
+                try {
+                    var timeRes = await api('/v1/time');
+                    if (!timeRes.ok) return;
+                    var timeData = await timeRes.json();
+                    ShellLogic.setServerTime(timeData.now);
+                    WidgetEditor.tickClock();
+                } catch (e) { /* keep local clock */ }
+            }
+
             // Live border preview in the edit grid.
             document.getElementById('edit-panel-borders').addEventListener('change', function () {
                 document.getElementById('panel-edit-grid').classList.toggle('no-borders', !this.checked);
@@ -348,6 +360,7 @@
                         var res = await api('/v1/dashboard/summary');
                         if (!res.ok) return;
                         var data = await res.json();
+                        ShellLogic.setServerTime(data.now);
                         allAutomations = Array.isArray(data.automations) ? data.automations : allAutomations;
                     } catch (_) { /* ignore */ }
                 }
@@ -358,6 +371,7 @@
                     var res = await api('/v1/dashboard/summary');
                     if (!res.ok) return;
                     var data = await res.json();
+                    ShellLogic.setServerTime(data.now);
                     allAutomations = Array.isArray(data.automations) ? data.automations : [];
                     editor.fillAutomationPicker();
                 } catch (e) { /* ignore */ }
@@ -560,6 +574,7 @@
                         return;
                     }
                     var data = await res.json();
+                    ShellLogic.setServerTime(data.now);
                     var widgets = Array.isArray(data.panel.widgets) ? data.panel.widgets : [];
                     previewConfigs[panelId] = {
                         variables: (data.variables && typeof data.variables === 'object') ? data.variables : {},
@@ -661,6 +676,7 @@
                     var res = await api('/v1/panels/' + encodeURIComponent(panelId) + '/config');
                     if (!res.ok) return;
                     var data = await res.json();
+                    ShellLogic.setServerTime(data.now);
                     var widgets = Array.isArray(data.panel.widgets) ? data.panel.widgets : [];
                     var key = JSON.stringify(widgets);
                     var prev = previewConfigs[panelId];
@@ -854,6 +870,7 @@
                 await loadAutomations();
                 await loadDevices();
                 await loadPanels();
+                syncServerTime();
             })();
         })();
     </script>

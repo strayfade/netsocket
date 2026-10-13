@@ -123,6 +123,8 @@ describe('panelApi', () => {
         assert.equal(ok.body.panel.id, 'kitchen');
         assert.equal(ok.body.automations.length, 1);
         assert.equal(ok.body.automations[0].title, 'Porch Light');
+        assert.equal(typeof ok.body.now, 'number');
+        assert.ok(Math.abs(ok.body.now - Date.now()) < 5000);
 
         const anon = mockRes();
         panelApi.handleGetPanelConfig(
