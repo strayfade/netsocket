@@ -1154,6 +1154,7 @@ select.admin-input {
 
 dialog#add-widget-dialog,
 dialog#panel-add-widget-dialog,
+dialog#panel-create-dialog,
 dialog#panel-edit-dialog {
     border: 1px solid var(--shell-border);
     background: var(--shell-bg);
@@ -1174,14 +1175,91 @@ dialog#panel-edit-dialog {
 
 dialog#add-widget-dialog::backdrop,
 dialog#panel-add-widget-dialog::backdrop,
+dialog#panel-create-dialog::backdrop,
 dialog#panel-edit-dialog::backdrop {
     background: rgba(0, 0, 0, 0.7);
 }
 
 dialog#add-widget-dialog[open],
 dialog#panel-add-widget-dialog[open],
+dialog#panel-create-dialog[open],
 dialog#panel-edit-dialog[open] {
     display: block;
+}
+
+/* ── Panels overview: header, live preview cards, creation dialog ─── */
+.panels-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 8px 0 16px;
+}
+
+.panels-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 12px;
+}
+
+.panel-preview-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.panel-preview-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.panel-preview-viewport {
+    height: 240px;
+    overflow: hidden;
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius);
+    background: var(--shell-surface-raised);
+    position: relative;
+}
+
+.panel-preview-scale {
+    transform-origin: top left;
+    width: 800px;
+}
+
+.panel-preview-grid {
+    min-height: 0;
+}
+
+/* Per-panel widget borders in previews (transparent 1px keeps layout). */
+.panel-preview-grid.no-borders .shell-card,
+.panel-preview-grid.no-borders .widget-run-btn,
+.panel-preview-grid.no-borders .shell-widget-frame {
+    border-color: transparent;
+}
+
+.panel-preview-grid .grid-stack-item-content > .shell-card {
+    justify-content: center;
+    text-align: center;
+}
+
+.panel-preview-loading {
+    margin: 0;
+}
+
+.panel-preview-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+    .panels-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 #panel-edit-grid {

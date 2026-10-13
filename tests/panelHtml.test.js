@@ -56,8 +56,14 @@ describe('panel pages', () => {
             assert.match(html, new RegExp(`data-shell-tab="${tab}"`));
         }
         for (const id of [
+            'new-panel-open',
+            'panel-create-dialog',
+            'panel-create-title',
+            'panel-create-close-top',
+            'panel-create-cancel',
             'create-panel-btn',
             'new-panel-name',
+            'new-panel-room',
             'panels-list',
             'panels-empty',
             'panel-edit-dialog',
@@ -97,6 +103,24 @@ describe('panel pages', () => {
         assert.match(html, /showBorders/);
         assert.match(html, /\/v1\/panels/);
         assert.match(html, /ensureSession/);
+        // Live previews: header button opens the creation dialog, each card
+        // paints its widgets with live config data and actions underneath.
+        assert.match(html, /panels-header/);
+        assert.match(html, /panels-grid/);
+        assert.match(html, /panel-preview-card/);
+        assert.match(html, /panel-preview-viewport/);
+        assert.match(html, /panel-preview-grid-/);
+        assert.match(html, /panel-preview-actions/);
+        assert.match(html, /\/config/);
+        assert.match(html, /\/execute/);
+        assert.match(html, /Widgets\.createItem/);
+        assert.match(html, /staticGrid/);
+        assert.match(html, /renderPanelCard/);
+        assert.match(html, /loadPreviewConfig/);
+        assert.match(html, /runPreviewAutomation/);
+        // The inline "New panel" card is gone; creation lives in the dialog.
+        assert.doesNotMatch(html, /aria-label="Create panel"/);
+        assert.match(html, /aria-label="New panel"/);
         assert.match(html, /<script src="\/js\/widgetEditor\.js"><\/script>/);
         assert.match(html, /<script src="\/js\/widgets\.js"><\/script>/);
         assert.match(html, /<link rel="stylesheet" href="\/vendor\/gridstack\.min\.css">/);

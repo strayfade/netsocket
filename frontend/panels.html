@@ -70,35 +70,41 @@
         </nav>
         <div class="shell-content">
             <main class="shell-main">
-        <div class="shell-grid">
-            <section class="shell-card shell-card-span-4" aria-label="Create panel">
-                <h2 class="shell-card-title">New panel</h2>
-                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
-                    <div class="admin-field">
-                        <label for="new-panel-name">Name</label>
-                        <input class="admin-input" id="new-panel-name" type="text" autocomplete="off"
-                            placeholder="Kitchen display" maxlength="120">
-                    </div>
-                    <div class="admin-field">
-                        <label for="new-panel-room">Room (optional)</label>
-                        <input class="admin-input" id="new-panel-room" type="text" autocomplete="off"
-                            placeholder="Kitchen" maxlength="120">
-                    </div>
-                    <div>
-                        <button class="shell-btn" id="create-panel-btn" type="button">Create panel</button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="shell-card shell-card-span-8" aria-label="Panels list">
-                <h2 class="shell-card-title">Room panels</h2>
-                <ul class="shell-list" id="panels-list">
-                    <li class="shell-list-item"><span class="shell-skeleton" style="flex: 1;">Loading panels</span></li>
-                </ul>
-                <p class="shell-empty" id="panels-empty" hidden>No panels yet. Create one to provision a wall surface.</p>
-            </section>
+        <div class="panels-header">
+            <div>
+                <h1 class="shell-page-title" style="margin: 0;">Room panels</h1>
+                <p class="shell-page-subtitle" style="margin-bottom: 0;">Live previews with real data. Actions sit underneath each preview.</p>
+            </div>
+            <button class="shell-btn" id="new-panel-open" type="button"><span class="material-symbols-outlined" aria-hidden="true">add</span> New Panel</button>
         </div>
+        <div class="panels-grid" id="panels-list" role="list" aria-label="Panels list">
+            <div class="shell-card"><p class="shell-stat-sub shell-skeleton" style="margin: 0;">Loading panels</p></div>
+        </div>
+        <p class="shell-empty" id="panels-empty" hidden>No panels yet. Create one to provision a wall surface.</p>
     </main>
+
+    <dialog id="panel-create-dialog" class="shell-card" aria-label="New panel" aria-labelledby="panel-create-title">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px;">
+            <h2 id="panel-create-title" class="shell-card-title" style="margin: 0;">New panel</h2>
+            <button class="dialog-close-btn" id="panel-create-close-top" type="button" aria-label="Close"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+            <div class="admin-field">
+                <label for="new-panel-name">Name</label>
+                <input class="admin-input" id="new-panel-name" type="text" autocomplete="off"
+                    placeholder="Kitchen display" maxlength="120">
+            </div>
+            <div class="admin-field">
+                <label for="new-panel-room">Room (optional)</label>
+                <input class="admin-input" id="new-panel-room" type="text" autocomplete="off"
+                    placeholder="Kitchen" maxlength="120">
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="shell-btn shell-btn-secondary" id="panel-create-cancel" type="button">Cancel</button>
+                <button class="shell-btn" id="create-panel-btn" type="button">Create panel</button>
+            </div>
+        </div>
+    </dialog>
 
     <dialog id="panel-edit-dialog" class="shell-card" style="color: var(--shell-text);">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px;">
@@ -264,16 +270,6 @@
             var editingWidgets = [];
             var panelVariables = {};
 
-            function formatWidgets(widgets) {
-                return (widgets || []).map(function (w) {
-                    if (!w || typeof w !== 'object') return '?';
-                    var text = (w.type || '?') + ' ' + (w.w || '?') + 'x' + (w.h || '?');
-                    if (w.variable) text += ':' + w.variable;
-                    if (w.automationId) text += ' #' + w.automationId;
-                    return text;
-                }).join(', ');
-            }
-
             function panelUrl(panelId) {
                 return window.location.origin + '/panel/' + encodeURIComponent(panelId);
             }
@@ -376,6 +372,74 @@
                 } catch (e) { /* ignore */ }
             }
 
+            // Live preview state: one static GridStack per panel card, painted
+            // at a fixed design width and CSS-scaled down to a thumbnail.
+            var previewCards = {};
+            var previewConfigs = {};
+            var previewRefreshTimer = null;
+            var PREVIEW_DESIGN_WIDTH = 800;
+            var PREVIEW_REFRESH_MS = 60000;
+
+            function widgetPreviewCtx(panelId) {
+                var cfg = previewConfigs[panelId] || {};
+                return {
+                    automations: cfg.automations || allAutomations,
+                    variables: cfg.variables || {},
+                    onRun: function (item, btn) { runPreviewAutomation(panelId, item, btn); },
+                    renderMarkdown: window.renderAgentMarkdown
+                        ? window.renderAgentMarkdown.bind(window)
+                        : null,
+                };
+            }
+
+            async function runPreviewAutomation(panelId, item, btn) {
+                try {
+                    var res = await api('/v1/panels/' + encodeURIComponent(panelId) + '/execute', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nodeId: item.id }),
+                    });
+                    if (res.ok) {
+                        // Silent success — no toast (matches kiosk)
+                    } else if (res.status === 401) {
+                        window.location.replace(ShellLogic.buildLoginRedirect(window.location.pathname));
+                    } else if (res.status === 403) {
+                        ShellLogic.showToast('Not allowed on this panel');
+                    } else {
+                        ShellLogic.showToast('Run failed (' + res.status + ')');
+                    }
+                } catch (e) {
+                    if (e.message !== 'unauthorized') ShellLogic.showToast('Run failed: network error');
+                } finally {
+                    btn.disabled = false;
+                }
+            }
+
+            function destroyPreviewGrids() {
+                Object.keys(previewCards).forEach(function (id) {
+                    var entry = previewCards[id];
+                    if (entry && entry.grid) {
+                        try { entry.grid.destroy(false); } catch (_) { /* ignore */ }
+                    }
+                });
+                previewCards = {};
+            }
+
+            function fitPreview(entry) {
+                if (!entry || !entry.viewport || !entry.scaleEl || !entry.gridEl) return;
+                var vw = entry.viewport.clientWidth;
+                if (!vw) return;
+                var s = vw / PREVIEW_DESIGN_WIDTH;
+                if (!isFinite(s) || s <= 0) return;
+                if (s > 1) s = 1;
+                entry.scaleEl.style.transform = 'scale(' + s + ')';
+            }
+
+            function fitAllPreviews() {
+                Object.keys(previewCards).forEach(function (id) { fitPreview(previewCards[id]); });
+            }
+            window.addEventListener('resize', fitAllPreviews);
+
             async function loadPanels() {
                 var list = document.getElementById('panels-list');
                 var empty = document.getElementById('panels-empty');
@@ -388,22 +452,28 @@
                     var data = await res.json();
                     var panels = Array.isArray(data.panels) ? data.panels : [];
                     allPanels = panels;
+                    destroyPreviewGrids();
                     list.innerHTML = '';
                     empty.hidden = panels.length > 0;
-                    panels.forEach(renderPanelRow);
+                    panels.forEach(function (panel, index) { renderPanelCard(panel, index); });
+                    // Fetch live configs in parallel; each card paints when ready.
+                    panels.forEach(function (panel) { loadPreviewConfig(panel.id); });
+                    schedulePreviewRefresh();
                 } catch (e) {
                     if (e.message !== 'unauthorized') ShellLogic.showToast('Could not load panels');
                 }
             }
 
-            function renderPanelRow(panel) {
+            function renderPanelCard(panel, index) {
                 var list = document.getElementById('panels-list');
-                var li = document.createElement('li');
-                li.className = 'shell-list-item';
-                li.style.alignItems = 'flex-start';
+                var card = document.createElement('section');
+                card.className = 'shell-card panel-preview-card';
+                card.setAttribute('role', 'listitem');
 
-                var main = document.createElement('div');
-                main.className = 'shell-list-item-main';
+                var head = document.createElement('div');
+                head.className = 'panel-preview-head';
+                var titleWrap = document.createElement('div');
+                titleWrap.className = 'shell-list-item-main';
                 var title = document.createElement('p');
                 title.className = 'shell-list-item-title';
                 title.textContent = panel.room
@@ -413,17 +483,39 @@
                 sub.className = 'shell-list-item-sub shell-mono';
                 var deviceCount = Array.isArray(panel.deviceIds) ? panel.deviceIds.length : 0;
                 sub.textContent = '/panel/' + panel.id
-                    + ' - ' + formatWidgets(panel.widgets)
                     + ' - ' + deviceCount + ' devices'
                     + (panel.showBorders === false ? ' - borders off' : '');
-                main.appendChild(title);
-                main.appendChild(sub);
-                li.appendChild(main);
+                titleWrap.appendChild(title);
+                titleWrap.appendChild(sub);
+                head.appendChild(titleWrap);
+                card.appendChild(head);
+
+                var viewport = document.createElement('div');
+                viewport.className = 'panel-preview-viewport';
+                var scaleEl = document.createElement('div');
+                scaleEl.className = 'panel-preview-scale';
+                var gridEl = document.createElement('div');
+                gridEl.className = 'grid-stack panel-preview-grid';
+                gridEl.id = 'panel-preview-grid-' + index;
+                gridEl.style.width = PREVIEW_DESIGN_WIDTH + 'px';
+                if (panel.showBorders === false) gridEl.classList.add('no-borders');
+                scaleEl.appendChild(gridEl);
+                viewport.appendChild(scaleEl);
+                card.appendChild(viewport);
+
+                var loading = document.createElement('p');
+                loading.className = 'shell-stat-sub shell-skeleton panel-preview-loading';
+                loading.textContent = 'Loading preview';
+                card.appendChild(loading);
+
+                var emptyNote = document.createElement('p');
+                emptyNote.className = 'shell-empty panel-preview-empty';
+                emptyNote.hidden = true;
+                emptyNote.textContent = 'No widgets yet. Edit to add some.';
+                card.appendChild(emptyNote);
 
                 var actions = document.createElement('div');
-                actions.style.display = 'flex';
-                actions.style.gap = '8px';
-                actions.style.flexWrap = 'wrap';
+                actions.className = 'panel-preview-actions';
 
                 var open = document.createElement('a');
                 open.className = 'shell-btn shell-btn-secondary';
@@ -452,9 +544,167 @@
                 del.addEventListener('click', function () { deletePanel(panel); });
                 actions.appendChild(del);
 
-                li.appendChild(actions);
-                list.appendChild(li);
+                card.appendChild(actions);
+                list.appendChild(card);
+                previewCards[panel.id] = { card: card, viewport: viewport, scaleEl: scaleEl, gridEl: gridEl, grid: null, panel: panel };
+                fitPreview(previewCards[panel.id]);
             }
+
+            async function loadPreviewConfig(panelId) {
+                var entry = previewCards[panelId];
+                if (!entry) return;
+                try {
+                    var res = await api('/v1/panels/' + encodeURIComponent(panelId) + '/config');
+                    if (!res.ok) {
+                        hidePreviewLoading(entry, true);
+                        return;
+                    }
+                    var data = await res.json();
+                    var widgets = Array.isArray(data.panel.widgets) ? data.panel.widgets : [];
+                    previewConfigs[panelId] = {
+                        variables: (data.variables && typeof data.variables === 'object') ? data.variables : {},
+                        automations: Array.isArray(data.automations) ? data.automations : [],
+                        layoutKey: JSON.stringify(widgets),
+                    };
+                    paintPreview(entry, panelId, widgets);
+                } catch (e) {
+                    hidePreviewLoading(entry, true);
+                }
+            }
+
+            function hidePreviewLoading(entry, failed) {
+                if (!entry) return;
+                var loading = entry.card.querySelector('.panel-preview-loading');
+                if (loading) loading.hidden = true;
+                if (failed) {
+                    var emptyNote = entry.card.querySelector('.panel-preview-empty');
+                    if (emptyNote && !entry.gridEl.hasChildNodes()) {
+                        emptyNote.hidden = false;
+                        emptyNote.textContent = 'Preview unavailable.';
+                    }
+                }
+            }
+
+            function paintPreview(entry, panelId, widgets) {
+                hidePreviewLoading(entry, false);
+                var emptyNote = entry.card.querySelector('.panel-preview-empty');
+                if (emptyNote) emptyNote.hidden = widgets.length > 0;
+                entry.viewport.hidden = widgets.length === 0;
+                if (entry.grid) {
+                    try { entry.grid.destroy(false); } catch (_) { /* ignore */ }
+                    entry.grid = null;
+                }
+                entry.gridEl.innerHTML = '';
+                var centered = centerWidgets(widgets);
+                var ctx = widgetPreviewCtx(panelId);
+                centered.forEach(function (widget) {
+                    var item = window.Widgets ? window.Widgets.createItem(widget, ctx) : null;
+                    if (item) entry.gridEl.appendChild(item);
+                });
+                WidgetEditor.tickClock();
+                if (window.GridStack && centered.length) {
+                    entry.grid = window.GridStack.init({
+                        column: 12,
+                        cellHeight: 'auto',
+                        margin: 0,
+                        staticGrid: true,
+                        animate: false,
+                        float: true,
+                        columnOpts: { breakpoints: [{ w: 640, c: 4 }] },
+                    }, entry.gridEl);
+                }
+                fitPreview(entry);
+            }
+
+            // Center the collective widget bounds (same as kiosk/edit views).
+            function centerWidgets(widgets) {
+                if (!widgets.length) return widgets;
+                var minX = Infinity, maxX = -Infinity, minY = Infinity;
+                widgets.forEach(function (w) {
+                    var x = w.x || 0;
+                    var ww = w.w || 1;
+                    var y = w.y || 0;
+                    if (x < minX) minX = x;
+                    if (x + ww > maxX) maxX = x + ww;
+                    if (y < minY) minY = y;
+                });
+                var boundsW = maxX - minX;
+                var offsetX = Math.floor((12 - boundsW) / 2) - minX;
+                var offsetY = -minY;
+                if (offsetX === 0 && offsetY === 0) return widgets;
+                return widgets.map(function (w) {
+                    var copy = {};
+                    for (var k in w) if (Object.prototype.hasOwnProperty.call(w, k)) copy[k] = w[k];
+                    copy.x = (w.x || 0) + offsetX;
+                    copy.y = (w.y || 0) + offsetY;
+                    return copy;
+                });
+            }
+
+            function refreshPreviewVars(panelId) {
+                var entry = previewCards[panelId];
+                var cfg = previewConfigs[panelId];
+                if (!entry || !cfg) return;
+                Object.keys(cfg.variables).forEach(function (name) {
+                    var value = cfg.variables[name];
+                    Array.prototype.forEach.call(entry.card.querySelectorAll('[data-var-content="' + CSS.escape(name) + '"]'), function (node) {
+                        node.innerHTML = window.renderAgentMarkdown ? window.renderAgentMarkdown(value) : '';
+                    });
+                    Array.prototype.forEach.call(entry.card.querySelectorAll('[data-var-frame="' + CSS.escape(name) + '"]'), function (frame) {
+                        frame.srcdoc = value;
+                    });
+                });
+            }
+
+            async function refreshPreviewConfig(panelId) {
+                try {
+                    var res = await api('/v1/panels/' + encodeURIComponent(panelId) + '/config');
+                    if (!res.ok) return;
+                    var data = await res.json();
+                    var widgets = Array.isArray(data.panel.widgets) ? data.panel.widgets : [];
+                    var key = JSON.stringify(widgets);
+                    var prev = previewConfigs[panelId];
+                    previewConfigs[panelId] = {
+                        variables: (data.variables && typeof data.variables === 'object') ? data.variables : {},
+                        automations: Array.isArray(data.automations) ? data.automations : [],
+                        layoutKey: key,
+                    };
+                    if (!prev || prev.layoutKey !== key) {
+                        var entry = previewCards[panelId];
+                        if (entry) paintPreview(entry, panelId, widgets);
+                    } else {
+                        refreshPreviewVars(panelId);
+                    }
+                } catch (e) { /* ignore, keep stale preview */ }
+            }
+
+            function schedulePreviewRefresh() {
+                if (previewRefreshTimer) clearInterval(previewRefreshTimer);
+                previewRefreshTimer = setInterval(function () {
+                    Object.keys(previewCards).forEach(refreshPreviewConfig);
+                }, PREVIEW_REFRESH_MS);
+            }
+
+            function closeCreateDialog() {
+                var d = document.getElementById('panel-create-dialog');
+                if (typeof d.close === 'function') { try { d.close(); } catch (_) { d.removeAttribute('open'); } } else d.removeAttribute('open');
+            }
+
+            document.getElementById('new-panel-open').addEventListener('click', function () {
+                var dialog = document.getElementById('panel-create-dialog');
+                if (typeof dialog.showModal === 'function') {
+                    try { dialog.showModal(); } catch (_) { dialog.setAttribute('open', ''); }
+                } else {
+                    dialog.setAttribute('open', '');
+                }
+                var nameInput = document.getElementById('new-panel-name');
+                if (nameInput) try { nameInput.focus(); } catch (_) {}
+            });
+            document.getElementById('panel-create-cancel').addEventListener('click', closeCreateDialog);
+            document.getElementById('panel-create-close-top').addEventListener('click', closeCreateDialog);
+            document.getElementById('panel-create-dialog').addEventListener('click', function (e) {
+                if (e.target === this) closeCreateDialog();
+            });
 
             document.getElementById('create-panel-btn').addEventListener('click', async function () {
                 var btn = this;
@@ -475,6 +725,7 @@
                         var data = await res.json();
                         document.getElementById('new-panel-name').value = '';
                         document.getElementById('new-panel-room').value = '';
+                        closeCreateDialog();
                         ShellLogic.showToast('Created ' + data.panel.name);
                         loadPanels();
                     } else {
@@ -509,7 +760,10 @@
                         showName: w.showName === true,
                     };
                 });
-                panelVariables = {};
+                var cached = previewConfigs[panel.id];
+                panelVariables = cached && cached.variables
+                    ? Object.assign({}, cached.variables)
+                    : {};
                 // Ensure grid shows even though dialog is still hidden (GridStack needs visible container; rebuild after showModal)
                 devicePicker.setSelected(panel.deviceIds || []);
 
