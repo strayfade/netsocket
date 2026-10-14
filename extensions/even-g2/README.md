@@ -82,8 +82,8 @@ Open the dev URL in a browser (phone or laptop). Below the live canvas:
    The device ID is shown underneath; approve it in the netsocket
    dashboard → Settings → Devices.
 3. **Aria** — endpoint (host root; a trailing `/api/v1` is stripped
-    automatically), API key, provider + model (use *Load providers* to
-    discover IDs), preset (`short` fits the display, `ping` is terser).
+    automatically), API key, and preset (`short` fits the display, `ping`
+    is terser). The model is chosen in Aria's settings, not here.
     The Aria host must serve CORS on `/api/v1/*` (added to Aria's
     `next.config.ts` — redeploy Aria after pulling) or the glasses get
     `failed to fetch` on preflight.
@@ -165,7 +165,7 @@ extensions/even-g2/
 ├── src/state/store.ts     ← tabs, alerts, Aria reply pages, link + status snapshot
 ├── src/crypto/device.ts   ← pairing crypto (noble curves + WebCrypto)
 ├── src/net/netsocket.ts   ← device WS client (hello/challenge/auth/ping)
-├── src/net/aria.ts        ← Aria chat + model discovery
+├── src/net/aria.ts        ← Aria chat
 ├── src/net/location.ts    ← phone one-shot fix (Low accuracy, ~1km rounding)
 ├── src/image/tiles.ts     ← 2x2 tile slicing + PNG bytes + dirty compare
 ├── src/ui/chrome.ts       ← frame base, tab bar, title, hint

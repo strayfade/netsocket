@@ -612,14 +612,6 @@
                     ariaKeyToggle.innerHTML = isPwd ? '<span class="material-symbols-outlined">visibility_off</span>' : '<span class="material-symbols-outlined">visibility</span>';
                 });
                 ariaKeyRow.appendChild(ariaKeyInp); ariaKeyRow.appendChild(ariaKeyToggle); ariaKeyWrap.appendChild(ariaKeyRow); ariaGrid.appendChild(ariaKeyWrap);
-                var ariaMkField = function (label, icon, id, placeholder) {
-                    var wrap = document.createElement('div'); wrap.className = 'provider-form-field';
-                    var lab = document.createElement('label'); lab.htmlFor = id; lab.innerHTML = '<span class="material-symbols-outlined">' + icon + '</span> ' + label;
-                    var inp = document.createElement('input'); inp.type = 'text'; inp.id = id; inp.placeholder = placeholder || '';
-                    wrap.appendChild(lab); wrap.appendChild(inp); ariaGrid.appendChild(wrap); return inp;
-                };
-                var ariaProviderInp = ariaMkField('Default provider ID', 'smart_toy', 'ai-aria-provider', 'Aria provider id');
-                var ariaModelInp = ariaMkField('Default model', 'model_training', 'ai-aria-model', 'Aria model id');
                 var ariaPresetWrap = document.createElement('div'); ariaPresetWrap.className = 'provider-form-field';
                 ariaPresetWrap.innerHTML = '<label for="ai-aria-preset"><span class="material-symbols-outlined">tune</span> Default verbosity</label>';
                 var ariaPresetSel = document.createElement('select'); ariaPresetSel.id = 'ai-aria-preset';
@@ -639,7 +631,7 @@
                 var ariaSaveBtn = document.createElement('button'); ariaSaveBtn.type = 'button'; ariaSaveBtn.className = 'btn-primary'; ariaSaveBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Save';
                 var ariaTestBtn = document.createElement('button'); ariaTestBtn.type = 'button'; ariaTestBtn.className = 'btn-muted'; ariaTestBtn.innerHTML = '<span class="material-symbols-outlined">power</span> Test';
                 ariaSaveBtn.addEventListener('click', async function () {
-                    var payload = { endpoint: ariaEndpointInp.value.trim(), providerId: ariaProviderInp.value.trim(), model: ariaModelInp.value.trim(), preset: ariaPresetSel.value };
+                    var payload = { endpoint: ariaEndpointInp.value.trim(), preset: ariaPresetSel.value };
                     if (ariaKeyInp.value) payload.apiKey = ariaKeyInp.value;
                     ariaSaveBtn.disabled = true; ariaSetStatus('Saving...', 'info');
                     try {
@@ -666,8 +658,6 @@
                     if (ares.ok) {
                         var aj = await ares.json();
                         ariaEndpointInp.value = aj.endpoint || '';
-                        ariaProviderInp.value = aj.providerId || '';
-                        ariaModelInp.value = aj.model || '';
                         if (aj.preset) ariaPresetSel.value = aj.preset;
                         if (aj.hasApiKey) ariaKeyInp.placeholder = 'key saved - leave blank to keep';
                     }

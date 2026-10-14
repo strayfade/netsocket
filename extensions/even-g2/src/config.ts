@@ -15,8 +15,6 @@ export interface G2Config {
   ariaEndpoint: string
   /** Aria API key (Settings > API Keys), sent as Bearer */
   ariaKey: string
-  providerId: string
-  model: string
   preset: 'ping' | 'short'
   /** Canned prompts — the glasses have no keyboard, so these are the inputs */
   prompts: string[]
@@ -61,8 +59,6 @@ export function defaultConfig(): G2Config {
     deviceName: 'G2 glasses',
     ariaEndpoint: '',
     ariaKey: '',
-    providerId: '',
-    model: '',
     preset: 'short',
     prompts: [...DEFAULT_PROMPTS],
     wxLat: '',
@@ -138,8 +134,6 @@ function sanitizeConfig(raw: Partial<G2Config>): G2Config {
     deviceName: str(raw.deviceName, base.deviceName).slice(0, 60) || base.deviceName,
     ariaEndpoint: str(raw.ariaEndpoint, '').replace(/\/+$/, ''),
     ariaKey: typeof raw.ariaKey === 'string' ? raw.ariaKey.trim().slice(0, 500) : '',
-    providerId: str(raw.providerId, ''),
-    model: str(raw.model, ''),
     preset: raw.preset === 'ping' ? 'ping' : 'short',
     prompts,
     wxLat: coord(raw.wxLat, -90, 90),

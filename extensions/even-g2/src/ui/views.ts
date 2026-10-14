@@ -257,7 +257,6 @@ function stripValueFor(card: 'alerts' | 'link' | 'aria' | 'home', state: AppStat
   }
   if (card === 'aria') {
     if (!cfg.ariaEndpoint || !cfg.ariaKey) return 'Off'
-    if (!cfg.providerId || !cfg.model) return 'No model'
     return 'Ready'
   }
   const home = state.status?.home
@@ -339,7 +338,7 @@ export function drawAria(
   cfg: G2Config,
 ): void {
   ctx.textBaseline = 'alphabetic'
-  const configured = Boolean(cfg.ariaEndpoint && cfg.ariaKey && cfg.providerId && cfg.model)
+  const configured = Boolean(cfg.ariaEndpoint && cfg.ariaKey)
   if (!configured) {
     drawCenteredMessage(ctx, 'Aria unavailable!')
     return

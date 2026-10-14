@@ -11,10 +11,6 @@ class NodeDefinition {
         this.addProperty("Message", "");
         this.addInput("Messages", "string");
         this.addProperty("Messages", "");
-        this.addInput("Provider", "string");
-        this.addProperty("Provider", "");
-        this.addInput("Model", "string");
-        this.addProperty("Model", "");
         this.addInput("Preset", "string");
         this.addEnumProperty("Preset", "balanced", ["ping", "short", "compact", "balanced", "detailed", "extended"]);
         this.addInput("Response Format", "string");
@@ -59,8 +55,6 @@ NodeDefinition.prototype.portMeta = {
 		Action: {"description":"Aria API operation to run. Chat sends a prompt; the rest read or manage saved chats, automations, models and MCP servers.","structure":"One of: Chat, List Models, List Chats, Get Chat, List Automations, Create Automation, Get Automation, Update Automation, Delete Automation, Run Automation, Automation Runs, List MCP Servers.","required":true},
 		Message: {"description":"Chat message for the Chat action, or automation prompt for Create/Update Automation.","structure":"Natural-language prompt text (chat messages are limited to 50,000 chars).","required":false},
 		Messages: {"description":"Optional full conversation history for the Chat action; overrides Message when set.","structure":"JSON array of { role, content } entries, roles user|assistant|system, up to 200 entries.","required":false},
-		Provider: {"description":"Aria-side model provider ID. Leave empty to use the AI Providers settings default.","structure":"Provider identifier string from Aria GET /api/v1/models.","required":false},
-		Model: {"description":"Aria-side model ID. Leave empty to use the AI Providers settings default.","structure":"Model identifier string (provider-specific).","required":false},
 		Preset: {"description":"Response length/verbosity preset. ping = one sentence (wearables), short = 1-2 sentences, compact = brief, balanced = default, detailed = multi-paragraph, extended = long-form.","structure":"One of: ping, short, compact, balanced, detailed, extended.","required":false},
 		"Response Format": {"description":"Reply text style. plaintext strips all markdown (glasses, watches, voice).","structure":"markdown (default) or plaintext.","required":false},
 		"Max Tokens": {"description":"Optional override of the preset output-token cap (1-8000). Empty = preset default.","structure":"Positive integer or empty.","required":false},
@@ -103,8 +97,6 @@ const NodeFunction = async (node, params, behaviors) => {
     const inputs = {
         message: string(params.Message),
         messages: string(params.Messages),
-        providerId: string(params.Provider) || stored.providerId,
-        model: string(params.Model) || stored.model,
         preset: string(params.Preset) || stored.preset,
         responseFormat: string(params['Response Format']) || 'markdown',
         maxTokens: number(params['Max Tokens']),

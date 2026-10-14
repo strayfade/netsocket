@@ -6,15 +6,6 @@ import type { G2Config } from '../config'
 
 const CHAT_TIMEOUT_MS = 120_000
 
-export interface AriaProvider {
-  id: string
-  name: string
-  defaultModel: string
-  isDefault?: boolean
-  models: { id: string }[] | null
-  modelError: string | null
-}
-
 function baseUrl(cfg: G2Config): string {
   // Accept the host root with or without a trailing /api/v1 — the path
   // is appended below, and users paste the docs' base URL verbatim.
@@ -67,7 +58,6 @@ export async function sendPromptStream(
   signal?: AbortSignal,
 ): Promise<string> {
   if (!cfg.ariaEndpoint || !cfg.ariaKey) throw new Error('aria not configured')
-  if (!cfg.providerId || !cfg.model) throw new Error('aria model not set')
   const ctrl = new AbortController()
   const timer = window.setTimeout(() => ctrl.abort(), CHAT_TIMEOUT_MS)
   const forwardAbort = () => ctrl.abort()
@@ -79,8 +69,6 @@ export async function sendPromptStream(
       signal: ctrl.signal,
       body: JSON.stringify({
         message: `${message}\n\n${ASCII_RULE}`,
-        providerId: cfg.providerId,
-        model: cfg.model,
         preset: cfg.preset,
         response_format: 'plaintext',
         include_tool_calls: false,
@@ -155,12 +143,4 @@ async function readError(res: Response): Promise<string> {
     // not JSON — fall through
   }
   return fallback
-}
-
-export async function fetchProviders(cfg: G2Config): Promise<AriaProvider[]> {
-  if (!cfg.ariaEndpoint || !cfg.ariaKey) throw new Error('aria not configured')
-  const res = await fetch(`${baseUrl(cfg)}/api/v1/models`, { headers: headers(cfg) })
-  if (!res.ok) throw new Error(`aria ${res.status}`)
-  const json = (await res.json()) as { providers?: AriaProvider[] }
-  return Array.isArray(json.providers) ? json.providers : []
 }

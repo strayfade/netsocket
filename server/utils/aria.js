@@ -39,8 +39,6 @@ const DEFAULT_TIMEOUT_MS = 30000
 
 const SETTING_ENDPOINT = 'aria.endpoint'
 const SETTING_API_KEY = 'aria.apiKey'
-const SETTING_PROVIDER_ID = 'aria.providerId'
-const SETTING_MODEL = 'aria.model'
 const SETTING_PRESET = 'aria.preset'
 
 // Accept the host root with or without a trailing /api/v1, mirroring the
@@ -61,8 +59,6 @@ const getAriaSettings = (store) => {
     return {
         endpoint: normalizeAriaEndpoint(s.getSetting(SETTING_ENDPOINT)),
         apiKey: String(s.getSetting(SETTING_API_KEY) || ''),
-        providerId: String(s.getSetting(SETTING_PROVIDER_ID) || '').trim(),
-        model: String(s.getSetting(SETTING_MODEL) || '').trim(),
         preset: isValidPreset(storedPreset) ? storedPreset : DEFAULT_PRESET,
     }
 }
@@ -125,17 +121,11 @@ const ariaRequest = async (conn, method, path, body, options = {}) => {
 }
 
 const normalizeChatBody = (inputs) => {
-    const providerId = String(inputs.providerId || '').trim()
-    const model = String(inputs.model || '').trim()
-    if (!providerId) throw new Error('Aria Provider is required (or set a default in AI Providers settings)')
-    if (!model) throw new Error('Aria Model is required (or set a default in AI Providers settings)')
     const preset = String(inputs.preset || DEFAULT_PRESET).trim()
     if (!isValidPreset(preset)) throw new Error(`Unknown preset "${preset}". Valid presets: ${ARIA_PRESETS.join(', ')}.`)
     const responseFormat = String(inputs.responseFormat || DEFAULT_RESPONSE_FORMAT).trim()
     if (!isValidResponseFormat(responseFormat)) throw new Error(`Unknown response_format "${responseFormat}". Use markdown or plaintext.`)
     const body = {
-        providerId,
-        model,
         preset,
         response_format: responseFormat,
         include_tool_calls: inputs.includeToolCalls !== false,
@@ -257,8 +247,6 @@ const normalizeAutomationBody = (inputs, partial) => {
     const body = {}
     const name = String(inputs.name || '').trim()
     const prompt = String(inputs.message || '').trim()
-    const providerId = String(inputs.providerId || '').trim()
-    const model = String(inputs.model || '').trim()
     const scheduleType = String(inputs.scheduleType || 'interval').trim()
     if (!['interval', 'cron'].includes(scheduleType)) {
         throw new Error('Schedule Type must be interval or cron')
@@ -271,18 +259,12 @@ const normalizeAutomationBody = (inputs, partial) => {
     if (!partial) {
         if (!name) throw new Error('Name is required to create an automation')
         if (!prompt) throw new Error('Message (automation prompt) is required to create an automation')
-        if (!providerId) throw new Error('Aria Provider is required to create an automation')
-        if (!model) throw new Error('Aria Model is required to create an automation')
         body.name = name
         body.prompt = prompt
-        body.providerId = providerId
-        body.model = model
         body.scheduleType = scheduleType
     } else {
         if (name) body.name = name
         if (prompt) body.prompt = prompt
-        if (providerId) body.providerId = providerId
-        if (model) body.model = model
         if (inputs.scheduleType) body.scheduleType = scheduleType
         if (!Object.keys(body).length && inputs.enabled === undefined
             && !Number.isFinite(intervalMinutes) && !cronExpression && !Number.isFinite(retentionRuns)) {
@@ -310,8 +292,6 @@ const getPublicAriaSettings = (store) => {
     return {
         configured: !!(stored.endpoint && s.getSetting(SETTING_API_KEY)),
         endpoint: stored.endpoint,
-        providerId: stored.providerId,
-        model: stored.model,
         preset: stored.preset,
         hasApiKey: !!s.getSetting(SETTING_API_KEY),
     }
@@ -339,12 +319,6 @@ const handleSaveAriaSettings = async (req, res, deps = {}) => {
         if (key.trim()) store.setSetting(SETTING_API_KEY, key.trim().slice(0, 500))
     } else if (body.apiKey === null) {
         store.setSetting(SETTING_API_KEY, '')
-    }
-    if (body.providerId !== undefined) {
-        store.setSetting(SETTING_PROVIDER_ID, String(body.providerId || '').trim().slice(0, 200))
-    }
-    if (body.model !== undefined) {
-        store.setSetting(SETTING_MODEL, String(body.model || '').trim().slice(0, 200))
     }
     if (body.preset !== undefined) {
         const preset = String(body.preset || '').trim()
@@ -388,8 +362,6 @@ module.exports = {
     MAX_TOKENS_HARD_CAP,
     SETTING_ENDPOINT,
     SETTING_API_KEY,
-    SETTING_PROVIDER_ID,
-    SETTING_MODEL,
     SETTING_PRESET,
     normalizeAriaEndpoint,
     isValidPreset,

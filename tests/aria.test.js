@@ -72,7 +72,7 @@ const runNode = async (params) => {
 }
 
 const clearAriaSettings = () => {
-    for (const key of [aria.SETTING_ENDPOINT, aria.SETTING_API_KEY, aria.SETTING_PROVIDER_ID, aria.SETTING_MODEL, aria.SETTING_PRESET]) {
+    for (const key of [aria.SETTING_ENDPOINT, aria.SETTING_API_KEY, aria.SETTING_PRESET]) {
         settingsManager.setSetting(key, '')
     }
 }
@@ -101,12 +101,13 @@ describe('presets and formats', () => {
 describe('normalizeChatBody', () => {
     it('builds a non-streaming body with verbosity settings', () => {
         const body = aria.normalizeChatBody({
-            message: 'hi', providerId: 'p1', model: 'm1',
+            message: 'hi',
             preset: 'short', responseFormat: 'plaintext',
             includeToolCalls: false, includeToolResults: true, maxTokens: 150,
         })
         assert.equal(body.message, 'hi')
-        assert.equal(body.providerId, 'p1')
+        assert.equal(body.providerId, undefined)
+        assert.equal(body.model, undefined)
         assert.equal(body.preset, 'short')
         assert.equal(body.response_format, 'plaintext')
         assert.equal(body.include_tool_calls, false)
@@ -118,19 +119,18 @@ describe('normalizeChatBody', () => {
     it('prefers Messages history over Message and validates entries', () => {
         const body = aria.normalizeChatBody({
             message: 'ignored', messages: JSON.stringify([{ role: 'user', content: 'a' }, { role: 'assistant', content: 'b' }]),
-            providerId: 'p1', model: 'm1',
         })
         assert.ok(!('message' in body))
         assert.deepEqual(body.messages, [{ role: 'user', content: 'a' }, { role: 'assistant', content: 'b' }])
-        assert.throws(() => aria.normalizeChatBody({ messages: 'not json', providerId: 'p1', model: 'm1' }), /Messages must be a JSON array/)
-        assert.throws(() => aria.normalizeChatBody({ messages: '[{"role":"wizard","content":"x"}]', providerId: 'p1', model: 'm1' }), /role/)
+        assert.throws(() => aria.normalizeChatBody({ messages: 'not json' }), /Messages must be a JSON array/)
+        assert.throws(() => aria.normalizeChatBody({ messages: '[{"role":"wizard","content":"x"}]' }), /role/)
     })
 
     it('rejects missing prompts, bad presets and out-of-range token caps', () => {
-        assert.throws(() => aria.normalizeChatBody({ message: '  ', providerId: 'p1', model: 'm1' }), /Message is required/)
-        assert.throws(() => aria.normalizeChatBody({ message: 'hi', providerId: 'p1', model: 'm1', preset: 'verbose' }), /Unknown preset/)
-        assert.throws(() => aria.normalizeChatBody({ message: 'hi', providerId: 'p1', model: 'm1', maxTokens: 9000 }), /Max Tokens/)
-        const withoutCap = aria.normalizeChatBody({ message: 'hi', providerId: 'p1', model: 'm1', maxTokens: 0 })
+        assert.throws(() => aria.normalizeChatBody({ message: '  ' }), /Message is required/)
+        assert.throws(() => aria.normalizeChatBody({ message: 'hi', preset: 'verbose' }), /Unknown preset/)
+        assert.throws(() => aria.normalizeChatBody({ message: 'hi', maxTokens: 9000 }), /Max Tokens/)
+        const withoutCap = aria.normalizeChatBody({ message: 'hi', maxTokens: 0 })
         assert.ok(!('maxTokens' in withoutCap))
     })
 })
@@ -138,18 +138,18 @@ describe('normalizeChatBody', () => {
 describe('normalizeAutomationBody', () => {
     it('builds a create body for interval schedules', () => {
         const body = aria.normalizeAutomationBody({
-            name: 'Morning', message: 'Summarize', providerId: 'p1', model: 'm1',
+            name: 'Morning', message: 'Summarize',
             scheduleType: 'interval', intervalMinutes: 60, enabled: true, retentionRuns: 50,
         }, false)
         assert.deepEqual(body, {
-            name: 'Morning', prompt: 'Summarize', providerId: 'p1', model: 'm1',
+            name: 'Morning', prompt: 'Summarize',
             scheduleType: 'interval', intervalMinutes: 60, enabled: true, retentionRuns: 50,
         })
     })
 
     it('requires fields on create and sends only filled fields on update', () => {
-        assert.throws(() => aria.normalizeAutomationBody({ message: 'x', providerId: 'p', model: 'm', intervalMinutes: 5 }, false), /Name is required/)
-        assert.throws(() => aria.normalizeAutomationBody({ name: 'n', message: 'x', providerId: 'p', model: 'm', scheduleType: 'cron' }, false), /Cron Expression/)
+        assert.throws(() => aria.normalizeAutomationBody({ message: 'x', intervalMinutes: 5 }, false), /Name is required/)
+        assert.throws(() => aria.normalizeAutomationBody({ name: 'n', message: 'x', scheduleType: 'cron' }, false), /Cron Expression/)
         assert.throws(() => aria.normalizeAutomationBody({}, true), /at least one field/)
         const patch = aria.normalizeAutomationBody({ name: 'Evening', enabled: false }, true)
         assert.deepEqual(patch, { name: 'Evening', enabled: false })
@@ -159,12 +159,12 @@ describe('normalizeAutomationBody', () => {
 describe('runAriaAction routing', () => {
     it('issues the right method and path per action', async () => {
         const cases = [
-            ['Chat', 'POST', '/api/v1/chat', { message: 'hi', providerId: 'p', model: 'm' }],
+            ['Chat', 'POST', '/api/v1/chat', { message: 'hi' }],
             ['List Models', 'GET', '/api/v1/models', {}],
             ['List Chats', 'GET', '/api/v1/chats', {}],
             ['Get Chat', 'GET', '/api/v1/chats/c1', { chatId: 'c1' }],
             ['List Automations', 'GET', '/api/v1/automations', {}],
-            ['Create Automation', 'POST', '/api/v1/automations', { name: 'n', message: 'p', providerId: 'p', model: 'm', scheduleType: 'interval', intervalMinutes: 5 }],
+            ['Create Automation', 'POST', '/api/v1/automations', { name: 'n', message: 'p', scheduleType: 'interval', intervalMinutes: 5 }],
             ['Get Automation', 'GET', '/api/v1/automations/a1', { automationId: 'a1' }],
             ['Update Automation', 'PATCH', '/api/v1/automations/a1', { automationId: 'a1', name: 'new' }],
             ['Delete Automation', 'DELETE', '/api/v1/automations/a1', { automationId: 'a1' }],
@@ -225,7 +225,7 @@ describe('aria-settings handlers', () => {
     it('POST saves fields, keeps the key when omitted, and validates presets', async () => {
         const store = makeStore({ [aria.SETTING_API_KEY]: 'original' })
         const res = mockRes()
-        await aria.handleSaveAriaSettings({ body: { endpoint: 'http://y/', providerId: 'p', model: 'm', preset: 'ping' } }, res, { canAccess: () => true, settings: store })
+        await aria.handleSaveAriaSettings({ body: { endpoint: 'http://y/', preset: 'ping' } }, res, { canAccess: () => true, settings: store })
         assert.equal(res.statusCode, 200)
         assert.equal(store.data[aria.SETTING_ENDPOINT], 'http://y/')
         assert.equal(store.data[aria.SETTING_API_KEY], 'original')
@@ -304,7 +304,7 @@ describe('Language Processing/Aria node', () => {
         settingsManager.setSetting(aria.SETTING_API_KEY, 'k')
         const { ok, populated, triggered } = await runNode({
             Action: 'Chat', Message: 'Anything need my attention?',
-            Provider: 'prov', Model: 'mod', Preset: 'short', 'Response Format': 'plaintext',
+            Preset: 'short', 'Response Format': 'plaintext',
             'Max Tokens': 150, 'Include Tool Calls': 'False',
         })
         assert.equal(ok, true)
@@ -315,6 +315,8 @@ describe('Language Processing/Aria node', () => {
         assert.equal(req.method, 'POST')
         assert.equal(req.url, '/api/v1/chat')
         assert.equal(req.auth, 'Bearer k')
+        assert.equal(req.body.providerId, undefined)
+        assert.equal(req.body.model, undefined)
         assert.equal(req.body.preset, 'short')
         assert.equal(req.body.response_format, 'plaintext')
         assert.equal(req.body.include_tool_calls, false)
@@ -322,18 +324,16 @@ describe('Language Processing/Aria node', () => {
         assert.equal(req.body.stream, false)
     })
 
-    it('falls back to stored provider, model and preset defaults', async () => {
+    it('falls back to the stored preset and does not send a model', async () => {
         stub = await startStubAria(() => ({ payload: { text: 'ok', toolCalls: [] } }))
         settingsManager.setSetting(aria.SETTING_ENDPOINT, `http://127.0.0.1:${stub.port}/api/v1`)
         settingsManager.setSetting(aria.SETTING_API_KEY, 'k')
-        settingsManager.setSetting(aria.SETTING_PROVIDER_ID, 'stored-prov')
-        settingsManager.setSetting(aria.SETTING_MODEL, 'stored-model')
         settingsManager.setSetting(aria.SETTING_PRESET, 'compact')
         const { ok, populated } = await runNode({ Action: 'Chat', Message: 'hi' })
         assert.equal(ok, true)
         assert.equal(populated[1], 'ok')
-        assert.equal(stub.seen[0].body.providerId, 'stored-prov')
-        assert.equal(stub.seen[0].body.model, 'stored-model')
+        assert.equal(stub.seen[0].body.providerId, undefined)
+        assert.equal(stub.seen[0].body.model, undefined)
         assert.equal(stub.seen[0].body.preset, 'compact')
     })
 
@@ -351,7 +351,7 @@ describe('Language Processing/Aria node', () => {
     it('routes validation and transport failures to the Error output', async () => {
         settingsManager.setSetting(aria.SETTING_ENDPOINT, 'http://127.0.0.1:1')
         settingsManager.setSetting(aria.SETTING_API_KEY, 'k')
-        const missing = await runNode({ Action: 'Chat', Message: '   ', Provider: 'p', Model: 'm' })
+        const missing = await runNode({ Action: 'Chat', Message: '   ' })
         assert.equal(missing.ok, false)
         assert.match(missing.populated[3], /Message is required/)
         const down = await runNode({ Action: 'List Models' })
@@ -367,7 +367,7 @@ describe('Language Processing/Aria node', () => {
         stub = await startStubAria(() => ({ status: 401, payload: { error: 'revoked' } }))
         settingsManager.setSetting(aria.SETTING_ENDPOINT, `http://127.0.0.1:${stub.port}`)
         settingsManager.setSetting(aria.SETTING_API_KEY, 'bad')
-        const { ok, populated } = await runNode({ Action: 'Chat', Message: 'hi', Provider: 'p', Model: 'm' })
+        const { ok, populated } = await runNode({ Action: 'Chat', Message: 'hi' })
         assert.equal(ok, false)
         assert.match(populated[3], /Aria 401: revoked/)
     })

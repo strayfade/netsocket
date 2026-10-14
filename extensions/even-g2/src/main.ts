@@ -19,7 +19,7 @@ import './style.css'
 import { applyUrlConfig, encodeSideloadUrl, loadConfig, saveConfig, type G2Config } from './config'
 import { getOrCreateDeviceId, NetsocketLink, type LinkStatus } from './net/netsocket'
 import { getPhoneFix } from './net/location'
-import { fetchProviders, sendPromptStream, type AriaProvider } from './net/aria'
+import { sendPromptStream } from './net/aria'
 import { TILES, TILE_W, TILE_H, quantizeFrame, sliceTiles, canvasToPngBytes, bytesEqual, FRAME_W, FRAME_H } from './image/tiles'
 import { drawFrameBase, connIconFrame, drawTabBar } from './ui/chrome'
 import { loadFonts } from './ui/font'
@@ -477,12 +477,8 @@ function buildBrowserMirror(): void {
     `<h2>Aria</h2>` +
     field('set-aria-url', 'aria endpoint', 'text', cfg.ariaEndpoint, 'http://192.168.1.101:3000') +
     field('set-aria-key', 'aria api key', 'password', cfg.ariaKey, 'aria_…') +
-    `<label>provider<select id="set-provider"></select></label>` +
-    `<label>model<select id="set-model"></select></label>` +
-    field('set-model-custom', 'model id (manual)', 'text', cfg.model, 'used when the provider list is unreachable') +
+    `<p class="sub">The model is chosen in Aria settings.</p>` +
     `<label>preset<select id="set-preset"><option value="short">short</option><option value="ping">ping</option></select></label>` +
-    `<div class="btnrow"><button id="set-load-models" type="button">Load providers</button></div>` +
-    `<p class="sub" id="mirror-models"></p>` +
     `<h2>Weather (Status tab)</h2>` +
     `<p class="sub">Primary source is your phone's location (one-shot, city-level, asked once per refresh). These fields are the fallback for denied permission, the simulator, and this mirror page.</p>` +
     field('set-wx-place', 'place label', 'text', cfg.wxPlace, 'Seattle') +
@@ -531,60 +527,6 @@ function buildBrowserMirror(): void {
     render()
   })
 
-  // Provider/model dropdowns fed by Load providers — exact IDs, no typos.
-  const providerSelect = document.querySelector<HTMLSelectElement>('#set-provider')
-  const modelSelect = document.querySelector<HTMLSelectElement>('#set-model')
-  const modelCustom = get('set-model-custom')
-  let providerCache: AriaProvider[] = []
-
-  const setOptions = (sel: HTMLSelectElement | null, options: { value: string; label: string }[], current: string) => {
-    if (!sel) return
-    sel.innerHTML = ''
-    const seen = new Set<string>()
-    for (const o of options) {
-      if (seen.has(o.value)) continue
-      seen.add(o.value)
-      const el = document.createElement('option')
-      el.value = o.value
-      el.textContent = o.label
-      sel.appendChild(el)
-    }
-    if (current && !seen.has(current)) {
-      const el = document.createElement('option')
-      el.value = current
-      el.textContent = `${current} (saved)`
-      sel.appendChild(el)
-    }
-    if (current) sel.value = current
-  }
-
-  const syncModels = () => {
-    const p = providerCache.find((x) => x.id === providerSelect?.value)
-    const models = p?.models ?? []
-    if (modelSelect) modelSelect.style.display = models.length > 0 ? '' : 'none'
-    if (modelCustom) {
-      modelCustom.style.display = models.length > 0 ? 'none' : ''
-      const label = modelCustom.closest('label')
-      if (label) label.style.display = models.length > 0 ? 'none' : ''
-    }
-    setOptions(
-      modelSelect,
-      models.map((m) => ({ value: m.id, label: m.id })),
-      cfg.model,
-    )
-    const out = document.querySelector('#mirror-models')
-    if (out && p && models.length === 0) {
-      out.textContent = p.modelError ? `model list failed: ${p.modelError} — type the id manually` : 'no models listed — type the id manually'
-    }
-  }
-
-  setOptions(providerSelect, [], cfg.providerId)
-  setOptions(modelSelect, [], cfg.model)
-  providerSelect?.addEventListener('change', () => {
-    cfg.providerId = providerSelect.value
-    syncModels()
-  })
-
   document.querySelector('#set-save')?.addEventListener('click', () => {
     cfg = {
       threshold: thresholdInput ? Math.max(0, Math.min(100, Number(thresholdInput.value) || 0)) : cfg.threshold,
@@ -595,8 +537,6 @@ function buildBrowserMirror(): void {
       deviceName: get('set-device')?.value ?? 'G2 glasses',
       ariaEndpoint: get('set-aria-url')?.value ?? '',
       ariaKey: get('set-aria-key')?.value ?? '',
-      providerId: providerSelect?.value ?? '',
-      model: modelSelect && modelSelect.style.display !== 'none' ? modelSelect.value : (get('set-model-custom')?.value ?? ''),
       preset: preset?.value === 'ping' ? 'ping' : 'short',
       wxLat: get('set-wx-lat')?.value ?? '',
       wxLon: get('set-wx-lon')?.value ?? '',
@@ -620,31 +560,6 @@ function buildBrowserMirror(): void {
       await navigator.clipboard.writeText(linkInput.value)
     } catch {
       linkInput.select()
-    }
-  })
-  document.querySelector('#set-load-models')?.addEventListener('click', async () => {
-    const out = document.querySelector('#mirror-models')
-    const probe: G2Config = {
-      ...cfg,
-      ariaEndpoint: get('set-aria-url')?.value ?? '',
-      ariaKey: get('set-aria-key')?.value ?? '',
-    }
-    if (out) out.textContent = 'loading…'
-    try {
-      const providers = await fetchProviders(probe)
-      providerCache = providers
-      setOptions(
-        providerSelect,
-        providers.map((p) => ({ value: p.id, label: `${p.name} (${p.id})` })),
-        cfg.providerId || providers.find((p) => p.isDefault)?.id || providers[0]?.id || '',
-      )
-      if (providerSelect) cfg.providerId = providerSelect.value
-      syncModels()
-      if (out && providerCache.find((p) => p.id === providerSelect?.value)?.models?.length) {
-        out.textContent = 'providers loaded — pick from the dropdowns, then Save + reconnect'
-      }
-    } catch (err) {
-      if (out) out.textContent = err instanceof Error ? err.message : 'failed'
     }
   })
   updateMirrorStatus()
