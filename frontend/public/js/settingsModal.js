@@ -590,6 +590,88 @@
                         providers = Array.isArray(j.providers) ? j.providers : [];
                     }
                 } catch (e) {}
+                // Aria agent gateway connection (used by the Language Processing/Aria node).
+                var ariaCard = document.createElement('div');
+                ariaCard.className = 'provider-form-card';
+                var ariaHead = document.createElement('div'); ariaHead.className = 'provider-form-head';
+                ariaHead.innerHTML = '<p class="provider-form-title">Aria Gateway</p><p class="provider-form-sub">Connected Aria instance for the <strong>Language Processing/Aria</strong> node.</p>';
+                ariaCard.appendChild(ariaHead);
+                var ariaGrid = document.createElement('div'); ariaGrid.className = 'provider-form-grid';
+                var ariaEndpointWrap = document.createElement('div'); ariaEndpointWrap.className = 'provider-form-field span-2';
+                ariaEndpointWrap.innerHTML = '<label for="ai-aria-endpoint"><span class="material-symbols-outlined">link</span> Aria endpoint</label>';
+                var ariaEndpointInp = document.createElement('input'); ariaEndpointInp.type = 'text'; ariaEndpointInp.id = 'ai-aria-endpoint'; ariaEndpointInp.placeholder = 'http://192.168.1.101:3000';
+                ariaEndpointWrap.appendChild(ariaEndpointInp); ariaGrid.appendChild(ariaEndpointWrap);
+                var ariaKeyWrap = document.createElement('div'); ariaKeyWrap.className = 'provider-form-field span-2';
+                ariaKeyWrap.innerHTML = '<label for="ai-aria-key"><span class="material-symbols-outlined">key</span> Aria API key <span style="font-weight:400;color:#666">- Settings &gt; API Keys on the Aria dashboard</span></label>';
+                var ariaKeyRow = document.createElement('div'); ariaKeyRow.className = 'provider-form-token-row';
+                var ariaKeyInp = document.createElement('input'); ariaKeyInp.type = 'password'; ariaKeyInp.id = 'ai-aria-key'; ariaKeyInp.placeholder = 'leave blank to keep existing';
+                var ariaKeyToggle = document.createElement('button'); ariaKeyToggle.type = 'button'; ariaKeyToggle.className = 'provider-form-token-toggle'; ariaKeyToggle.innerHTML = '<span class="material-symbols-outlined">visibility</span>'; ariaKeyToggle.title = 'Show/hide';
+                ariaKeyToggle.addEventListener('click', function () {
+                    var isPwd = ariaKeyInp.type === 'password';
+                    ariaKeyInp.type = isPwd ? 'text' : 'password';
+                    ariaKeyToggle.innerHTML = isPwd ? '<span class="material-symbols-outlined">visibility_off</span>' : '<span class="material-symbols-outlined">visibility</span>';
+                });
+                ariaKeyRow.appendChild(ariaKeyInp); ariaKeyRow.appendChild(ariaKeyToggle); ariaKeyWrap.appendChild(ariaKeyRow); ariaGrid.appendChild(ariaKeyWrap);
+                var ariaMkField = function (label, icon, id, placeholder) {
+                    var wrap = document.createElement('div'); wrap.className = 'provider-form-field';
+                    var lab = document.createElement('label'); lab.htmlFor = id; lab.innerHTML = '<span class="material-symbols-outlined">' + icon + '</span> ' + label;
+                    var inp = document.createElement('input'); inp.type = 'text'; inp.id = id; inp.placeholder = placeholder || '';
+                    wrap.appendChild(lab); wrap.appendChild(inp); ariaGrid.appendChild(wrap); return inp;
+                };
+                var ariaProviderInp = ariaMkField('Default provider ID', 'smart_toy', 'ai-aria-provider', 'Aria provider id');
+                var ariaModelInp = ariaMkField('Default model', 'model_training', 'ai-aria-model', 'Aria model id');
+                var ariaPresetWrap = document.createElement('div'); ariaPresetWrap.className = 'provider-form-field';
+                ariaPresetWrap.innerHTML = '<label for="ai-aria-preset"><span class="material-symbols-outlined">tune</span> Default verbosity</label>';
+                var ariaPresetSel = document.createElement('select'); ariaPresetSel.id = 'ai-aria-preset';
+                var ariaPresetOpts = [['ping', 'Ping - one sentence'], ['short', 'Short - 1-2 sentences'], ['compact', 'Compact - brief'], ['balanced', 'Balanced - default'], ['detailed', 'Detailed'], ['extended', 'Extended - long-form']];
+                for (var ai = 0; ai < ariaPresetOpts.length; ai++) {
+                    var aopt = document.createElement('option'); aopt.value = ariaPresetOpts[ai][0]; aopt.textContent = ariaPresetOpts[ai][1];
+                    ariaPresetSel.appendChild(aopt);
+                }
+                ariaPresetWrap.appendChild(ariaPresetSel); ariaGrid.appendChild(ariaPresetWrap);
+                ariaCard.appendChild(ariaGrid);
+                var ariaStatus = document.createElement('div'); ariaStatus.className = 'provider-form-status';
+                var ariaSetStatus = function (msg, kind) {
+                    ariaStatus.textContent = msg; ariaStatus.className = 'provider-form-status is-visible is-' + (kind || 'info');
+                    if (!msg) ariaStatus.className = 'provider-form-status';
+                };
+                var ariaActions = document.createElement('div'); ariaActions.className = 'provider-card-actions'; ariaActions.style.marginTop = '12px';
+                var ariaSaveBtn = document.createElement('button'); ariaSaveBtn.type = 'button'; ariaSaveBtn.className = 'btn-primary'; ariaSaveBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Save';
+                var ariaTestBtn = document.createElement('button'); ariaTestBtn.type = 'button'; ariaTestBtn.className = 'btn-muted'; ariaTestBtn.innerHTML = '<span class="material-symbols-outlined">power</span> Test';
+                ariaSaveBtn.addEventListener('click', async function () {
+                    var payload = { endpoint: ariaEndpointInp.value.trim(), providerId: ariaProviderInp.value.trim(), model: ariaModelInp.value.trim(), preset: ariaPresetSel.value };
+                    if (ariaKeyInp.value) payload.apiKey = ariaKeyInp.value;
+                    ariaSaveBtn.disabled = true; ariaSetStatus('Saving...', 'info');
+                    try {
+                        var sres = await fetch('/v1/aria-settings', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        if (!sres.ok) { var sj = await sres.json().catch(function () { return {}; }); ariaSetStatus('Failed: ' + (sj.error || sres.statusText), 'error'); ariaSaveBtn.disabled = false; return; }
+                        ariaKeyInp.value = ''; ariaKeyInp.type = 'password';
+                        ariaSetStatus('Aria settings saved.', 'success');
+                    } catch (e) { ariaSetStatus('Error: ' + e.message, 'error'); } finally { ariaSaveBtn.disabled = false; }
+                });
+                ariaTestBtn.addEventListener('click', async function () {
+                    ariaTestBtn.disabled = true; var orig = ariaTestBtn.innerHTML; ariaTestBtn.innerHTML = '<span class="material-symbols-outlined">progress_activity</span> Testing…';
+                    try {
+                        var tres = await fetch('/v1/aria-settings/test', { method: 'POST', credentials: 'same-origin' });
+                        var tj = await tres.json().catch(function () { return {}; });
+                        if (tj.ok) ariaSetStatus('Connected: ' + tj.providers + ' Aria provider(s) found.', 'success');
+                        else ariaSetStatus('Failed: ' + (tj.error || tres.statusText), 'error');
+                    } catch (e) { ariaSetStatus('Error: ' + e.message, 'error'); }
+                    ariaTestBtn.disabled = false; ariaTestBtn.innerHTML = orig;
+                });
+                ariaActions.appendChild(ariaSaveBtn); ariaActions.appendChild(ariaTestBtn); ariaCard.appendChild(ariaActions); ariaCard.appendChild(ariaStatus);
+                aiProvidersPanelEl.appendChild(ariaCard);
+                try {
+                    var ares = await fetch('/v1/aria-settings', { credentials: 'same-origin' });
+                    if (ares.ok) {
+                        var aj = await ares.json();
+                        ariaEndpointInp.value = aj.endpoint || '';
+                        ariaProviderInp.value = aj.providerId || '';
+                        ariaModelInp.value = aj.model || '';
+                        if (aj.preset) ariaPresetSel.value = aj.preset;
+                        if (aj.hasApiKey) ariaKeyInp.placeholder = 'key saved - leave blank to keep';
+                    }
+                } catch (e) {}
                 if (!providers.length) {
                     var empty = document.createElement('div');
                     empty.className = 'provider-empty';

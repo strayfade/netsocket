@@ -1085,6 +1085,17 @@ app.get('/v1/providers/:id/models', async (req, res) => {
     }
 })
 
+// MARK: Aria agent gateway (connection settings live in the AI Providers tab)
+app.get('/v1/aria-settings', (req, res) => {
+    return require('./utils/aria').handleGetAriaSettings(req, res, { canAccess: canAccessPrivateApi })
+})
+app.post('/v1/aria-settings', async (req, res) => {
+    return require('./utils/aria').handleSaveAriaSettings(req, res, { canAccess: canAccessPrivateApi })
+})
+app.post('/v1/aria-settings/test', async (req, res) => {
+    return require('./utils/aria').handleTestAriaSettings(req, res, { canAccess: canAccessPrivateApi })
+})
+
 app.get("/v1/auth-state", (req, res) => {
     res.status(200).json({ needsRegistration: !hasAccount() });
 });
