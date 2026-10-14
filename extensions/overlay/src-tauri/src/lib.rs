@@ -2,6 +2,7 @@ mod config;
 mod device_crypto;
 mod hotkeys;
 mod overlay;
+mod palette;
 mod platform;
 mod settings_store;
 mod websocket;
@@ -310,6 +311,47 @@ fn overlay_get_visible(app: AppHandle) -> bool {
 }
 
 #[tauri::command]
+async fn palette_refresh(app: AppHandle) -> Result<palette::PaletteSnapshot, String> {
+    palette::refresh(app).await
+}
+
+#[tauri::command]
+async fn palette_files(app: AppHandle, query: String) -> Result<Vec<palette::FileHit>, String> {
+    palette::files(app, query).await
+}
+
+#[tauri::command]
+fn palette_windows(app: AppHandle) -> Vec<palette::WindowHit> {
+    let hwnd = main_window(&app)
+        .and_then(|window| window.hwnd().ok())
+        .map(|raw| raw.0 as isize);
+    palette::windows_list(hwnd)
+}
+
+#[tauri::command]
+fn palette_execute(payload: palette::ExecutePayload) -> Result<OkPayload, String> {
+    palette::execute(&payload)?;
+    Ok(OkPayload {
+        ok: true,
+        error: None,
+        conversationId: None,
+    })
+}
+
+#[tauri::command]
+fn palette_history_get(app: AppHandle) -> Vec<palette::HistoryEntry> {
+    palette::load_history(&app)
+}
+
+#[tauri::command]
+fn palette_history_record(
+    app: AppHandle,
+    entry: palette::HistoryEntry,
+) -> Result<Vec<palette::HistoryEntry>, String> {
+    palette::record_history(&app, entry)
+}
+
+#[tauri::command]
 fn shell_open_external(app: AppHandle, url: String) -> Result<OkPayload, String> {
     if !config::is_external_url(&url) {
         return Ok(OkPayload {
@@ -375,6 +417,7 @@ pub fn run() {
             let settings = SettingsHandle::new(app.handle());
             app.manage(settings.clone());
             app.manage(OverlayHandle::new());
+            app.manage(palette::PaletteHandle::new());
 
             let ws_runtime = WsRuntime::spawn(app.handle().clone(), settings.clone());
             app.manage(ws_runtime);
@@ -424,6 +467,12 @@ pub fn run() {
             overlay_notify_ready,
             overlay_get_visible,
             shell_open_external,
+            palette_refresh,
+            palette_files,
+            palette_windows,
+            palette_execute,
+            palette_history_get,
+            palette_history_record,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

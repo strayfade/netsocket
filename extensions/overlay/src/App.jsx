@@ -7,9 +7,15 @@ import HistoryPanel from "./HistoryPanel";
 import {
   createSlashCommands,
   matchSlashCommand,
-  suggestSlashCommands,
   unknownSlashHelp,
 } from "./slashCommands.js";
+import { runPaletteAction } from "./palette/actions.js";
+import { evaluateExpression } from "./palette/calculator.js";
+import { collectAsyncResults } from "./palette/asyncResults.js";
+import { readLocalHistory, remember, writeLocalHistory } from "./palette/history.js";
+import { rankPalette } from "./palette/rank.js";
+import { isModeQuery } from "./palette/score.js";
+import { normalizeSearchEngine } from "./palette/web.js";
 import { recordReceivedAlert } from "./alertHistory.js";
 import {
   DEFAULT_PREFERRED,
@@ -42,6 +48,7 @@ const defaultSettings = {
   deviceId: "",
   deviceName: "",
   animationsEnabled: true,
+  searchEngine: "google",
   profiles: {
     production: { url: "ws://127.0.0.1:4675", secret: "" },
     development: { url: "ws://127.0.0.1:4675", secret: "" },
@@ -69,6 +76,12 @@ const fallbackApi = {
   notifyReady: () => {},
   getOverlayVisible: async () => false,
   bindOverlayEvents: async () => () => {},
+  paletteRefresh: async () => ({ apps: [] }),
+  paletteFiles: async () => [],
+  paletteWindows: async () => [],
+  paletteExecute: async () => ({ ok: false, error: "Palette actions need the desktop app." }),
+  paletteHistoryGet: async () => readLocalHistory(),
+  paletteHistoryRecord: async (entry) => writeLocalHistory(remember(readLocalHistory(), entry)),
 };
 
 const api =
@@ -223,6 +236,7 @@ export default function App() {
   const settingsSaveTimeoutRef = useRef(null);
   const settingsSaveGenRef = useRef(0);
   const animationsEnabledRef = useRef(true);
+  const suggestionTouchedRef = useRef(false);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -541,26 +555,120 @@ export default function App() {
   const [suggestSuppressed, setSuggestSuppressed] = useState(false);
   const [pinnedSuggestions, setPinnedSuggestions] = useState([]);
   const [suggestQuery, setSuggestQuery] = useState(query);
+  const [paletteApps, setPaletteApps] = useState([]);
+  const [paletteWindows, setPaletteWindows] = useState([]);
+  const [paletteFiles, setPaletteFiles] = useState([]);
+  const [paletteExtras, setPaletteExtras] = useState([]);
+  const [paletteHistory, setPaletteHistory] = useState([]);
+  const [confirmId, setConfirmId] = useState(null);
+
+  const preview = useMemo(
+    () =>
+      rankPalette({
+        query,
+        searchEngine: settings.searchEngine,
+        history: paletteHistory,
+        apps: paletteApps,
+        windows: paletteWindows,
+        files: paletteFiles,
+        extras: paletteExtras,
+        slashCommands,
+      }),
+    [
+      query,
+      settings.searchEngine,
+      paletteHistory,
+      paletteApps,
+      paletteWindows,
+      paletteFiles,
+      paletteExtras,
+      slashCommands,
+    ]
+  );
 
   if (query !== suggestQuery) {
     setSuggestQuery(query);
     setSuggestSuppressed(false);
-    setSuggestionIndex(0);
+    setConfirmId(null);
+    suggestionTouchedRef.current = false;
+    setSuggestionIndex(preview.index < 0 ? 0 : preview.index);
   }
 
-  const slashSuggestions = useMemo(
-    () => (suggestSuppressed ? [] : suggestSlashCommands(query, slashCommands)),
-    [query, slashCommands, suggestSuppressed]
-  );
+  const liveResults = suggestSuppressed ? [] : preview.results;
 
-  if (slashSuggestions.length > 0 && pinnedSuggestions !== slashSuggestions) {
-    setPinnedSuggestions(slashSuggestions);
+  if (liveResults.length > 0 && pinnedSuggestions !== liveResults) {
+    setPinnedSuggestions(liveResults);
   }
 
-  const suggestOpen = slashSuggestions.length > 0;
+  const suggestOpen = liveResults.length > 0;
   const activeSuggestionIndex = suggestOpen
-    ? Math.min(Math.max(suggestionIndex, -1), slashSuggestions.length - 1)
+    ? Math.min(Math.max(suggestionIndex, 0), liveResults.length - 1)
     : -1;
+
+  useEffect(() => {
+    if (suggestionTouchedRef.current) return;
+    if (preview.index >= 0) setSuggestionIndex(preview.index);
+  }, [preview.index, query, paletteExtras, paletteFiles]);
+
+  useEffect(() => {
+    if (phase !== "shown" && phase !== "showing") return undefined;
+    let cancelled = false;
+    (async () => {
+      const [snapshot, openWindows, history] = await Promise.all([
+        api.paletteRefresh?.().catch(() => null),
+        api.paletteWindows?.().catch(() => null),
+        api.paletteHistoryGet?.().catch(() => null),
+      ]);
+      if (cancelled) return;
+      if (Array.isArray(snapshot?.apps)) setPaletteApps(snapshot.apps);
+      if (Array.isArray(openWindows)) setPaletteWindows(openWindows);
+      if (Array.isArray(history)) setPaletteHistory(history);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [phase]);
+
+  useEffect(() => {
+    const text = query.trim();
+    if (text.length < 2 || text.includes("\n") || isModeQuery(text) || evaluateExpression(text)) {
+      setPaletteFiles([]);
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const found = await api.paletteFiles?.(text);
+        if (!cancelled) setPaletteFiles(Array.isArray(found) ? found : []);
+      } catch {
+        if (!cancelled) setPaletteFiles([]);
+      }
+    }, 80);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPaletteExtras([]);
+    const timer = setTimeout(async () => {
+      const extras = await collectAsyncResults(query);
+      if (!cancelled) setPaletteExtras(extras);
+    }, 80);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  useEffect(() => {
+    if (!suggestOpen || activeSuggestionIndex < 0) return;
+    document.getElementById(`command-suggest-${activeSuggestionIndex}`)?.scrollIntoView({
+      block: "nearest",
+    });
+  }, [suggestOpen, activeSuggestionIndex, pinnedSuggestions]);
 
   const dismissFlyIn = async () => {
     const current = flyInRef.current;
@@ -888,18 +996,67 @@ export default function App() {
     requestAnimationFrame(resizeQueryInput);
   };
 
+  const activateResult = async (result) => {
+    if (!result) {
+      await sendQuery();
+      return;
+    }
+    if (result.confirm && confirmId !== result.id) {
+      setConfirmId(result.id);
+      setOtpNotice(result.subtitle || "Press Enter again to confirm.");
+      return;
+    }
+    setConfirmId(null);
+    await runPaletteAction(result, {
+      query,
+      confirmed: Boolean(result.confirm),
+      writeClipboard: (text) => api.writeClipboard(text),
+      openExternal: (url) => api.openExternal(url),
+      execute: (payload) => api.paletteExecute(payload),
+      runSlash: (name) => {
+        const matched = matchSlashCommand(name, slashCommands);
+        matched?.run({ commands: slashCommands });
+        setQuery("");
+        requestAnimationFrame(resizeQueryInput);
+      },
+      ask: (text) => sendQuery(text),
+      notice: (text) => {
+        setSendError("");
+        setOtpNotice(text);
+        setTimeout(() => {
+          setOtpNotice((prev) => (prev === text ? "" : prev));
+        }, 1600);
+      },
+      hide: async () => {
+        await api.hideNow?.();
+        await startClose();
+      },
+      record: async (entry) => {
+        setPaletteHistory((prev) => remember(prev, entry));
+        try {
+          const saved = await api.paletteHistoryRecord?.(entry);
+          if (Array.isArray(saved)) setPaletteHistory(saved);
+        } catch {
+          // The in-memory list is already updated.
+        }
+      },
+    });
+  };
+
   const onCommandKeyDown = async (event) => {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       if (!suggestOpen || event.altKey || event.ctrlKey || event.metaKey) return;
       event.preventDefault();
-      const last = slashSuggestions.length - 1;
+      suggestionTouchedRef.current = true;
+      const last = liveResults.length - 1;
       setSuggestionIndex((current) => {
+        const currentIndex = current < 0 ? 0 : current;
         if (event.key === "ArrowDown") {
-          if (current >= last) return last;
-          return current + 1;
+          if (currentIndex >= last) return last;
+          return currentIndex + 1;
         }
-        if (current <= 0) return -1;
-        return current - 1;
+        if (currentIndex <= 0) return 0;
+        return currentIndex - 1;
       });
       return;
     }
@@ -910,7 +1067,8 @@ export default function App() {
 
       if (suggestOpen) {
         setSuggestSuppressed(true);
-        setSuggestionIndex(-1);
+        setSuggestionIndex(0);
+        setConfirmId(null);
         return;
       }
 
@@ -949,8 +1107,12 @@ export default function App() {
     if (event.key === "Enter") {
       event.preventDefault();
       const selected =
-        activeSuggestionIndex >= 0 ? slashSuggestions[activeSuggestionIndex] : null;
-      await sendQuery(selected ? selected.name : undefined);
+        activeSuggestionIndex >= 0 ? liveResults[activeSuggestionIndex] : null;
+      if (selected) {
+        await activateResult(selected);
+        return;
+      }
+      await sendQuery();
     }
   };
 
@@ -1139,6 +1301,28 @@ export default function App() {
         </section>
 
         <section className="settings-field">
+          <label className="settings-field-label" htmlFor="settings-search-engine">
+            Web search
+          </label>
+          <p className="settings-desc">Used by the Search the web result.</p>
+          <select
+            id="settings-search-engine"
+            className="settings-input"
+            value={normalizeSearchEngine(draftSettings.searchEngine)}
+            onChange={(event) =>
+              setDraftSettings((prev) => ({
+                ...prev,
+                searchEngine: event.target.value,
+              }))
+            }
+          >
+            <option value="google">Google</option>
+            <option value="bing">Bing</option>
+            <option value="duckduckgo">DuckDuckGo</option>
+          </select>
+        </section>
+
+        <section className="settings-field">
           <label className="settings-field-label" htmlFor="response-timeout-slider">
             Response timeout
           </label>
@@ -1196,7 +1380,7 @@ export default function App() {
                     className={`query-input modern-scrollbar ${isLoading ? "loading" : ""}`}
                     onChange={(event) => setQuery(event.target.value)}
                     onKeyDown={onCommandKeyDown}
-                    placeholder="Enter a command..."
+                    placeholder="Search, calculate, or ask..."
                     rows={1}
                     autoComplete="off"
                     aria-autocomplete="list"
@@ -1219,17 +1403,14 @@ export default function App() {
                     {pinnedSuggestions.length ? (
                       <ul
                         id="command-suggest"
-                        className="command-suggest"
+                        className="command-suggest modern-scrollbar"
                         role="listbox"
                         aria-label="Commands"
                       >
-                        {pinnedSuggestions.map((command, index) => {
-                          const typedLength = query.length;
-                          const nameHead = command.name.slice(0, typedLength);
-                          const nameRest = command.name.slice(typedLength);
+                        {pinnedSuggestions.map((result, index) => {
                           const isActive = suggestOpen && index === activeSuggestionIndex;
                           return (
-                            <li key={command.name} role="presentation">
+                            <li key={result.id} role="presentation">
                               <button
                                 type="button"
                                 id={`command-suggest-${index}`}
@@ -1237,17 +1418,20 @@ export default function App() {
                                 aria-selected={isActive}
                                 tabIndex={-1}
                                 className={`command-suggest-option ${isActive ? "is-active" : ""}`}
-                                onMouseEnter={() => setSuggestionIndex(index)}
+                                onMouseEnter={() => {
+                                  suggestionTouchedRef.current = true;
+                                  setSuggestionIndex(index);
+                                }}
                                 onMouseDown={(event) => {
                                   event.preventDefault();
-                                  sendQuery(command.name);
+                                  activateResult(result);
                                 }}
                               >
-                                <span className="command-suggest-name">
-                                  <span className="command-suggest-match">{nameHead}</span>
-                                  <span className="command-suggest-rest">{nameRest}</span>
+                                <span className="command-suggest-category">{result.category}</span>
+                                <span className="command-suggest-copy">
+                                  <span className="command-suggest-name">{result.title}</span>
+                                  <span className="command-suggest-desc">{result.subtitle}</span>
                                 </span>
-                                <span className="command-suggest-desc">{command.description}</span>
                               </button>
                             </li>
                           );

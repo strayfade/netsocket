@@ -39,6 +39,18 @@ fn default_true() -> bool {
     true
 }
 
+fn default_search_engine() -> String {
+    "google".to_string()
+}
+
+pub fn normalize_search_engine(value: &str) -> String {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "bing" => "bing".to_string(),
+        "duckduckgo" => "duckduckgo".to_string(),
+        _ => "google".to_string(),
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub hotkey: String,
@@ -62,6 +74,8 @@ pub struct Settings {
     pub pinnedServerIdentityPublicKey: String,
     #[serde(default = "default_true")]
     pub animationsEnabled: bool,
+    #[serde(default = "default_search_engine")]
+    pub searchEngine: String,
 }
 
 impl Default for Settings {
@@ -83,6 +97,7 @@ impl Default for Settings {
             identityPrivateKey: String::new(),
             pinnedServerIdentityPublicKey: String::new(),
             animationsEnabled: true,
+            searchEngine: default_search_engine(),
         }
     }
 }
@@ -170,6 +185,7 @@ impl Settings {
             identityPrivateKey: raw.identityPrivateKey.trim().to_string(),
             pinnedServerIdentityPublicKey: raw.pinnedServerIdentityPublicKey.trim().to_string(),
             animationsEnabled: raw.animationsEnabled,
+            searchEngine: normalize_search_engine(&raw.searchEngine),
         }
     }
 
@@ -470,5 +486,19 @@ mod tests {
         assert_eq!(broadcast.text, "hello");
         assert_eq!(broadcast.conversation_id.as_deref(), Some("c1"));
         assert_eq!(broadcast.device_id.as_deref(), Some("d1"));
+    }
+
+    #[test]
+    fn search_engine_is_normalized() {
+        let settings = Settings::from_saved(Settings::default());
+        assert_eq!(settings.searchEngine, "google");
+
+        let mut bing = Settings::default();
+        bing.searchEngine = "Bing".to_string();
+        assert_eq!(Settings::from_saved(bing).searchEngine, "bing");
+
+        let mut unknown = Settings::default();
+        unknown.searchEngine = "yahoo".to_string();
+        assert_eq!(Settings::from_saved(unknown).searchEngine, "google");
     }
 }
