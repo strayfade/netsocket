@@ -34,16 +34,18 @@ object ClipboardAccessibility {
 
     fun openSettings(context: Context) {
         val component = ComponentName(context, ClipboardAccessibilityService::class.java)
-        val details = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Intent(Settings.ACTION_ACCESSIBILITY_DETAILS_SETTINGS).apply {
-                putExtra(Intent.EXTRA_COMPONENT_NAME, component.flattenToString())
-            }
-        } else {
-            null
+        val details = Intent(ACTION_ACCESSIBILITY_DETAILS_SETTINGS).apply {
+            putExtra(EXTRA_COMPONENT_NAME, component.flattenToString())
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        val fallback = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-        val target = details?.takeIf { it.resolveActivity(context.packageManager) != null } ?: fallback
-        target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val fallback = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val target = if (details.resolveActivity(context.packageManager) != null) details else fallback
         context.startActivity(target)
     }
+
+    private const val ACTION_ACCESSIBILITY_DETAILS_SETTINGS =
+        "android.settings.ACCESSIBILITY_DETAILS_SETTINGS"
+    private const val EXTRA_COMPONENT_NAME = "android.intent.extra.COMPONENT_NAME"
 }
