@@ -1045,6 +1045,74 @@
                 });
                 contrastField.appendChild(contrastPresets);
                 panel.appendChild(contrastField);
+                var brightnessMin = (window.LGraphCanvas && LGraphCanvas.BACKGROUND_BRIGHTNESS_MIN != null) ? LGraphCanvas.BACKGROUND_BRIGHTNESS_MIN : 0;
+                var brightnessMax = (window.LGraphCanvas && LGraphCanvas.BACKGROUND_BRIGHTNESS_MAX != null) ? LGraphCanvas.BACKGROUND_BRIGHTNESS_MAX : 200;
+                var brightnessDefault = (window.LGraphCanvas && LGraphCanvas.BACKGROUND_BRIGHTNESS_DEFAULT != null) ? LGraphCanvas.BACKGROUND_BRIGHTNESS_DEFAULT : 100;
+                var GRID_BRIGHTNESS_STORAGE_KEY = 'netsocket:gridBrightness';
+                var clampBrightness = function (value) {
+                    if (window.LGraphCanvas && typeof LGraphCanvas.clampBackgroundBrightness === 'function') {
+                        return LGraphCanvas.clampBackgroundBrightness(value);
+                    }
+                    var n = Math.round(Number(value));
+                    if (!isFinite(n)) return brightnessDefault;
+                    return Math.max(brightnessMin, Math.min(brightnessMax, n));
+                };
+                var readGridBrightness = function () {
+                    if (typeof window.getNetsocketGridBrightness === 'function') return clampBrightness(window.getNetsocketGridBrightness());
+                    try {
+                        var raw = localStorage.getItem(GRID_BRIGHTNESS_STORAGE_KEY);
+                        if (raw != null && raw !== '') return clampBrightness(raw);
+                    } catch (e) { /* ignore */ }
+                    return brightnessDefault;
+                };
+                var brightnessField = document.createElement('div');
+                brightnessField.className = 'settings-field';
+                var brightnessTitle = document.createElement('div');
+                brightnessTitle.className = 'settings-label-block';
+                brightnessTitle.textContent = 'Grid brightness';
+                brightnessField.appendChild(brightnessTitle);
+                var brightnessRow = document.createElement('div');
+                brightnessRow.className = 'settings-field-row settings-render-resolution';
+                var brightnessRange = document.createElement('input');
+                brightnessRange.type = 'range';
+                brightnessRange.min = String(brightnessMin);
+                brightnessRange.max = String(brightnessMax);
+                brightnessRange.step = '5';
+                brightnessRange.setAttribute('aria-label', 'Grid brightness');
+                brightnessRange.value = String(readGridBrightness());
+                var brightnessValue = document.createElement('span');
+                brightnessValue.className = 'settings-render-resolution-value';
+                var syncBrightnessLabel = function () { brightnessValue.textContent = brightnessRange.value + '%'; };
+                syncBrightnessLabel();
+                var applyBrightness = function () {
+                    var applied = clampBrightness(brightnessRange.value);
+                    if (typeof window.setNetsocketGridBrightness === 'function') {
+                        applied = window.setNetsocketGridBrightness(applied);
+                    } else {
+                        try { localStorage.setItem(GRID_BRIGHTNESS_STORAGE_KEY, String(applied)); } catch (e) { /* ignore */ }
+                    }
+                    brightnessRange.value = String(applied);
+                    syncBrightnessLabel();
+                };
+                brightnessRange.addEventListener('input', applyBrightness);
+                brightnessRow.appendChild(brightnessRange);
+                brightnessRow.appendChild(brightnessValue);
+                brightnessField.appendChild(brightnessRow);
+                var brightnessPresets = document.createElement('div');
+                brightnessPresets.className = 'settings-field-row settings-quality-presets';
+                [50, 100, 200].forEach(function (pct) {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'settings-quality-btn';
+                    btn.textContent = pct + '%';
+                    btn.addEventListener('click', function () {
+                        brightnessRange.value = String(pct);
+                        applyBrightness();
+                    });
+                    brightnessPresets.appendChild(btn);
+                });
+                brightnessField.appendChild(brightnessPresets);
+                panel.appendChild(brightnessField);
                 panelsScrollEl.appendChild(panel);
                 panels.push(panel);
             })();
