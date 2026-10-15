@@ -78,6 +78,16 @@ class Prefs(context: Context) {
         get() = prefs.getBoolean(KEY_AUTO_UPDATE, true)
         set(value) = prefs.edit { putBoolean(KEY_AUTO_UPDATE, value) }
 
+    /** When true, local copies are sent to the host as clipboard triggers. */
+    var sendClipboard: Boolean
+        get() = prefs.getBoolean(KEY_SEND_CLIPBOARD, false)
+        set(value) = prefs.edit { putBoolean(KEY_SEND_CLIPBOARD, value) }
+
+    /** When true, clipboard updates from the host are applied on this device. */
+    var receiveClipboard: Boolean
+        get() = prefs.getBoolean(KEY_RECEIVE_CLIPBOARD, false)
+        set(value) = prefs.edit { putBoolean(KEY_RECEIVE_CLIPBOARD, value) }
+
     var responseTimeoutSeconds: Int
         get() = prefs.getInt(KEY_RESPONSE_TIMEOUT, DEFAULT_RESPONSE_TIMEOUT_SECONDS)
             .coerceIn(MIN_RESPONSE_TIMEOUT_SECONDS, MAX_RESPONSE_TIMEOUT_SECONDS)
@@ -144,6 +154,8 @@ class Prefs(context: Context) {
         const val KEY_VOICE_MODE_DEFAULT = "voice_mode_default"
         const val KEY_AUTO_OPEN_PANEL = "auto_open_panel"
         const val KEY_AUTO_UPDATE = "auto_update_enabled"
+        const val KEY_SEND_CLIPBOARD = "send_clipboard"
+        const val KEY_RECEIVE_CLIPBOARD = "receive_clipboard"
         const val KEY_RESPONSE_TIMEOUT = "response_timeout_seconds"
         const val KEY_CONVERSATION_ID = "conversation_id"
         const val KEY_SELECTED_PANEL = "selected_panel_id"

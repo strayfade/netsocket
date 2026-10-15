@@ -54,6 +54,8 @@ const defaultSettings = {
   animationsEnabled: true,
   autoUpdateEnabled: true,
   searchEngine: "google",
+  sendClipboard: false,
+  receiveClipboard: false,
   profiles: {
     production: { url: "ws://127.0.0.1:4675", secret: "" },
     development: { url: "ws://127.0.0.1:4675", secret: "" },
@@ -1365,6 +1367,52 @@ export default function App() {
               setDraftSettings((prev) => ({
                 ...prev,
                 autoUpdateEnabled: prev.autoUpdateEnabled === false,
+              }))
+            }
+          >
+            <span className="toggle-thumb" />
+          </button>
+        </section>
+
+        <section className="settings-field settings-field--inline">
+          <div className="settings-field-copy">
+            <div className="settings-field-label">Send Clipboard</div>
+            <p className="settings-desc">
+              When you copy text or an image, send it to netsocket.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={draftSettings.sendClipboard === true}
+            aria-label="Send clipboard"
+            className={`toggle-switch ${draftSettings.sendClipboard ? "on" : ""}`}
+            onClick={() =>
+              setDraftSettings((prev) => ({
+                ...prev,
+                sendClipboard: !prev.sendClipboard,
+              }))
+            }
+          >
+            <span className="toggle-thumb" />
+          </button>
+        </section>
+
+        <section className="settings-field settings-field--inline">
+          <div className="settings-field-copy">
+            <div className="settings-field-label">Receive Clipboard</div>
+            <p className="settings-desc">Allow netsocket to update this device&apos;s clipboard.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={draftSettings.receiveClipboard === true}
+            aria-label="Receive clipboard"
+            className={`toggle-switch ${draftSettings.receiveClipboard ? "on" : ""}`}
+            onClick={() =>
+              setDraftSettings((prev) => ({
+                ...prev,
+                receiveClipboard: !prev.receiveClipboard,
               }))
             }
           >

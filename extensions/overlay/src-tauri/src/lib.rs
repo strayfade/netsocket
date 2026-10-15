@@ -1,3 +1,4 @@
+mod clipboard;
 mod config;
 mod device_crypto;
 mod hotkeys;
@@ -216,10 +217,7 @@ async fn request_send(
 
 #[tauri::command]
 fn clipboard_write_text(app: AppHandle, text: String) -> Result<OkPayload, String> {
-    use tauri_plugin_clipboard_manager::ClipboardExt;
-    app.clipboard()
-        .write_text(text)
-        .map_err(|e| e.to_string())?;
+    clipboard::write_text(&app, &text)?;
     Ok(OkPayload {
         ok: true,
         error: None,
@@ -437,6 +435,15 @@ pub fn run() {
 
             let ws_runtime = WsRuntime::spawn(app.handle().clone(), settings.clone());
             app.manage(ws_runtime);
+            let clipboard_tx = app.state::<WsRuntime>().command_tx.clone();
+            clipboard::start_watcher(
+                app.handle().clone(),
+                settings.clone(),
+                app.state::<WsRuntime>().connection.clone(),
+                move |content| {
+                    let _ = clipboard_tx.send(WsCommand::Clipboard { content });
+                },
+            );
 
             if let Some(window) = main_window(app.handle()) {
                 overlay::apply_overlay_bounds(&window).ok();

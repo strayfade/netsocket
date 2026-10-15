@@ -205,6 +205,28 @@ const handleTrustedMessage = async (socket, message) => {
             })
             break
         }
+        case 'clipboard': {
+            const payload = message.broadcastData
+            let content = ''
+            let deviceId = null
+            if (typeof payload === 'string') {
+                content = payload
+            } else if (payload && typeof payload === 'object') {
+                content = String(payload.content ?? '')
+                deviceId = normalizeId(payload.deviceId ?? payload.device_id ?? null)
+            }
+            const deviceSession = deviceAuth.getSession(socket)
+            if (deviceSession?.deviceId) {
+                deviceId = deviceSession.deviceId
+            }
+            if (deviceId) {
+                registerDevice(deviceId, socket)
+            }
+            if (content && content.length <= 8 * 1024 * 1024) {
+                await onNewClipboard(content, deviceId)
+            }
+            break
+        }
         case 'ping': {
             const pingData = message.broadcastData
             let deviceId = null
@@ -837,6 +859,7 @@ app.get("/", (req, res) => {
     return res.redirect(302, `/login?redirect=${encodeURIComponent(target)}`)
 });
 const { onNewCommand } = require('./utils/waitForCommands.js')
+const { onNewClipboard } = require('./utils/waitForClipboard.js')
 
 app.post("/v1/triggers/command-palette", async (req, res) => {
     const expectedSecret = settingsManager.getSetting('triggersCommandPalette.secret')

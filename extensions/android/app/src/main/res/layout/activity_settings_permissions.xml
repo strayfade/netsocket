@@ -58,6 +58,22 @@
             android:text="@string/open_listener_settings" />
 
         <TextView
+            android:id="@+id/clipboardAccessibilityStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="@color/netsocket_on_surface_muted" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/clipboardAccessibilityButton"
+            style="@style/Widget.Netsocket.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/open_clipboard_accessibility" />
+
+        <TextView
             android:id="@+id/batteryStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

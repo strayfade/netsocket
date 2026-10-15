@@ -79,6 +79,12 @@ pub struct Settings {
     /// Silent overnight self-updates. Missing in older saves means enabled.
     #[serde(default = "default_true")]
     pub autoUpdateEnabled: bool,
+    /// When true, local copies are sent to the host as clipboard triggers.
+    #[serde(default)]
+    pub sendClipboard: bool,
+    /// When true, clipboard updates from the host are applied on this device.
+    #[serde(default)]
+    pub receiveClipboard: bool,
 }
 
 impl Default for Settings {
@@ -102,6 +108,8 @@ impl Default for Settings {
             animationsEnabled: true,
             searchEngine: default_search_engine(),
             autoUpdateEnabled: true,
+            sendClipboard: false,
+            receiveClipboard: false,
         }
     }
 }
@@ -191,6 +199,8 @@ impl Settings {
             animationsEnabled: raw.animationsEnabled,
             searchEngine: normalize_search_engine(&raw.searchEngine),
             autoUpdateEnabled: raw.autoUpdateEnabled,
+            sendClipboard: raw.sendClipboard,
+            receiveClipboard: raw.receiveClipboard,
         }
     }
 

@@ -32,6 +32,7 @@ const deviceIdSockets = new Map()
 
 const DEVICE_PURPOSES = new Set([
     'command',
+    'clipboard',
     'ping',
     'encrypted',
     'getOtpAccounts',

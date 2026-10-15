@@ -21,6 +21,8 @@
     "core:event:allow-listen",
     "clipboard-manager:allow-write-text",
     "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-image",
+    "clipboard-manager:allow-read-image",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
     "global-shortcut:allow-unregister-all",

@@ -1,9 +1,6 @@
 package com.strayfade.netsocket.notification
 
 import android.Manifest
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -31,6 +28,9 @@ class PermissionsSettingsActivity : AppCompatActivity() {
         binding.openListenerButton.setOnClickListener {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
+        binding.clipboardAccessibilityButton.setOnClickListener {
+            ClipboardAccessibility.openSettings(this)
+        }
         binding.batteryButton.setOnClickListener { requestBatteryExemption() }
         binding.disableRedactionButton.setOnClickListener { disableNotificationRedaction() }
         binding.startServiceButton.setOnClickListener {
@@ -54,6 +54,13 @@ class PermissionsSettingsActivity : AppCompatActivity() {
         val batteryUnrestricted = isIgnoringBatteryOptimizations()
         binding.listenerStatus.text = getString(
             if (listenerEnabled) R.string.status_listener_enabled else R.string.status_listener_disabled
+        )
+        binding.clipboardAccessibilityStatus.text = getString(
+            if (ClipboardAccessibility.isEnabled(this)) {
+                R.string.status_clipboard_accessibility_enabled
+            } else {
+                R.string.status_clipboard_accessibility_disabled
+            }
         )
         binding.batteryStatus.text = getString(
             if (batteryUnrestricted) R.string.status_battery_ok else R.string.status_battery_restricted
@@ -130,8 +137,7 @@ class PermissionsSettingsActivity : AppCompatActivity() {
                 openNotificationSettings()
             }
             .setNeutralButton(R.string.redaction_dialog_copy_cmd) { _, _ ->
-                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("adb command", command))
+                ClipboardBridge.writeText(this, "adb command", command)
                 Toast.makeText(this, R.string.redaction_cmd_copied_toast, Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(R.string.redaction_dialog_close, null)

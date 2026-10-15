@@ -5,6 +5,7 @@ const assert = require('node:assert/strict')
 const path = require('node:path')
 const {
     alert,
+    updateClipboard,
     setWsServerConnectedClients,
     registerConversation,
     registerDevice,
@@ -115,5 +116,69 @@ describe('Command Palette and Alert device pins', () => {
         const alertNode = getNodeMetadata('Notifiers/Alert')
         assert.ok(alertNode)
         assert.ok(alertNode.inputs.some((input) => input.name === 'Device ID'))
+    })
+})
+
+describe('clipboard device routing', () => {
+    beforeEach(() => {
+        resetAlertStateForTests()
+    })
+
+    it('broadcasts to all clients when device id is blank', async () => {
+        const a = makeClient()
+        const b = makeClient()
+        setWsServerConnectedClients([a, b])
+
+        await updateClipboard('copied text', '')
+
+        assert.equal(a.messages.length, 1)
+        assert.equal(b.messages.length, 1)
+        const payload = JSON.parse(a.messages[0])
+        assert.equal(payload.broadcastPurpose, 'clipboard')
+        assert.equal(payload.broadcastData.content, 'copied text')
+        assert.equal(payload.broadcastData.deviceId, null)
+    })
+
+    it('routes to registered device sockets when device id is set', async () => {
+        const target = makeClient()
+        const other = makeClient()
+        setWsServerConnectedClients([target, other])
+        registerDevice('phone-1', target)
+
+        await updateClipboard('for phone', 'phone-1')
+
+        assert.equal(target.messages.length, 1)
+        assert.equal(other.messages.length, 0)
+        const payload = JSON.parse(target.messages[0])
+        assert.equal(payload.broadcastData.deviceId, 'phone-1')
+        assert.equal(payload.broadcastData.content, 'for phone')
+    })
+
+    it('drops the update when the target device has no sockets', async () => {
+        const a = makeClient()
+        const b = makeClient()
+        setWsServerConnectedClients([a, b])
+
+        await updateClipboard('secret', 'missing-device')
+
+        assert.equal(a.messages.length, 0)
+        assert.equal(b.messages.length, 0)
+    })
+})
+
+describe('clipboard node pins', () => {
+    it('exposes clipboard content and device id pins', async () => {
+        const { setupNodes, getNodeMetadata } = require('../server/manager/nodeImporter')
+        await setupNodes(path.join(__dirname, '../server/nodes'))
+
+        const trigger = getNodeMetadata('Triggers/Clipboard Updated')
+        assert.ok(trigger)
+        assert.ok(trigger.outputs.some((output) => output.name === 'Clipboard Content'))
+        assert.ok(trigger.outputs.some((output) => output.name === 'Device ID'))
+
+        const notifier = getNodeMetadata('Notifiers/Update Clipboard')
+        assert.ok(notifier)
+        assert.ok(notifier.inputs.some((input) => input.name === 'Clipboard Content'))
+        assert.ok(notifier.inputs.some((input) => input.name === 'Device ID'))
     })
 })

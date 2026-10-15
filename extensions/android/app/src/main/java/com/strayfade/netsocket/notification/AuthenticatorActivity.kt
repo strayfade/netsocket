@@ -1,7 +1,5 @@
 package com.strayfade.netsocket.notification
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -265,8 +263,7 @@ class AuthenticatorActivity : AppCompatActivity() {
 
     private fun copyCode(account: OtpAccount) {
         val code = account.currentCode().replace(" ", "")
-        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("OTP", code))
+        ClipboardBridge.writeText(this, "OTP", code)
         Toast.makeText(this, R.string.response_copied, Toast.LENGTH_SHORT).show()
     }
 

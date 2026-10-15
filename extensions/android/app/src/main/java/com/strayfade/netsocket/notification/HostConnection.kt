@@ -168,6 +168,22 @@ object HostConnection {
         return sendAppMessage(envelope)
     }
 
+    fun sendClipboard(content: String): Boolean {
+        if (!approved || !state.connected) return false
+        if (content.isEmpty() || content.length > ClipboardBridge.MAX_ENCODED_CHARS) return false
+        val context = appContext ?: return false
+        if (!Prefs(context).sendClipboard) return false
+        val data = JSONObject().apply {
+            put("content", content)
+            put("deviceId", DeviceId.get(context))
+        }
+        val envelope = JSONObject().apply {
+            put("broadcastPurpose", "clipboard")
+            put("broadcastData", data)
+        }
+        return sendAppMessage(envelope)
+    }
+
     fun request(
         purpose: String,
         data: JSONObject? = null,
@@ -419,6 +435,16 @@ object HostConnection {
             "ack" -> {
                 // Host accepted the command.
             }
+            "clipboard" -> {
+                val data = message.optJSONObject("broadcastData") ?: JSONObject()
+                val content = if (data.isNull("content")) "" else data.optString("content")
+                if (content.isEmpty() || content.length > ClipboardBridge.MAX_ENCODED_CHARS) return
+                val deviceId = jsonId(data, "deviceId", "device_id")
+                val context = appContext ?: return
+                if (!Prefs(context).receiveClipboard) return
+                if (!alertTargetsDevice(deviceId)) return
+                ClipboardBridge.writeContent(context, content)
+            }
             "deviceStatus" -> {
                 handleDeviceStatus(message.optJSONObject("broadcastData") ?: JSONObject())
             }
@@ -530,6 +556,15 @@ object HostConnection {
                 pending.callback.onResult(false, null, reason)
             }
         }
+    }
+
+    private fun jsonId(data: JSONObject, vararg keys: String): String? {
+        for (key in keys) {
+            if (!data.has(key) || data.isNull(key)) continue
+            val value = data.optString(key).trim()
+            if (value.isNotEmpty()) return value
+        }
+        return null
     }
 
     private fun alertTargetsDevice(alertDeviceId: String?): Boolean {

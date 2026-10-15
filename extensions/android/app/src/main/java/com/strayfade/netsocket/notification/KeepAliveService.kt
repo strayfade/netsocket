@@ -36,14 +36,17 @@ class KeepAliveService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
         HostConnection.start(this)
+        ClipboardBridge.syncWatch(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         HostConnection.start(this)
+        ClipboardBridge.syncWatch(this)
         return START_STICKY
     }
 
     override fun onDestroy() {
+        ClipboardBridge.stopWatching(this)
         HostConnection.stop()
         super.onDestroy()
     }

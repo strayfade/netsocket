@@ -2,6 +2,7 @@ package com.strayfade.netsocket.notification
 
 import android.os.Bundle
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.strayfade.netsocket.notification.databinding.ActivitySettingsGeneralBinding
 
@@ -22,6 +23,8 @@ class GeneralSettingsActivity : AppCompatActivity() {
         binding.voiceDefaultSwitch.isChecked = prefs.voiceModeDefault
         binding.autoUpdateSwitch.isChecked = prefs.autoUpdateEnabled
         binding.autoOpenPanelSwitch.isChecked = prefs.autoOpenPanel
+        binding.sendClipboardSwitch.isChecked = prefs.sendClipboard
+        binding.receiveClipboardSwitch.isChecked = prefs.receiveClipboard
         binding.deviceNameInput.setText(prefs.deviceName)
         binding.deviceIdValue.text = DeviceId.get(this)
         updatePreview()
@@ -53,6 +56,9 @@ class GeneralSettingsActivity : AppCompatActivity() {
         prefs.voiceModeDefault = binding.voiceDefaultSwitch.isChecked
         prefs.autoUpdateEnabled = binding.autoUpdateSwitch.isChecked
         prefs.autoOpenPanel = binding.autoOpenPanelSwitch.isChecked
+        prefs.sendClipboard = binding.sendClipboardSwitch.isChecked
+        prefs.receiveClipboard = binding.receiveClipboardSwitch.isChecked
+        ClipboardBridge.syncWatch(this)
         AppUpdater.reschedule(this)
         prefs.deviceName = binding.deviceNameInput.text?.toString().orEmpty()
         binding.deviceNameInput.setText(prefs.deviceName)
@@ -60,5 +66,15 @@ class GeneralSettingsActivity : AppCompatActivity() {
         HostConnection.reconnect()
         KeepAliveService.start(this)
         Toast.makeText(this, R.string.settings_saved, Toast.LENGTH_SHORT).show()
+        if (prefs.sendClipboard && ClipboardAccessibility.isRequired() && !ClipboardAccessibility.isEnabled(this)) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.clipboard_accessibility_title)
+                .setMessage(R.string.clipboard_accessibility_message)
+                .setPositiveButton(R.string.clipboard_accessibility_open) { _, _ ->
+                    ClipboardAccessibility.openSettings(this)
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
     }
 }

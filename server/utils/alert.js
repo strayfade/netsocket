@@ -88,6 +88,40 @@ const getRecentAlerts = (deviceId = null, limit = MAX_ALERT_HISTORY) => {
         .reverse()
 }
 
+/** Encoded clipboard strings (text or data-URL images) above this are dropped. */
+const MAX_CLIPBOARD_CHARS = 8 * 1024 * 1024
+
+/**
+ * Push clipboard content to devices.
+ * A blank device id broadcasts. A device id with no live sockets is dropped
+ * instead of falling back to every client.
+ */
+const updateClipboard = async (content, deviceId = null) => {
+    const text = content == null ? '' : String(content)
+    if (!text || text.length > MAX_CLIPBOARD_CHARS) return
+    const normalizedDeviceId = normalizeId(deviceId)
+    const message = {
+        broadcastPurpose: 'clipboard',
+        broadcastData: {
+            content: text,
+            deviceId: normalizedDeviceId,
+        },
+    }
+
+    if (normalizedDeviceId) {
+        const sockets = deviceSockets.get(normalizedDeviceId)
+        if (!sockets || sockets.size === 0) return
+        for (const client of sockets) {
+            sendToClient(client, message)
+        }
+        return
+    }
+
+    wsServerClients.forEach((client) => {
+        sendToClient(client, message)
+    })
+}
+
 const alert = async (text, conversationId = null, deviceId = null) => {
     const normalizedConversationId = normalizeId(conversationId)
     const normalizedDeviceId = normalizeId(deviceId)
@@ -139,6 +173,8 @@ const resetAlertStateForTests = () => {
 
 module.exports = {
     alert,
+    updateClipboard,
+    MAX_CLIPBOARD_CHARS,
     getRecentAlerts,
     MAX_ALERT_HISTORY,
     setWsServerConnectedClients,

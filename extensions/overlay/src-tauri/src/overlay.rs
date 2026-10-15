@@ -210,7 +210,6 @@ pub fn toggle_overlay(app: &AppHandle) {
 }
 
 pub fn copy_last_response(app: &AppHandle) -> Result<(), String> {
-    use tauri_plugin_clipboard_manager::ClipboardExt;
     let text = {
         let handle = app.state::<OverlayHandle>();
         let text = handle.lock().last_server_notification_text.clone();
@@ -219,9 +218,7 @@ pub fn copy_last_response(app: &AppHandle) -> Result<(), String> {
     if text.is_empty() {
         return Err("No response to copy.".to_string());
     }
-    app.clipboard()
-        .write_text(text)
-        .map_err(|e| e.to_string())
+    crate::clipboard::write_text(app, &text)
 }
 
 pub fn type_last_response(app: &AppHandle) -> Result<(), String> {

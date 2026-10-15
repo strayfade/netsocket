@@ -33,6 +33,9 @@ pub enum WsCommand {
         conversation_id: Option<String>,
         device_id: Option<String>,
     },
+    Clipboard {
+        content: String,
+    },
     Request {
         purpose: String,
         data: Option<serde_json::Value>,
@@ -315,6 +318,33 @@ async fn ws_loop(
                                 "broadcastData": {
                                     "command": command,
                                     "conversationId": conversation_id,
+                                    "deviceId": device_id,
+                                }
+                            });
+                            if send_app_message(&mut write, &session_key, approved, payload).await.is_err() {
+                                fail_pending_requests(&mut pending_requests, "Connection lost.");
+                                break;
+                            }
+                        }
+                        Some(WsCommand::Clipboard { content }) => {
+                            if !approved || !settings.get().sendClipboard {
+                                continue;
+                            }
+                            if content.is_empty() || content.len() > crate::clipboard::MAX_ENCODED_CHARS {
+                                continue;
+                            }
+                            let device_id = {
+                                let id = settings.get().deviceId;
+                                if id.trim().is_empty() {
+                                    None
+                                } else {
+                                    Some(id)
+                                }
+                            };
+                            let payload = serde_json::json!({
+                                "broadcastPurpose": "clipboard",
+                                "broadcastData": {
+                                    "content": content,
                                     "deviceId": device_id,
                                 }
                             });
@@ -676,6 +706,30 @@ fn update_connection(
     let _ = emit_to_renderer(app, "overlay:connection", connection.lock().clone());
 }
 
+fn apply_remote_clipboard(app: &AppHandle, settings: &SettingsHandle, parsed: &serde_json::Value) {
+    let current = settings.get();
+    if !current.receiveClipboard {
+        return;
+    }
+    let data = parsed.get("broadcastData");
+    let content = data
+        .and_then(|value| value.get("content"))
+        .and_then(|value| value.as_str())
+        .unwrap_or("");
+    if content.is_empty() || content.len() > crate::clipboard::MAX_ENCODED_CHARS {
+        return;
+    }
+    let device_id = data
+        .and_then(|value| value.get("deviceId"))
+        .and_then(|value| value.as_str());
+    if !alert_targets_device(&current.deviceId, device_id) {
+        return;
+    }
+    if let Err(error) = crate::clipboard::write_content(app, content) {
+        log::warn!("failed to apply clipboard update: {error}");
+    }
+}
+
 fn handle_incoming_message(
     app: &AppHandle,
     connection: &Arc<Mutex<ConnectionState>>,
@@ -691,6 +745,11 @@ fn handle_incoming_message(
             state.authStatus = "approved".to_string();
         }
         emit_to_renderer(app, "overlay:connection", state.clone());
+    }
+
+    if parsed.get("broadcastPurpose").and_then(|v| v.as_str()) == Some("clipboard") {
+        apply_remote_clipboard(app, settings, parsed);
+        return;
     }
 
     if let Some(broadcast) = parse_overlay_broadcast(parsed) {

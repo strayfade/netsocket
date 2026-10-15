@@ -1,7 +1,5 @@
 package com.strayfade.netsocket.notification
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
@@ -81,8 +79,7 @@ class MessageAdapter(
         }
 
         private fun copyText(context: Context, value: String) {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("netsocket response", value))
+            ClipboardBridge.writeText(context, "netsocket response", value)
             Toast.makeText(context, R.string.response_copied, Toast.LENGTH_SHORT).show()
         }
     }
