@@ -147,8 +147,14 @@ if (-not (Test-Path $builtApk)) {
 $outApk = Join-Path $DistDir "netsocket-notifications-debug.apk"
 Copy-Item -Force $builtApk $outApk
 
+# Canonical artifact served by the netsocket host for browser downloads
+# (/downloads/android) and overnight self-updates (/v1/updates/android).
+$servedApk = Join-Path $DistDir "netsocket-android.apk"
+Copy-Item -Force $builtApk $servedApk
+
 Write-Step "Build complete"
 Write-Host "APK: $outApk"
+Write-Host "Served APK: $servedApk"
 Write-Host ""
 Write-Host "Install with:"
 Write-Host "  adb install -r `"$outApk`""

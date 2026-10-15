@@ -109,12 +109,18 @@ describe('dashboard shell pages', () => {
         for (const name of ['dashboard.html', 'panels.html', 'editor.html']) {
             const html = readFrontend(name);
             const download = html.indexOf('id="download-overlay"');
+            const android = html.indexOf('id="download-android"');
             const backup = html.indexOf('id="open-backup"');
             assert.ok(download !== -1, `${name} is missing Download Overlay`);
+            assert.ok(android !== -1, `${name} is missing Download Android`);
             assert.ok(backup !== -1, `${name} is missing Backup`);
             assert.ok(download < backup, `${name}: Download Overlay should precede Backup`);
+            assert.ok(download < android, `${name}: Download Android should follow Download Overlay`);
+            assert.ok(android < backup, `${name}: Download Android should precede Backup`);
             assert.match(html, /href="\/downloads\/overlay"/);
             assert.match(html, />Download Overlay</);
+            assert.match(html, /href="\/downloads\/android"/);
+            assert.match(html, />Download Android</);
         }
     });
 

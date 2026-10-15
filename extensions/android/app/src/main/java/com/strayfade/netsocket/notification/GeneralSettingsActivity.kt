@@ -20,6 +20,7 @@ class GeneralSettingsActivity : AppCompatActivity() {
         binding.portInput.setText(prefs.port)
         binding.httpsSwitch.isChecked = prefs.useHttps
         binding.voiceDefaultSwitch.isChecked = prefs.voiceModeDefault
+        binding.autoUpdateSwitch.isChecked = prefs.autoUpdateEnabled
         binding.deviceNameInput.setText(prefs.deviceName)
         binding.deviceIdValue.text = DeviceId.get(this)
         updatePreview()
@@ -49,6 +50,8 @@ class GeneralSettingsActivity : AppCompatActivity() {
         prefs.port = binding.portInput.text?.toString().orEmpty()
         prefs.useHttps = binding.httpsSwitch.isChecked
         prefs.voiceModeDefault = binding.voiceDefaultSwitch.isChecked
+        prefs.autoUpdateEnabled = binding.autoUpdateSwitch.isChecked
+        AppUpdater.reschedule(this)
         prefs.deviceName = binding.deviceNameInput.text?.toString().orEmpty()
         binding.deviceNameInput.setText(prefs.deviceName)
         updatePreview()

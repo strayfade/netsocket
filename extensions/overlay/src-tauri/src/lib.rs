@@ -5,6 +5,7 @@ mod overlay;
 mod palette;
 mod platform;
 mod settings_store;
+mod updater;
 mod websocket;
 
 use config::{
@@ -49,6 +50,8 @@ fn settings_save(app: AppHandle, next_settings: Settings) -> Result<Settings, St
     safe.ensure_device_id();
     safe.ensure_identity_keys();
     app.state::<SettingsHandle>().update(safe.clone());
+    app.state::<updater::UpdaterHandle>()
+        .set_enabled(safe.autoUpdateEnabled);
     save_settings(&app, &safe)?;
     apply_autostart(&app, safe.openAtLogin)?;
     register_all_hotkeys(&app, &safe)?;
@@ -352,6 +355,17 @@ fn palette_history_record(
 }
 
 #[tauri::command]
+fn updater_get_status(app: AppHandle) -> updater::UpdateStatus {
+    updater::refresh_enabled(&app);
+    app.state::<updater::UpdaterHandle>().get()
+}
+
+#[tauri::command]
+async fn updater_check_now(app: AppHandle, install_when_ready: bool) -> updater::UpdateStatus {
+    updater::check_now(app, install_when_ready).await
+}
+
+#[tauri::command]
 fn shell_open_external(app: AppHandle, url: String) -> Result<OkPayload, String> {
     if !config::is_external_url(&url) {
         return Ok(OkPayload {
@@ -415,7 +429,9 @@ pub fn run() {
         )
         .setup(|app| {
             let settings = SettingsHandle::new(app.handle());
+            let auto_updates = settings.get().autoUpdateEnabled;
             app.manage(settings.clone());
+            app.manage(updater::UpdaterHandle::new(auto_updates));
             app.manage(OverlayHandle::new());
             app.manage(palette::PaletteHandle::new());
 
@@ -466,6 +482,8 @@ pub fn run() {
             overlay_set_ignore_mouse,
             overlay_notify_ready,
             overlay_get_visible,
+            updater_get_status,
+            updater_check_now,
             shell_open_external,
             palette_refresh,
             palette_files,

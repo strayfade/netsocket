@@ -3,7 +3,11 @@
 *.iml
 local.properties
 .tools/
-dist/
+# Local build outputs stay ignored, except the canonical APK served by the
+# netsocket host (/downloads/android, /v1/updates/android). Rebuild it with
+# build.sh / build.ps1 / build.bat whenever the app changes and commit it.
+# (The re-inclusion must stay below *.apk: last match wins.)
+dist/*
 app/build/
 build/
 *.apk
@@ -11,3 +15,4 @@ build/
 *.dex
 .DS_Store
 captures/
+!dist/netsocket-android.apk

@@ -40,6 +40,7 @@ const DEVICE_PURPOSES = new Set([
     'getPanelGrants',
     'getRecentAlerts',
     'getStatusSnapshot',
+    'getUpdateInfo',
 ])
 
 const HANDSHAKE_PURPOSES = new Set([

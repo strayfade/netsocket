@@ -103,6 +103,8 @@ describe('sessionAuth', () => {
             assert.equal(isProtectedPagePath('/js/shell.js'), true);
             assert.equal(isProtectedPagePath('/downloads/overlay'), true);
             assert.equal(isProtectedPagePath('/downloads/overlay?cache=1'), true);
+            assert.equal(isProtectedPagePath('/downloads/android'), true);
+            assert.equal(isProtectedPagePath('/downloads/android?cache=1'), true);
         });
 
         it('does not treat public paths as protected', () => {

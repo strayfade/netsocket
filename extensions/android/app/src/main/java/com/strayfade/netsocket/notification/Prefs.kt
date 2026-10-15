@@ -65,6 +65,14 @@ class Prefs(context: Context) {
         get() = prefs.getBoolean(KEY_VOICE_MODE_DEFAULT, false)
         set(value) = prefs.edit { putBoolean(KEY_VOICE_MODE_DEFAULT, value) }
 
+    /**
+     * Silent overnight self-updates. When true, a nightly job checks the
+     * host for a newer APK and installs it while on unmetered Wi-Fi.
+     */
+    var autoUpdateEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_UPDATE, true)
+        set(value) = prefs.edit { putBoolean(KEY_AUTO_UPDATE, value) }
+
     var responseTimeoutSeconds: Int
         get() = prefs.getInt(KEY_RESPONSE_TIMEOUT, DEFAULT_RESPONSE_TIMEOUT_SECONDS)
             .coerceIn(MIN_RESPONSE_TIMEOUT_SECONDS, MAX_RESPONSE_TIMEOUT_SECONDS)
@@ -129,6 +137,7 @@ class Prefs(context: Context) {
         const val KEY_DEVICE_NAME = "device_name"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
         const val KEY_VOICE_MODE_DEFAULT = "voice_mode_default"
+        const val KEY_AUTO_UPDATE = "auto_update_enabled"
         const val KEY_RESPONSE_TIMEOUT = "response_timeout_seconds"
         const val KEY_CONVERSATION_ID = "conversation_id"
         const val KEY_SELECTED_PANEL = "selected_panel_id"

@@ -16,6 +16,7 @@ export async function bindOverlayEvents(handlers) {
     subscribe("overlay:server-message", (payload) => handlers.onServerMessage?.(payload)),
     subscribe("overlay:hotkey-captured", (payload) => handlers.onHotkeyCaptured?.(payload)),
     subscribe("overlay:dismiss-notification", () => handlers.onDismissNotification?.()),
+    subscribe("overlay:update-status", (payload) => handlers.onUpdateStatus?.(payload)),
   ]);
 
   return () => {
@@ -31,6 +32,9 @@ export const overlayApi = {
     invoke("settings_complete_hotkey_capture", { payload }),
   getConnectionState: () => invoke("connection_get"),
   getOverlayVisible: () => invoke("overlay_get_visible"),
+  getUpdaterStatus: () => invoke("updater_get_status"),
+  checkForUpdates: (installWhenReady = false) =>
+    invoke("updater_check_now", { installWhenReady }),
   openExternal: (url) => invoke("shell_open_external", { url }),
   sendCommand: (query) => invoke("command_send", { payload: query }),
   sendRequest: (payload) => invoke("request_send", { payload }),

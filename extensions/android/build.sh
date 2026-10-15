@@ -131,8 +131,14 @@ fi
 OUT_APK="$DIST_DIR/netsocket-notifications-debug.apk"
 cp -f "$BUILT_APK" "$OUT_APK"
 
+# Canonical artifact served by the netsocket host for browser downloads
+# (/downloads/android) and overnight self-updates (/v1/updates/android).
+SERVED_APK="$DIST_DIR/netsocket-android.apk"
+cp -f "$BUILT_APK" "$SERVED_APK"
+
 step "Build complete"
 echo "APK: $OUT_APK"
+echo "Served APK: $SERVED_APK"
 echo ""
 echo "Install with:"
 echo "  adb install -r \"$OUT_APK\""

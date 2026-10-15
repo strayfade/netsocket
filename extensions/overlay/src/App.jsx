@@ -18,6 +18,10 @@ import { isModeQuery } from "./palette/score.js";
 import { normalizeSearchEngine } from "./palette/web.js";
 import { recordReceivedAlert } from "./alertHistory.js";
 import {
+  AUTO_UPDATE_CHECK_INTERVAL_MS,
+  shouldAutoUpdateNow,
+} from "./autoUpdate.js";
+import {
   DEFAULT_PREFERRED,
   computeTileRects,
   computeTileRegion,
@@ -48,6 +52,7 @@ const defaultSettings = {
   deviceId: "",
   deviceName: "",
   animationsEnabled: true,
+  autoUpdateEnabled: true,
   searchEngine: "google",
   profiles: {
     production: { url: "ws://127.0.0.1:4675", secret: "" },
@@ -75,6 +80,8 @@ const fallbackApi = {
   openExternal: async () => ({ ok: true }),
   notifyReady: () => {},
   getOverlayVisible: async () => false,
+  getUpdaterStatus: async () => ({ enabled: true, state: "idle", currentVersion: "dev" }),
+  checkForUpdates: async () => ({ enabled: true, state: "idle", currentVersion: "dev" }),
   bindOverlayEvents: async () => () => {},
   paletteRefresh: async () => ({ apps: [] }),
   paletteFiles: async () => [],
@@ -191,6 +198,7 @@ export default function App() {
   const [otpNotice, setOtpNotice] = useState("");
   const [capturingHotkeyTarget, setCapturingHotkeyTarget] = useState(null);
   const [saveNotice, setSaveNotice] = useState("");
+  const [updateStatus, setUpdateStatus] = useState(null);
   const [settings, setSettings] = useState(defaultSettings);
   const [draftSettings, setDraftSettings] = useState(defaultSettings);
   const [connection, setConnection] = useState({
@@ -802,6 +810,9 @@ export default function App() {
         onDismissNotification: () => {
           dismissFlyInRef.current();
         },
+        onUpdateStatus: (status) => {
+          if (status) setUpdateStatus(status);
+        },
         onHotkeyCaptured: (result) => {
           setCapturingHotkeyTarget(null);
           if (result?.cancelled) return;
@@ -846,6 +857,13 @@ export default function App() {
       });
 
       await api.notifyReady?.();
+      if (cancelled) return;
+      try {
+        const status = await api.getUpdaterStatus?.();
+        if (!cancelled && status) setUpdateStatus(status);
+      } catch {
+        // Updater status is best-effort in browser preview.
+      }
       if (cancelled) return;
       await syncInteractiveState();
     };
@@ -939,6 +957,40 @@ export default function App() {
   useEffect(() => {
     return () => {
       api.setEscapeDismiss?.(false)?.catch?.(() => {});
+    };
+  }, []);
+
+  // Silent overnight self-updates: the check only runs while the overlay
+  // is fully hidden with nothing pending, inside the 01:00–05:00 window.
+  // The native side downloads, verifies, and reinstalls without prompts.
+  useEffect(() => {
+    let cancelled = false;
+    let running = false;
+    const tick = async () => {
+      if (cancelled || running) return;
+      if (!settingsHydratedRef.current) return;
+      const enabled = settingsRef.current?.autoUpdateEnabled !== false;
+      const awaitingResponse =
+        pendingConversationRef.current != null || flyInRef.current != null;
+      if (!shouldAutoUpdateNow({ enabled, phase: phaseRef.current, awaitingResponse })) {
+        return;
+      }
+      running = true;
+      try {
+        const status = await api.checkForUpdates?.(true);
+        if (!cancelled && status) setUpdateStatus(status);
+      } catch {
+        // Best-effort: the next tick retries.
+      } finally {
+        running = false;
+      }
+    };
+    const timer = setInterval(tick, AUTO_UPDATE_CHECK_INTERVAL_MS);
+    const initial = setTimeout(tick, 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      clearTimeout(initial);
     };
   }, []);
 
@@ -1135,6 +1187,22 @@ export default function App() {
     await api.startHotkeyCapture?.(target);
   };
 
+  const checkUpdatesManually = async () => {
+    setSaveNotice("Checking for updates…");
+    try {
+      const status = await api.checkForUpdates?.(false);
+      if (status) {
+        setUpdateStatus(status);
+        setSaveNotice(status.message || `Update status: ${status.state}`);
+      } else {
+        setSaveNotice("");
+      }
+    } catch {
+      setSaveNotice("Update check failed.");
+    }
+    setTimeout(() => setSaveNotice(""), 2200);
+  };
+
   const openResponseLink = async (url) => {
     await api.openExternal?.(url);
   };
@@ -1257,6 +1325,46 @@ export default function App() {
               setDraftSettings((prev) => ({
                 ...prev,
                 animationsEnabled: prev.animationsEnabled === false,
+              }))
+            }
+          >
+            <span className="toggle-thumb" />
+          </button>
+        </section>
+
+        <section className="settings-field settings-field--inline">
+          <div className="settings-field-copy">
+            <div className="settings-field-label">Automatic updates</div>
+            <p className="settings-desc">
+              Installs quietly overnight when the overlay is idle. Current version:{" "}
+              {updateStatus?.currentVersion || "unknown"}
+              {updateStatus?.latestVersion ? ` — latest: ${updateStatus.latestVersion}` : ""}
+            </p>
+            {updateStatus?.message ? (
+              <p
+                className={`settings-status${updateStatus.state === "error" ? " settings-status--error" : ""}`}
+              >
+                {updateStatus.message}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              className="settings-link-button"
+              onClick={checkUpdatesManually}
+            >
+              Check now
+            </button>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={draftSettings.autoUpdateEnabled !== false}
+            aria-label="Enable automatic updates"
+            className={`toggle-switch ${draftSettings.autoUpdateEnabled !== false ? "on" : ""}`}
+            onClick={() =>
+              setDraftSettings((prev) => ({
+                ...prev,
+                autoUpdateEnabled: prev.autoUpdateEnabled === false,
               }))
             }
           >

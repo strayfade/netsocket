@@ -10,6 +10,7 @@ class BootReceiver : BroadcastReceiver() {
         val action = intent?.action ?: return
         Log.i(TAG, "Boot/package event: $action")
         KeepAliveService.start(context.applicationContext)
+        AppUpdater.reschedule(context.applicationContext)
     }
 
     companion object {

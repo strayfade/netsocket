@@ -14,6 +14,7 @@
   --text-soft: #aaaaaa;
   --connected: #6fcf97;
   --danger: #f85149;
+  --accent: #58a6ff;
   --motion: cubic-bezier(0.25, 0.1, 0.25, 1);
   --duration: 180ms;
   --duration-fast: 120ms;
@@ -324,6 +325,22 @@ body,
 
 .settings-status--error {
   color: var(--danger);
+}
+
+.settings-link-button {
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--accent);
+  cursor: pointer;
+  text-align: left;
+}
+
+.settings-link-button:hover {
+  text-decoration: underline;
 }
 
 .settings-readonly {

@@ -398,6 +398,17 @@ const handleTrustedMessage = async (socket, message) => {
         case 'getStatusSnapshot':
             await require('./manager/statusApi.js').handleDeviceStatusSnapshot(socket, message)
             break
+        case 'getUpdateInfo': {
+            const data = message.broadcastData || {}
+            const platform = typeof data === 'string' ? data : data.platform
+            const manifest = appUpdates.buildUpdateManifest(platform)
+            replyToSocket(socket, {
+                broadcastPurpose: 'getUpdateInfo',
+                requestId: message.requestId,
+                broadcastData: manifest || { ok: false, error: 'No update available.' },
+            })
+            break
+        }
         case 'getSubgraphs': {
             if (!isEditorOrLegacy) break
             const subgraphStore = require('./manager/subgraphStore')
@@ -791,6 +802,8 @@ const {
     INSTALLER_FILENAME,
     INSTALLER_PATH,
 } = require('./manager/overlayInstaller.js')
+const appUpdates = require('./manager/appUpdates.js')
+const logDownloadError = (message) => log(message, logColors.Error)
 app.get('/downloads/overlay', requireUserSession, (req, res) => {
     res.setHeader('Cache-Control', 'no-store')
     res.download(INSTALLER_PATH, INSTALLER_FILENAME, (error) => {
@@ -801,6 +814,18 @@ app.get('/downloads/overlay', requireUserSession, (req, res) => {
         log(`overlay-download: ${error}`, logColors.Error)
         return res.sendStatus(500)
     })
+})
+app.get('/downloads/android', requireUserSession, (req, res) => {
+    appUpdates.handleDownloadAndroid(req, res, logDownloadError)
+})
+
+// MARK: App updates (public manifests + artifacts for background updaters;
+// manual browser downloads stay session-gated under /downloads/*)
+app.get('/v1/updates/:platform', (req, res) => {
+    appUpdates.handleGetUpdateManifest(req, res)
+})
+app.get('/v1/updates/:platform/download', (req, res) => {
+    appUpdates.handleDownloadUpdateArtifact(req, res, logDownloadError)
 })
 
 app.use('/', express.static(path.join(__dirname, '../frontend/public')));

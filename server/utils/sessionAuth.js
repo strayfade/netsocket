@@ -248,6 +248,7 @@ const PROTECTED_PAGE_PATHS = new Set([
     '/js/shell.js',
     '/js/widgets.js',
     '/downloads/overlay',
+    '/downloads/android',
     '/vendor/gridstack-all.js',
     '/inset.browser.js',
 ])

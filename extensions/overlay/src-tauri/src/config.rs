@@ -76,6 +76,9 @@ pub struct Settings {
     pub animationsEnabled: bool,
     #[serde(default = "default_search_engine")]
     pub searchEngine: String,
+    /// Silent overnight self-updates. Missing in older saves means enabled.
+    #[serde(default = "default_true")]
+    pub autoUpdateEnabled: bool,
 }
 
 impl Default for Settings {
@@ -98,6 +101,7 @@ impl Default for Settings {
             pinnedServerIdentityPublicKey: String::new(),
             animationsEnabled: true,
             searchEngine: default_search_engine(),
+            autoUpdateEnabled: true,
         }
     }
 }
@@ -186,6 +190,7 @@ impl Settings {
             pinnedServerIdentityPublicKey: raw.pinnedServerIdentityPublicKey.trim().to_string(),
             animationsEnabled: raw.animationsEnabled,
             searchEngine: normalize_search_engine(&raw.searchEngine),
+            autoUpdateEnabled: raw.autoUpdateEnabled,
         }
     }
 
@@ -486,6 +491,28 @@ mod tests {
         assert_eq!(broadcast.text, "hello");
         assert_eq!(broadcast.conversation_id.as_deref(), Some("c1"));
         assert_eq!(broadcast.device_id.as_deref(), Some("d1"));
+    }
+
+    #[test]
+    fn auto_update_defaults_to_enabled_for_older_saves() {
+        let settings = Settings::from_saved(Settings::default());
+        assert!(settings.autoUpdateEnabled);
+
+        // Saves written before the toggle existed carry no field.
+        let legacy: Settings = serde_json::from_value(serde_json::json!({
+            "hotkey": DEFAULT_HOTKEY,
+            "copyLastResponseHotkey": DEFAULT_COPY_LAST_RESPONSE_HOTKEY,
+            "typeLastResponseHotkey": DEFAULT_TYPE_LAST_RESPONSE_HOTKEY,
+            "openAtLogin": false,
+            "activeProfile": "production",
+            "responseTimeoutSeconds": 120,
+            "profiles": {},
+            "animationsEnabled": true,
+            "searchEngine": "google"
+        }))
+        .expect("legacy settings parse");
+        assert!(legacy.autoUpdateEnabled);
+        assert!(Settings::from_saved(legacy).autoUpdateEnabled);
     }
 
     #[test]

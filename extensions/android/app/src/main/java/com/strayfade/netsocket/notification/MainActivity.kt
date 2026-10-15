@@ -109,6 +109,7 @@ class MainActivity : AppCompatActivity() {
 
         requestPostNotificationsIfNeeded()
         KeepAliveService.start(this)
+        AppUpdater.reschedule(this)
     }
 
     override fun onNewIntent(intent: Intent) {

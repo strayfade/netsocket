@@ -60,6 +60,10 @@ if not exist "%BUILT_APK%" (
 if not exist "%PROJECT_ROOT%dist" mkdir "%PROJECT_ROOT%dist"
 set "OUT_APK=%PROJECT_ROOT%dist\netsocket-notifications-debug.apk"
 copy /y "%BUILT_APK%" "%OUT_APK%" >nul
+rem Canonical artifact served by the netsocket host for browser downloads
+rem (/downloads/android) and overnight self-updates (/v1/updates/android).
+set "SERVED_APK=%PROJECT_ROOT%dist\netsocket-android.apk"
+copy /y "%BUILT_APK%" "%SERVED_APK%" >nul
 
 echo.
 echo ==^> Installing over ADB

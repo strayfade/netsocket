@@ -68,6 +68,8 @@
     <string name="assistant_label">netsocket</string>
     <string name="voice_mode_default">Open voice dictation by default</string>
     <string name="voice_mode_default_helper">Launch into the voice page instead of the text chat.</string>
+    <string name="auto_update_title">Automatic updates</string>
+    <string name="auto_update_helper">Installs quietly overnight on unmetered Wi-Fi while charging.</string>
     <string name="voice_title">Voice</string>
     <string name="voice_hint_idle"></string>
     <string name="voice_hint_listening">Listening…</string>
