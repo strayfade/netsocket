@@ -49,7 +49,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (shouldOpenVoiceByDefault(savedInstanceState)) {
+        if (shouldAutoOpenPanel(savedInstanceState)) {
+            // Land on the wall panel; Main stays in the stack so Back returns to chat.
+            // Takes precedence over voice-default: a panel device should boot to its panel.
+            startActivity(Intent(this, PanelActivity::class.java))
+        } else if (shouldOpenVoiceByDefault(savedInstanceState)) {
             redirectedToVoice = true
             startActivity(Intent(this, VoiceActivity::class.java))
             finish()
@@ -115,6 +119,13 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+    }
+
+    private fun shouldAutoOpenPanel(savedInstanceState: Bundle?): Boolean {
+        if (savedInstanceState != null) return false
+        if (intent.getBooleanExtra(EXTRA_SKIP_VOICE_REDIRECT, false)) return false
+        if (intent.getBooleanExtra(EXTRA_FOCUS_CHAT, false)) return false
+        return Prefs(this).autoOpenPanel
     }
 
     private fun shouldOpenVoiceByDefault(savedInstanceState: Bundle?): Boolean {

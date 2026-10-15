@@ -70,6 +70,8 @@
     <string name="voice_mode_default_helper">Launch into the voice page instead of the text chat.</string>
     <string name="auto_update_title">Automatic updates</string>
     <string name="auto_update_helper">Installs quietly overnight on unmetered Wi-Fi while charging.</string>
+    <string name="auto_open_panel">Auto-open Panel</string>
+    <string name="auto_open_panel_helper">Open the wall panel instead of chat on launch. Press Back to return to chat.</string>
     <string name="voice_title">Voice</string>
     <string name="voice_hint_idle"></string>
     <string name="voice_hint_listening">Listening…</string>

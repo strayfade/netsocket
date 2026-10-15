@@ -21,6 +21,7 @@ class GeneralSettingsActivity : AppCompatActivity() {
         binding.httpsSwitch.isChecked = prefs.useHttps
         binding.voiceDefaultSwitch.isChecked = prefs.voiceModeDefault
         binding.autoUpdateSwitch.isChecked = prefs.autoUpdateEnabled
+        binding.autoOpenPanelSwitch.isChecked = prefs.autoOpenPanel
         binding.deviceNameInput.setText(prefs.deviceName)
         binding.deviceIdValue.text = DeviceId.get(this)
         updatePreview()
@@ -51,6 +52,7 @@ class GeneralSettingsActivity : AppCompatActivity() {
         prefs.useHttps = binding.httpsSwitch.isChecked
         prefs.voiceModeDefault = binding.voiceDefaultSwitch.isChecked
         prefs.autoUpdateEnabled = binding.autoUpdateSwitch.isChecked
+        prefs.autoOpenPanel = binding.autoOpenPanelSwitch.isChecked
         AppUpdater.reschedule(this)
         prefs.deviceName = binding.deviceNameInput.text?.toString().orEmpty()
         binding.deviceNameInput.setText(prefs.deviceName)

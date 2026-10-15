@@ -65,6 +65,11 @@ class Prefs(context: Context) {
         get() = prefs.getBoolean(KEY_VOICE_MODE_DEFAULT, false)
         set(value) = prefs.edit { putBoolean(KEY_VOICE_MODE_DEFAULT, value) }
 
+    /** When true, launching the app opens the wall panel instead of the text chat. */
+    var autoOpenPanel: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_OPEN_PANEL, false)
+        set(value) = prefs.edit { putBoolean(KEY_AUTO_OPEN_PANEL, value) }
+
     /**
      * Silent overnight self-updates. When true, a nightly job checks the
      * host for a newer APK and installs it while on unmetered Wi-Fi.
@@ -137,6 +142,7 @@ class Prefs(context: Context) {
         const val KEY_DEVICE_NAME = "device_name"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
         const val KEY_VOICE_MODE_DEFAULT = "voice_mode_default"
+        const val KEY_AUTO_OPEN_PANEL = "auto_open_panel"
         const val KEY_AUTO_UPDATE = "auto_update_enabled"
         const val KEY_RESPONSE_TIMEOUT = "response_timeout_seconds"
         const val KEY_CONVERSATION_ID = "conversation_id"
