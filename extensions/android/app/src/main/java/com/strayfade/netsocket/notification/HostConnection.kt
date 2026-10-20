@@ -577,13 +577,11 @@ object HostConnection {
         return when (broadcastData) {
             is String -> Triple(broadcastData, null, null)
             is JSONObject -> {
-                val text = broadcastData.optString("text")
-                    .ifBlank { broadcastData.optString("message") }
-                val conversationId = broadcastData.optString("conversationId")
-                    .takeIf { it.isNotBlank() }
-                val deviceId = broadcastData.optString("deviceId")
-                    .ifBlank { broadcastData.optString("device_id") }
-                    .takeIf { it.isNotBlank() }
+                // optString() turns JSON null into the literal "null", which made
+                // Alert payloads look like a conversation id and get dropped.
+                val text = jsonId(broadcastData, "text", "message").orEmpty()
+                val conversationId = jsonId(broadcastData, "conversationId", "conversation_id")
+                val deviceId = jsonId(broadcastData, "deviceId", "device_id")
                 Triple(text, conversationId, deviceId)
             }
             else -> Triple("", null, null)

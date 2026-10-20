@@ -213,7 +213,9 @@ object ConversationRepository {
             )
         )
 
-        if (!isUiVisible()) {
+        // Alerts have no conversation id and should always surface as a system
+        // notification. Command replies only notify while the UI is in the background.
+        if (conversationId == null || !isUiVisible()) {
             appContext?.let { IncomingNotifier.notify(it, text) }
         }
     }

@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.PowerManager
+import android.os.Process
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -81,10 +82,31 @@ class NetsocketNotificationListener : NotificationListenerService() {
         }
     }
 
-    /** True for keep-alive, incoming-message, and any other notification posted by this app. */
+    /**
+     * True for keep-alive, alert, and any other notification posted by this app.
+     * Package string alone is not enough: some builds report a different package
+     * while the posting uid, channel, or [IncomingNotifier.EXTRA_OWN] still identify us.
+     * [StatusBarNotification.getOpPkg] is API 29+, so it must not be called below that.
+     */
     private fun isOwnNotification(sbn: StatusBarNotification): Boolean {
+        if (sbn.uid == Process.myUid()) return true
         val self = packageName
-        return sbn.packageName == self || sbn.opPkg == self
+        if (sbn.packageName == self) return true
+        if (opPackage(sbn) == self) return true
+        if (sbn.notification.extras?.getBoolean(IncomingNotifier.EXTRA_OWN, false) == true) {
+            return true
+        }
+        val channelId = sbn.notification.channelId
+        return channelId == IncomingNotifier.CHANNEL_ID || channelId == KeepAliveService.CHANNEL_ID
+    }
+
+    private fun opPackage(sbn: StatusBarNotification): String? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        return try {
+            sbn.opPkg
+        } catch (_: Throwable) {
+            null
+        }
     }
 
     private fun appLabel(packageName: String): String {

@@ -81,13 +81,15 @@ class KeepAliveService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
+            .setLocalOnly(true)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .addExtras(android.os.Bundle().apply { putBoolean(IncomingNotifier.EXTRA_OWN, true) })
             .build()
     }
 
     companion object {
-        private const val CHANNEL_ID = "netsocket_keepalive"
+        const val CHANNEL_ID = "netsocket_keepalive"
         private const val NOTIFICATION_ID = 1001
 
         fun start(context: Context) {

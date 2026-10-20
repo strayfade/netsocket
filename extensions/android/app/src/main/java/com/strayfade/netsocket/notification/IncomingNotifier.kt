@@ -8,9 +8,13 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import java.util.concurrent.atomic.AtomicInteger
 
-/** Posts system notifications when overlay responses arrive while the chat UI is not visible. */
+/** Posts system notifications for alerts, and for command replies while the chat UI is hidden. */
 object IncomingNotifier {
-    private const val CHANNEL_ID = "netsocket_messages"
+    const val CHANNEL_ID = "netsocket_messages"
+
+    /** Set on every notification this app posts so the forwarder can ignore them. */
+    const val EXTRA_OWN = "com.strayfade.netsocket.notification.own"
+
     private val nextId = AtomicInteger(2000)
 
     fun ensureChannel(context: Context) {
@@ -52,8 +56,10 @@ object IncomingNotifier {
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setContentIntent(open)
             .setAutoCancel(true)
+            .setLocalOnly(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .addExtras(android.os.Bundle().apply { putBoolean(EXTRA_OWN, true) })
             .build()
 
         manager.notify(nextId.getAndIncrement(), notification)
