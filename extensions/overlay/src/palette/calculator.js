@@ -259,14 +259,39 @@ export function evaluateExpression(input) {
   }
 }
 
+function formatPercent(value) {
+  const percent = value * 100;
+  if (!Number.isFinite(percent)) return null;
+  if (Object.is(percent, -0)) return "0";
+  // Keep tiny percentages visible instead of rounding them down to 0%.
+  if (percent !== 0 && Math.abs(percent) < 0.01) return formatResult(percent);
+  return String(Number(percent.toFixed(2)));
+}
+
+function basicDivisionPercent(expression) {
+  // Only a lone "<number> / <number>" — not compound expressions
+  // like "1/2/3", "1/2+1", or "(1/2)".
+  const match =
+    /^([+-]?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*\/\s*([+-]?\d+(?:\.\d+)?(?:e[+-]?\d+)?)$/i.exec(
+      expression
+    );
+  if (!match) return null;
+  const denominator = Number(match[2]);
+  if (denominator === 0) return null;
+  return formatPercent(Number(match[1]) / denominator);
+}
+
 export function calculatorResult(query) {
   const text = String(query || "").trim();
   if (!text || text.includes("\n")) return null;
   const value = evaluateExpression(text);
   if (value == null) return null;
+  const percent = basicDivisionPercent(preprocess(text));
   return {
     id: "calculator",
-    title: value,
+    // Preview-only: the percentage is shown in the title, while the
+    // copy action below still copies just the plain result.
+    title: percent == null ? value : `${value} (${percent}%)`,
     subtitle: "Copy result",
     category: "Calculator",
     score: 2000,
