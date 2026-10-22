@@ -75,9 +75,9 @@
     <string name="send_clipboard">Send Clipboard</string>
     <string name="send_clipboard_helper">When you copy text or an image, send it to netsocket. On Android 10 and later, turn on the clipboard accessibility service so this still works in other apps.</string>
     <string name="clipboard_accessibility_label">Netsocket clipboard</string>
-    <string name="clipboard_accessibility_description">Reads text and images you copy so netsocket can send them while this app is in the background. It does not read the screen or control other apps.</string>
+    <string name="clipboard_accessibility_description">Notices when you copy text or an image so netsocket can send the clipboard while this app is in the background. It does not read the screen or change other apps.</string>
     <string name="clipboard_accessibility_title">Background clipboard access</string>
-    <string name="clipboard_accessibility_message">Android only lets a background app read the clipboard after you turn on its accessibility service. Enable Netsocket clipboard so copies still send while you are in other apps.</string>
+    <string name="clipboard_accessibility_message">Android does not tell background apps when the clipboard changes. Enable Netsocket clipboard so copies still send while you are in other apps.</string>
     <string name="clipboard_accessibility_open">Open accessibility settings</string>
     <string name="status_clipboard_accessibility_enabled">Clipboard accessibility: on</string>
     <string name="status_clipboard_accessibility_disabled">Clipboard accessibility: off</string>

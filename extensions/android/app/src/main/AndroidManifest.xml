@@ -32,6 +32,7 @@
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
+        <package android:name="com.android.systemui" />
     </queries>
 
     <application
@@ -158,8 +159,8 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:excludeFromRecents="true"
             android:exported="false"
+            android:autoRemoveFromRecents="true"
             android:launchMode="singleInstance"
-            android:noHistory="true"
             android:taskAffinity=""
             android:theme="@style/Theme.NetsocketNotification.ClipboardCapture" />
 
