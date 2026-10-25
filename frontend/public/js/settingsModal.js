@@ -294,11 +294,13 @@
                             card.appendChild(top);
                             var meta = document.createElement('div');
                             meta.className = 'device-card-meta';
+                            // Device fields come from an unauthenticated pairing
+                            // handshake (deviceHello), so never interpolate them raw.
                             meta.innerHTML = [
-                                '<div><span>Device ID</span><code title="' + device.deviceId + '">' + shortId(device.deviceId) + '</code></div>',
-                                '<div><span>IP address</span><code>' + (device.ipAddress || '—') + '</code></div>',
-                                '<div><span>Platform</span><code>' + (device.platform || '—') + '</code></div>',
-                                '<div><span>Last seen</span><code>' + formatTime(device.lastSeenAt) + '</code></div>'
+                                '<div><span>Device ID</span><code title="' + escHtml(device.deviceId) + '">' + escHtml(shortId(device.deviceId)) + '</code></div>',
+                                '<div><span>IP address</span><code>' + escHtml(device.ipAddress || '—') + '</code></div>',
+                                '<div><span>Platform</span><code>' + escHtml(device.platform || '—') + '</code></div>',
+                                '<div><span>Last seen</span><code>' + escHtml(formatTime(device.lastSeenAt)) + '</code></div>'
                             ].join('');
                             card.appendChild(meta);
                             var actions = document.createElement('div');

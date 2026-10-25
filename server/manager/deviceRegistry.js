@@ -23,10 +23,28 @@ let store = { version: 1, devices: {} }
 /** @type {{ publicKeyB64: string, privateKeyB64: string } | null} */
 let serverIdentity = null
 
+/** Cap unauthenticated pairing writes: any internet client can send deviceHello. */
+const MAX_DEVICES = 200
+const MAX_DEVICE_ID_LENGTH = 128
+
+/**
+ * Display-only fields (name/platform) are echoed back to dashboards, so strip
+ * markup-significant characters and control codes before persisting. The
+ * registry never trusts them for logic.
+ */
+const sanitizeDisplayText = (value, maxLength) => {
+    if (typeof value !== 'string') return ''
+    return value
+        .replace(/[<>&"'\u0000-\u001f\u007f]/g, '')
+        .trim()
+        .slice(0, maxLength)
+}
+
 const normalizeDeviceId = (value) => {
     if (value == null) return null
     const trimmed = String(value).trim()
-    return trimmed || null
+    if (!trimmed || trimmed.length > MAX_DEVICE_ID_LENGTH) return null
+    return trimmed
 }
 
 const loadJsonFile = (filePath, fallback) => {
@@ -151,13 +169,22 @@ const upsertFromHello = ({
     const now = Date.now()
     const existing = store.devices[id]
     const pub = identityPublicKey.trim()
+    if (!existing && Object.keys(store.devices).length >= MAX_DEVICES) {
+        // Evict the stalest pending device so a flood of hellos can't block new
+        // pairings, while approved devices are never dropped implicitly.
+        const pending = Object.values(store.devices)
+            .filter((device) => device.status === STATUS.PENDING)
+            .sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0))
+        if (!pending.length) throw new Error('device_limit_reached')
+        delete store.devices[pending[0].deviceId]
+    }
 
     if (!existing) {
         const created = {
             deviceId: id,
             identityPublicKey: pub,
-            name: typeof name === 'string' ? name.trim().slice(0, 120) : '',
-            platform: typeof platform === 'string' ? platform.trim().slice(0, 64) : '',
+            name: sanitizeDisplayText(name, 120),
+            platform: sanitizeDisplayText(platform, 64),
             ipAddress: typeof ipAddress === 'string' ? ipAddress : '',
             status: STATUS.PENDING,
             createdAt: now,
@@ -182,12 +209,8 @@ const upsertFromHello = ({
     const next = {
         ...existing,
         identityPublicKey: pub,
-        name: typeof name === 'string' && name.trim()
-            ? name.trim().slice(0, 120)
-            : existing.name,
-        platform: typeof platform === 'string' && platform.trim()
-            ? platform.trim().slice(0, 64)
-            : existing.platform,
+        name: sanitizeDisplayText(name, 120) || existing.name,
+        platform: sanitizeDisplayText(platform, 64) || existing.platform,
         ipAddress: typeof ipAddress === 'string' && ipAddress
             ? ipAddress
             : existing.ipAddress,
@@ -267,6 +290,7 @@ load()
 
 module.exports = {
     STATUS,
+    MAX_DEVICES,
     DEVICES_PATH,
     SERVER_IDENTITY_PATH,
     load,

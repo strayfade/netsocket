@@ -128,13 +128,26 @@ const handleDeviceHello = (socket, message, request) => {
     }
 
     const ipAddress = getRemoteIp(request)
-    const { device, isNew, statusChanged } = deviceRegistry.upsertFromHello({
-        deviceId,
-        identityPublicKey,
-        name,
-        platform,
-        ipAddress,
-    })
+    let upsert
+    try {
+        upsert = deviceRegistry.upsertFromHello({
+            deviceId,
+            identityPublicKey,
+            name,
+            platform,
+            ipAddress,
+        })
+    } catch (error) {
+        sendJson(socket, {
+            broadcastPurpose: 'deviceError',
+            broadcastData: {
+                error: 'invalid_hello',
+                message: error?.message || 'device registration rejected',
+            },
+        })
+        return { ok: false, error: error?.message || 'invalid_hello' }
+    }
+    const { device, isNew, statusChanged } = upsert
 
     if (device.status === deviceRegistry.STATUS.DENIED) {
         sendJson(socket, {

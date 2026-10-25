@@ -141,6 +141,48 @@ describe('deviceRegistry', () => {
         const sig = registry.signWithServerIdentity('test-message');
         assert.equal(crypto.verifyEd25519(pub, 'test-message', sig), true);
     });
+
+    it('strips markup characters from unauthenticated display fields', () => {
+        const keys = crypto.generateEd25519KeyPair();
+        const { device } = registry.upsertFromHello({
+            deviceId: 'dev-xss',
+            identityPublicKey: keys.publicKeyB64,
+            name: '<img src=x onerror=alert(1)>',
+            platform: '" onmouseover="alert(1)',
+            ipAddress: '10.0.0.9',
+        });
+        // The pending-device list is HTML-rendered in the dashboard.
+        assert.ok(!/[<>"']/.test(device.name), `name kept markup: ${device.name}`);
+        assert.ok(!/[<>"']/.test(device.platform), `platform kept markup: ${device.platform}`);
+        assert.equal(device.name, 'img src=x onerror=alert(1)');
+        assert.equal(device.platform, 'onmouseover=alert(1)');
+    });
+
+    it('rejects oversized device ids and caps unauthenticated registrations', () => {
+        const keys = crypto.generateEd25519KeyPair();
+        assert.throws(
+            () => registry.upsertFromHello({
+                deviceId: 'x'.repeat(129),
+                identityPublicKey: keys.publicKeyB64,
+            }),
+            /device_id_required/,
+        );
+        for (let i = 0; i < registry.MAX_DEVICES; i += 1) {
+            registry.upsertFromHello({ deviceId: `cap-${i}`, identityPublicKey: keys.publicKeyB64 });
+        }
+        assert.equal(registry.listDevices().length, registry.MAX_DEVICES);
+        // A hello flood must not be able to block legit pairings: the stalest
+        // pending entry is evicted instead of growing the store without bound.
+        registry.upsertFromHello({ deviceId: 'cap-new', identityPublicKey: keys.publicKeyB64 });
+        const ids = registry.listDevices().map((device) => device.deviceId);
+        assert.equal(ids.length, registry.MAX_DEVICES);
+        assert.equal(ids.includes('cap-new'), true);
+        assert.equal(ids.includes('cap-0'), false);
+        // Known devices can still re-hello at the cap.
+        assert.doesNotThrow(
+            () => registry.upsertFromHello({ deviceId: 'cap-new', identityPublicKey: keys.publicKeyB64 }),
+        );
+    });
 });
 
 describe('deviceAuth handshake', () => {
