@@ -35,6 +35,7 @@ const {
     requireUserSession,
     loginRateLimit,
     recordFailedLoginAttempt,
+    clearLoginAttempts,
     securityHeaders,
 } = require('./utils/sessionAuth')
 if (secureCookies) {
@@ -622,20 +623,21 @@ const { onNewNotification } = require('./utils/receiveNotification')
 const { onGenericWebhook, onGitHubWebhook } = require('./utils/waitForWebhookEvents')
 app.post("/v1/postNotification/:secret", async (req, res) => {
     const expectedSecret = settingsManager.getSetting('triggersNotification.secret')
-    if (!expectedSecret || req.params.secret !== expectedSecret) {
+    if (!providedSecretMatches(req.params.secret, expectedSecret)) {
         return res.sendStatus(403)
     }
     else {
         const notificationContent = req.body
         onNewNotification(notificationContent)
-        log(`Received notification: ${JSON.stringify(notificationContent)}`, logColors.Success)
+        // Payload is user data (may contain credentials); log the event only.
+        log('Received notification', logColors.Success)
         res.sendStatus(200);
     }
 })
 
 app.post("/v1/triggers/webhook/:secret", async (req, res) => {
     const expectedSecret = settingsManager.getSetting('triggersWebhook.secret')
-    if (!expectedSecret || req.params.secret !== expectedSecret) {
+    if (!providedSecretMatches(req.params.secret, expectedSecret)) {
         return res.sendStatus(403)
     }
 
@@ -647,13 +649,14 @@ app.post("/v1/triggers/webhook/:secret", async (req, res) => {
         body: req.body
     })
 
-    log(`Webhook received on ${req.path}`, logColors.Success)
+    // req.path contains the secret, so never log it.
+    log('Webhook received', logColors.Success)
     return res.sendStatus(200);
 })
 
 app.post("/v1/triggers/github/:secret", async (req, res) => {
     const expectedSecret = settingsManager.getSetting('triggersGitHub.secret')
-    if (!expectedSecret || req.params.secret !== expectedSecret) {
+    if (!providedSecretMatches(req.params.secret, expectedSecret)) {
         return res.sendStatus(403)
     }
 
@@ -1158,7 +1161,10 @@ app.post("/login", loginRateLimit, async (req, res) => {
     if (!u || !password.length) {
         return res.sendStatus(400);
     }
-    const issueSession = (tk) => res.cookie("tk", tk, getSessionCookieOpts(persistSession)).sendStatus(200);
+    const issueSession = (tk) => {
+        clearLoginAttempts(req)
+        return res.cookie("tk", tk, getSessionCookieOpts(persistSession)).sendStatus(200)
+    }
     if (authSkipped()) {
         const tk = createToken({ rememberMe: persistSession });
         return issueSession(tk);
@@ -1214,9 +1220,10 @@ const broadcastGraphToClients = () => {
         broadcastData: getNodes().nodes
     })
     connectedClients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(payload)
-        }
+        if (client.readyState !== WebSocket.OPEN) return
+        // Graphs carry node properties (secrets) — editor/legacy sessions only.
+        if (client.netsocketRole !== 'editor' && client.netsocketRole !== 'legacy') return
+        client.send(payload)
     })
 }
 
@@ -1303,9 +1310,9 @@ app.post('/v1/import-full-state', async (req, res) => {
                 broadcastData: subgraphStore.listDefinitions(),
             })
             connectedClients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(subgraphPayload)
-                }
+                if (client.readyState !== WebSocket.OPEN) return
+                if (client.netsocketRole !== 'editor' && client.netsocketRole !== 'legacy') return
+                client.send(subgraphPayload)
             })
         }
         cronTriggerManager.syncFromGraphIfNeeded()

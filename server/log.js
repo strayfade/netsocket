@@ -1,4 +1,6 @@
 let currentLog = ""
+/** Keep the in-memory log bounded; unauthenticated traffic can add lines. */
+const MAX_LOG_CHARS = 512 * 1024
 const ColorsForeground = Object.freeze({
     Black: 30,
     Red: 31,
@@ -69,6 +71,12 @@ const logPriv = (string, colors = logColors.Default) => {
     }
     const shouldBold = colors == logColors.successVisible || colors == logColors.warningVisible || colors == logColors.errorVisible
     currentLog += `${string}\n`
+    if (currentLog.length > MAX_LOG_CHARS) {
+        // Trim to the newest tail, aligned to a line boundary.
+        const tail = currentLog.slice(currentLog.length - MAX_LOG_CHARS)
+        const boundary = tail.indexOf('\n')
+        currentLog = boundary === -1 ? tail : tail.slice(boundary + 1)
+    }
     if (onPushLog)
         onPushLog(string)
     for (const listener of [...pushLogListeners]) {
@@ -121,4 +129,4 @@ const getLines = (lineCount = 1) => {
     return lines.slice(-lineCount);
 }
 
-module.exports = { ColorsForeground, ColorsBackground, logColors, log, getLines, setOnPushLog, addPushLogListener };
+module.exports = { ColorsForeground, ColorsBackground, logColors, log, getLines, setOnPushLog, addPushLogListener, MAX_LOG_CHARS };

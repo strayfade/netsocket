@@ -142,8 +142,9 @@ const createToken = ({ rememberMe = false } = {}) => {
 const revokeToken = (tk) => {
     const normalized = normalizeToken(tk)
     if (!normalized) return
-    const users = getUsers().filter((u) => !tokensEqual(u.tk, normalized))
-    setUsers(users)
+    const users = getUsers()
+    if (findSessionIndex(users, normalized) === -1) return
+    setUsers(users.filter((u) => !tokensEqual(u.tk, normalized)))
     flushUsersSync({ allowEmpty: true })
 }
 
@@ -267,10 +268,18 @@ const requireUserSession = (req, res, next) => {
     return res.status(403).redirect(`/login?redirect=${redirect}`)
 }
 
+/** Drop expired rate-limit buckets so spoofed/rotating addresses can't grow the map. */
+const pruneLoginAttempts = (now = Date.now()) => {
+    for (const [ip, entry] of loginAttemptsByIp) {
+        if (now - entry.windowStart > LOGIN_RATE_WINDOW_MS) loginAttemptsByIp.delete(ip)
+    }
+}
+
 const loginRateLimit = (req, res, next) => {
     if (authSkipped()) return next()
     const ip = req.ip || req.socket?.remoteAddress || 'unknown'
     const now = Date.now()
+    if (loginAttemptsByIp.size > 0) pruneLoginAttempts(now)
     const entry = loginAttemptsByIp.get(ip)
     if (entry && now - entry.windowStart <= LOGIN_RATE_WINDOW_MS && entry.count >= LOGIN_RATE_MAX_ATTEMPTS) {
         return res.sendStatus(429)
@@ -288,6 +297,16 @@ const recordFailedLoginAttempt = (req) => {
     }
     entry.count += 1
     loginAttemptsByIp.set(ip, entry)
+}
+
+/** Successful sign-in clears the failure counter so a legit user isn't held out. */
+const clearLoginAttempts = (req) => {
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown'
+    loginAttemptsByIp.delete(ip)
+}
+
+const resetLoginRateLimit = () => {
+    loginAttemptsByIp.clear()
 }
 
 const securityHeaders = (_req, res, next) => {
@@ -330,6 +349,8 @@ module.exports = {
     isProtectedPagePath,
     requireUserSession,
     recordFailedLoginAttempt,
+    clearLoginAttempts,
+    resetLoginRateLimit,
     loginRateLimit,
     securityHeaders,
 }

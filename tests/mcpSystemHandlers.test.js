@@ -141,4 +141,21 @@ describe('system handlers', () => {
         assert.equal(result.format, 'svg')
         assert.equal(result.pngUnavailable.code, 'WEBMCP_UNCONFIGURED')
     })
+
+    it('caps the in-memory log buffer', () => {
+        const { MAX_LOG_CHARS, getLines } = require('../server/log')
+        const realWrite = process.stdout.write
+        process.stdout.write = () => true
+        try {
+            const chunk = 'x'.repeat(4096)
+            const iterations = Math.ceil(MAX_LOG_CHARS / chunk.length) + 8
+            for (let i = 0; i < iterations; i += 1) log(chunk)
+            log('marker-after-flood')
+        } finally {
+            process.stdout.write = realWrite
+        }
+        const lines = getLines(100000)
+        assert.equal(lines[lines.length - 1].includes('marker-after-flood'), true)
+        assert.ok(lines.join('\n').length <= MAX_LOG_CHARS + 8192)
+    })
 })

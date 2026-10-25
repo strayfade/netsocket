@@ -24,6 +24,8 @@ const {
     revokeToken,
     loginRateLimit,
     recordFailedLoginAttempt,
+    clearLoginAttempts,
+    resetLoginRateLimit,
     securityHeaders,
     sessionCookieOpts,
     getSessionCookieOpts,
@@ -66,6 +68,7 @@ function mockReqRes(overrides = {}) {
 describe('sessionAuth', () => {
     beforeEach(() => {
         setUsers([]);
+        resetLoginRateLimit();
         process.argv = originalArgv.filter((arg) => arg !== '--skip-auth');
     });
 
@@ -234,6 +237,14 @@ describe('sessionAuth', () => {
             assert.equal(validateToken(token), false);
         });
 
+        it('leaves the session store untouched for unknown tokens', () => {
+            const token = createToken({ rememberMe: false });
+            revokeToken('not-a-real-session-token');
+            const users = require('../server/manager/saveUsers').getUsers();
+            assert.equal(users.length, 1);
+            assert.equal(validateToken(token), true);
+        });
+
         it('slides session expiration on activity', () => {
             const token = createToken({ rememberMe: true });
             const usersBefore = require('../server/manager/saveUsers').getUsers();
@@ -273,6 +284,22 @@ describe('sessionAuth', () => {
             let called = false;
             loginRateLimit(req, res, () => { called = true; });
             assert.equal(called, true);
+        });
+
+        it('clears the failure counter for a successful sign-in', () => {
+            const { req, res } = mockReqRes({ ip: '203.0.113.9' });
+            for (let i = 0; i < 10; i += 1) {
+                recordFailedLoginAttempt(req);
+            }
+            let blocked = false;
+            loginRateLimit(req, res, () => { blocked = true; });
+            assert.equal(blocked, false);
+            assert.equal(res.statusCode, 429);
+
+            clearLoginAttempts(req);
+            let allowed = false;
+            loginRateLimit(req, res, () => { allowed = true; });
+            assert.equal(allowed, true);
         });
     });
 
