@@ -42,6 +42,7 @@ class KeepAliveService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         HostConnection.start(this)
         ClipboardBridge.syncWatch(this)
+        ListenerAccess.warnIfMissing(this)
         return START_STICKY
     }
 

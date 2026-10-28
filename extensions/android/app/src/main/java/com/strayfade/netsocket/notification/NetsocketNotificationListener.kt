@@ -23,13 +23,23 @@ class NetsocketNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         Log.i(TAG, "Notification listener connected")
+        ListenerAccess.setConnected(true)
+        ListenerAccess.clearWarning(this)
         KeepAliveService.start(this)
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
         Log.w(TAG, "Notification listener disconnected; requesting rebind")
+        ListenerAccess.setConnected(false)
+        // Debounced by the access check: a rebind while the grant is intact posts nothing.
+        ListenerAccess.warnIfMissing(this)
         requestRebind(ComponentName(this, NetsocketNotificationListener::class.java))
+    }
+
+    override fun onDestroy() {
+        ListenerAccess.setConnected(false)
+        super.onDestroy()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {

@@ -25,7 +25,9 @@ function Write-Step([string]$Message) {
 
 function Find-JdkHome {
     $candidates = New-Object System.Collections.Generic.List[string]
-    if ($env:JAVA_HOME -and (Test-Path (Join-Path $env:JAVA_HOME "bin\java.exe"))) {
+    # Bundled JDK first: a machine-wide JAVA_HOME is often a JRE (no javac) or the wrong version.
+    $candidates.Add((Join-Path $ToolsDir "jdk-21"))
+    if ($env:JAVA_HOME -and (Test-Path (Join-Path $env:JAVA_HOME "bin\javac.exe"))) {
         $candidates.Add($env:JAVA_HOME)
     }
 
@@ -47,8 +49,8 @@ function Find-JdkHome {
     }
 
     foreach ($candidate in $candidates) {
-        $javaExe = Join-Path $candidate "bin\java.exe"
-        if (Test-Path $javaExe) {
+        $javacExe = Join-Path $candidate "bin\javac.exe"
+        if (Test-Path $javacExe) {
             return $candidate
         }
     }
@@ -60,6 +62,7 @@ function Find-AndroidSdk {
     $candidates = @(
         $env:ANDROID_HOME,
         $env:ANDROID_SDK_ROOT,
+        (Join-Path $ToolsDir "android-sdk"),
         (Join-Path $env:LOCALAPPDATA "Android\Sdk"),
         (Join-Path $env:USERPROFILE "AppData\Local\Android\Sdk"),
         "C:\Android\Sdk"

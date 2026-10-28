@@ -11,7 +11,6 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.strayfade.netsocket.notification.databinding.ActivitySettingsPermissionsBinding
 
@@ -48,9 +47,7 @@ class PermissionsSettingsActivity : AppCompatActivity() {
     }
 
     private fun refreshStatus() {
-        val listenerEnabled = NotificationManagerCompat
-            .getEnabledListenerPackages(this)
-            .contains(packageName)
+        val listenerEnabled = ListenerAccess.isEnabled(this)
         val batteryUnrestricted = isIgnoringBatteryOptimizations()
         binding.listenerStatus.text = getString(
             if (listenerEnabled) R.string.status_listener_enabled else R.string.status_listener_disabled

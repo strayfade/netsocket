@@ -156,6 +156,10 @@
     <string name="keepalive_text">Listening for commands and notifications</string>
     <string name="messages_channel_name">netsocket messages</string>
     <string name="messages_channel_description">Responses and alerts from your netsocket host</string>
+    <string name="warnings_channel_name">netsocket warnings</string>
+    <string name="warnings_channel_description">Problems that stop netsocket working, such as disabled notification access</string>
+    <string name="listener_access_warning_title">Notification forwarding is off</string>
+    <string name="listener_access_warning_text">Notification access is disabled for netsocket, so nothing is being forwarded. Tap to turn it back on.</string>
     <string name="message_notification_title">netsocket</string>
     <string name="message_notification_fallback">New message</string>
 </resources>
