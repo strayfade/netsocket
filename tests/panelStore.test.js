@@ -230,6 +230,7 @@ describe('panelStore', () => {
     it('defaults widget borders on and toggles them per panel', () => {
         const created = store.createPanel({ name: 'Kitchen' });
         assert.equal(created.panel.showBorders, true);
+        assert.equal(created.panel.widgetStyle, 'classic');
 
         const borderless = store.createPanel({ name: 'Porch', showBorders: false });
         assert.equal(borderless.panel.showBorders, false);
@@ -242,6 +243,16 @@ describe('panelStore', () => {
         assert.throws(() => store.updatePanel('kitchen', { showBorders: 1 }), /invalid_show_borders/);
         // Failed updates leave the stored value untouched.
         assert.equal(store.getPanelPublic('kitchen').showBorders, true);
+    });
+
+    it('stores switchable widget design styles per panel', () => {
+        const created = store.createPanel({ name: 'Studio', widgetStyle: 'vivid' });
+        assert.equal(created.panel.widgetStyle, 'vivid');
+        const updated = store.updatePanel(created.panel.id, { widgetStyle: 'neon' });
+        assert.equal(updated.widgetStyle, 'neon');
+        assert.throws(() => store.createPanel({ name: 'BadStyle', widgetStyle: 'pastel' }), /invalid_widget_style/);
+        assert.throws(() => store.updatePanel(created.panel.id, { widgetStyle: 3 }), /invalid_widget_style/);
+        assert.equal(store.getPanelPublic(created.panel.id).widgetStyle, 'neon');
     });
 
     it('migrates legacy panels without a border flag to borders-on', () => {
@@ -258,6 +269,7 @@ describe('panelStore', () => {
         delete require.cache[require.resolve('../server/manager/panelStore')];
         const reloaded = require('../server/manager/panelStore');
         assert.equal(reloaded.getPanelPublic('legacy').showBorders, true);
+        assert.equal(reloaded.getPanelPublic('legacy').widgetStyle, 'classic');
         reloaded.resetForTests();
     });
 

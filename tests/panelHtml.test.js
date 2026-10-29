@@ -33,7 +33,7 @@ describe('panel pages', () => {
         assert.doesNotMatch(html, /id="panel-clock-inline"/);
         assert.doesNotMatch(html, /id="panel-clock-hero"/);
         assert.doesNotMatch(html, /kiosk-header/);
-        assert.match(html, /<div class="grid-stack" id="panel-grid">/);
+        assert.match(html, /id="panel-grid"/);
         assert.match(html, /<script src="\/js\/agentMarkdown\.js"><\/script>/);
         assert.match(html, /<script src="\/js\/shell\.js"><\/script>/);
         assert.match(html, /<script src="\/vendor\/gridstack-all\.js"><\/script>/);
@@ -41,6 +41,8 @@ describe('panel pages', () => {
         assert.match(html, /Widgets\.createItem/);
         assert.match(html, /staticGrid/);
         assert.match(html, /showBorders/);
+        assert.match(html, /widgetStyle/);
+        assert.match(html, /data-widget-style/);
         assert.match(html, /no-borders/);
         assert.match(html, /refreshVarContent/);
         assert.match(html, /varsChanged/);
@@ -77,13 +79,14 @@ describe('panel pages', () => {
             'panel-add-widget-dialog',
             'panel-dialog-kind',
             'panel-dialog-preset-track',
-            'panel-dialog-size-label',
             'panel-dialog-variable',
             'panel-dialog-automation',
             'panel-dialog-add',
+            'panel-dialog-show-date',
             'edit-panel-name',
             'edit-panel-room',
             'edit-panel-borders',
+            'edit-panel-widget-style',
             'edit-panel-devices',
             'edit-panel-device-search',
             'edit-panel-device-results',
@@ -92,6 +95,8 @@ describe('panel pages', () => {
         ]) {
             assert.match(html, new RegExp(`id="${id}"`));
         }
+        assert.doesNotMatch(html, /id="panel-dialog-size-label"/);
+        assert.doesNotMatch(html, /id="panel-carousel-prev"/);
         assert.doesNotMatch(html, /id="edit-panel-widgetlist"/);
         assert.doesNotMatch(html, /id="edit-widget-type"/);
         assert.doesNotMatch(html, /id="edit-panel-automations"/);
@@ -104,6 +109,8 @@ describe('panel pages', () => {
         assert.match(html, /\/v1\/devices/);
         assert.match(html, /deviceIds/);
         assert.match(html, /showBorders/);
+        assert.match(html, /widgetStyle/);
+        assert.match(html, />Timer<\/option>/);
         assert.match(html, /\/v1\/panels/);
         assert.match(html, /ensureSession/);
         // Live previews: header button opens the creation dialog, each card

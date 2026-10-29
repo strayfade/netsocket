@@ -7,6 +7,8 @@ const {
     MAX_WIDGETS,
     DEFAULT_CLOCK_SIZE,
     DEFAULT_CONTENT_SIZE,
+    DEFAULT_WIDGET_STYLE,
+    normalizeWidgetStyle,
     validateWidgetList,
     flowLayout,
 } = require('./widgetSchema')
@@ -18,8 +20,8 @@ const LAYOUT_PATH = config.storage.dashboard
 // UI can toast once about what disappeared.
 const LEGACY_DROPPED_KINDS = Object.freeze(['stats', 'automations', 'weather'])
 
-/** @type {{ version: number, widgets: Array<object>, droppedLegacy: object }} */
-let layout = { version: 2, widgets: [], droppedLegacy: {} }
+/** @type {{ version: number, widgets: Array<object>, droppedLegacy: object, widgetStyle: string }} */
+let layout = { version: 2, widgets: [], droppedLegacy: {}, widgetStyle: DEFAULT_WIDGET_STYLE }
 
 const loadJsonFile = (filePath, fallback) => {
     try {
@@ -86,16 +88,27 @@ const migrateV1Widgets = (list) => {
 
 const load = () => {
     if (!fs.existsSync(LAYOUT_PATH)) {
-        layout = { version: 2, widgets: defaultWidgets(), droppedLegacy: {} }
+        layout = {
+            version: 2,
+            widgets: defaultWidgets(),
+            droppedLegacy: {},
+            widgetStyle: DEFAULT_WIDGET_STYLE,
+        }
         persist()
         return
     }
     const raw = loadJsonFile(LAYOUT_PATH, { version: 2, widgets: [] })
     const list = raw && Array.isArray(raw.widgets) ? raw.widgets : []
+    const style = normalizeWidgetStyle(raw && raw.widgetStyle) || DEFAULT_WIDGET_STYLE
     try {
         if (raw && raw.version !== 2) {
             const { widgets, dropped } = migrateV1Widgets(list)
-            layout = { version: 2, widgets: validateWidgetList(widgets), droppedLegacy: dropped }
+            layout = {
+                version: 2,
+                widgets: validateWidgetList(widgets),
+                droppedLegacy: dropped,
+                widgetStyle: style,
+            }
             persist()
             return
         }
@@ -105,17 +118,42 @@ const load = () => {
             droppedLegacy: raw && typeof raw.droppedLegacy === 'object' && raw.droppedLegacy
                 ? raw.droppedLegacy
                 : {},
+            widgetStyle: style,
         }
     } catch {
-        layout = { version: 2, widgets: [], droppedLegacy: {} }
+        layout = {
+            version: 2,
+            widgets: [],
+            droppedLegacy: {},
+            widgetStyle: DEFAULT_WIDGET_STYLE,
+        }
     }
 }
 
 const getLayout = () => JSON.parse(JSON.stringify(layout))
 
-const replaceLayout = (widgets) => {
+const replaceLayout = (widgets, options = {}) => {
     const next = validateWidgetList(widgets)
-    layout = { version: 2, widgets: next, droppedLegacy: {} }
+    let style = layout.widgetStyle || DEFAULT_WIDGET_STYLE
+    if (options && Object.prototype.hasOwnProperty.call(options, 'widgetStyle')) {
+        const clean = normalizeWidgetStyle(options.widgetStyle)
+        if (clean == null) throw new Error('invalid_widget_style')
+        style = clean
+    }
+    layout = {
+        version: 2,
+        widgets: next,
+        droppedLegacy: {},
+        widgetStyle: style,
+    }
+    persist()
+    return getLayout()
+}
+
+const setWidgetStyle = (widgetStyle) => {
+    const clean = normalizeWidgetStyle(widgetStyle)
+    if (clean == null) throw new Error('invalid_widget_style')
+    layout.widgetStyle = clean
     persist()
     return getLayout()
 }
@@ -132,7 +170,12 @@ const boundVariableNames = () => {
 }
 
 const resetForTests = () => {
-    layout = { version: 2, widgets: [], droppedLegacy: {} }
+    layout = {
+        version: 2,
+        widgets: [],
+        droppedLegacy: {},
+        widgetStyle: DEFAULT_WIDGET_STYLE,
+    }
 }
 
 load()
@@ -144,6 +187,7 @@ module.exports = {
     load,
     getLayout,
     replaceLayout,
+    setWidgetStyle,
     boundVariableNames,
     migrateV1Widgets,
     resetForTests,

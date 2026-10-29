@@ -22,6 +22,28 @@ describe('widgetSchema', () => {
         });
     });
 
+    it('accepts clock showDate and timer widgets', () => {
+        const clock = schema.validateWidget(
+            { type: 'clock', x: 0, y: 0, w: 4, h: 2, showDate: false },
+            0
+        );
+        assert.equal(clock.showDate, false);
+        const clockDefault = schema.validateWidget(
+            { type: 'clock', x: 0, y: 0, w: 4, h: 2 },
+            1
+        );
+        assert.equal(clockDefault.showDate, undefined);
+        const timer = schema.validateWidget(
+            { type: 'timer', x: 0, y: 0, w: 4, h: 4 },
+            2
+        );
+        assert.equal(timer.type, 'timer');
+        assert.deepEqual(
+            { w: timer.w, h: timer.h },
+            schema.DEFAULT_TIMER_SIZE
+        );
+    });
+
     it('rejects bad types, bindings, and positions', () => {
         assert.throws(() => schema.validateWidget(null, 0), /invalid_widget/);
         assert.throws(() => schema.validateWidget({ type: 'stats', x: 0, y: 0, w: 1, h: 1 }, 0), /invalid_type/);
@@ -34,7 +56,7 @@ describe('widgetSchema', () => {
         assert.throws(() => schema.validateWidget({ type: 'clock', x: 0, y: 0, w: 13, h: 1 }, 0), /invalid_widget/);
     });
 
-    it('caps list length and exposes fixed presets', () => {
+    it('caps list length and exposes default sizes', () => {
         assert.throws(
             () => schema.validateWidgetList(
                 Array.from({ length: 101 }, () => ({ type: 'clock', x: 0, y: 0, w: 4, h: 2 }))
@@ -42,15 +64,21 @@ describe('widgetSchema', () => {
             /too_many_widgets/
         );
         assert.deepEqual(schema.presetFor('button'), { w: 1, h: 1 });
-        assert.equal(schema.TYPE_PRESETS.button.length, 16);
-        assert.equal(schema.TYPE_PRESETS.clock.length, 16);
-        assert.equal(schema.TYPE_PRESETS.markdown.length, 16);
-        assert.equal(schema.TYPE_PRESETS.html.length, 16);
-        assert.deepEqual(schema.TYPE_PRESETS.clock[0], { w: 1, h: 1 });
-        assert.deepEqual(schema.TYPE_PRESETS.clock[15], { w: 4, h: 4 });
-        assert.ok(schema.TYPE_PRESETS.markdown.some((p) => p.w === 1 && p.h === 3));
-        assert.ok(schema.TYPE_PRESETS.html.some((p) => p.w === 3 && p.h === 1));
-        assert.ok(!schema.TYPE_PRESETS.markdown.some((p) => p.w === 6));
+        assert.deepEqual(schema.defaultSizeFor('timer'), schema.DEFAULT_TIMER_SIZE);
+        assert.equal(schema.TYPE_PRESETS.button.length, 1);
+        assert.equal(schema.TYPE_PRESETS.clock.length, 1);
+        assert.equal(schema.TYPE_PRESETS.markdown.length, 1);
+        assert.equal(schema.TYPE_PRESETS.html.length, 1);
+        assert.equal(schema.TYPE_PRESETS.timer.length, 1);
+        assert.deepEqual(schema.TYPE_PRESETS.clock[0], { w: 4, h: 2 });
+        assert.ok(schema.WIDGET_TYPES.includes('timer'));
+    });
+
+    it('normalizes widget styles', () => {
+        assert.equal(schema.normalizeWidgetStyle(null), 'classic');
+        assert.equal(schema.normalizeWidgetStyle('Vivid'), 'vivid');
+        assert.equal(schema.normalizeWidgetStyle('nope'), null);
+        assert.ok(schema.WIDGET_STYLES.includes('neon'));
     });
 
     it('packs positions without overlap', () => {

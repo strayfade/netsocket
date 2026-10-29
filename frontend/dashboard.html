@@ -74,7 +74,7 @@
         </nav>
         <div class="shell-content">
             <main class="shell-main">
-        <div class="grid-stack" id="dashboard-widgets">
+        <div class="grid-stack" id="dashboard-widgets" data-widget-style="classic">
             <div class="grid-stack-item" gs-x="0" gs-y="0" gs-w="4" gs-h="2">
                 <div class="grid-stack-item-content">
                     <section class="shell-card" aria-label="Loading">
@@ -87,6 +87,16 @@
         <div class="dashboard-toolbar">
             <button class="shell-btn shell-btn-secondary" id="layout-edit-toggle" type="button">Edit layout</button>
             <button class="shell-btn" id="add-widget-open" type="button"><span class="material-symbols-outlined" aria-hidden="true">add</span> Add widget</button>
+            <label class="admin-field dashboard-style-field" for="dashboard-widget-style" style="margin:0; display:flex; align-items:center; gap:8px;">
+                <span class="shell-stat-sub" style="margin:0; white-space:nowrap;">Style</span>
+                <select class="admin-input" id="dashboard-widget-style" aria-label="Widget design style" style="min-height:36px; width:auto;">
+                    <option value="classic">Classic</option>
+                    <option value="minimal">Minimal</option>
+                    <option value="soft">Soft</option>
+                    <option value="vivid">Vivid</option>
+                    <option value="neon">Neon</option>
+                </select>
+            </label>
         </div>
 
         <dialog id="add-widget-dialog" class="shell-card" aria-label="Add widget" aria-labelledby="add-widget-title">
@@ -101,19 +111,16 @@
                         <option value="clock">Clock</option>
                         <option value="markdown">Markdown</option>
                         <option value="html">HTML</option>
+                        <option value="timer">Timer</option>
                     </select>
                 </div>
                 <div class="admin-field" id="dialog-carousel-field">
                     <div class="widget-carousel">
                         <div class="carousel-viewport">
-                            <div class="carousel-track" id="dialog-preset-track" role="listbox" aria-label="Size variants"></div>
+                            <div class="carousel-track" id="dialog-preset-track" role="listbox" aria-label="Widget preview"></div>
                         </div>
                     </div>
-                    <div class="carousel-controls">
-                        <button class="shell-btn shell-btn-secondary carousel-nav prev" id="carousel-prev" type="button" aria-label="Previous size"><span class="material-symbols-outlined" aria-hidden="true">chevron_left</span></button>
-                        <span class="shell-stat-sub shell-mono carousel-size-label" id="dialog-size-label">4×2</span>
-                        <button class="shell-btn shell-btn-secondary carousel-nav next" id="carousel-next" type="button" aria-label="Next size"><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
-                    </div>
+                    <p class="shell-stat-sub" style="margin:8px 0 0;">Placed at a default size — drag the corners in Edit layout to resize on the grid.</p>
                 </div>
                 <div id="dialog-fields" style="display: flex; flex-direction: column; gap: 12px;">
                     <div class="admin-field" id="dialog-variable-field" hidden>
@@ -129,6 +136,12 @@
                         <label class="admin-check" for="dialog-show-name" style="margin:0">
                             <input type="checkbox" id="dialog-show-name">
                             Show name
+                        </label>
+                    </div>
+                    <div class="admin-field" id="dialog-show-date-field" hidden>
+                        <label class="admin-check" for="dialog-show-date" style="margin:0">
+                            <input type="checkbox" id="dialog-show-date" checked>
+                            Show date
                         </label>
                     </div>
                 </div>
@@ -192,11 +205,20 @@
             var liveCounts = {};
             var liveAutomations = [];
             var currentWidgets = [];
+            var currentWidgetStyle = 'classic';
             var lastLayoutKey = null;
             var lastSummary = null;
 
             WidgetEditor.tickClock();
             setInterval(WidgetEditor.tickClock, 15000);
+
+            function applyWidgetStyle(style) {
+                currentWidgetStyle = style || 'classic';
+                var grid = document.getElementById('dashboard-widgets');
+                if (grid) grid.setAttribute('data-widget-style', currentWidgetStyle);
+                var picker = document.getElementById('dashboard-widget-style');
+                if (picker && picker.value !== currentWidgetStyle) picker.value = currentWidgetStyle;
+            }
 
             // Sync clock widgets to the central server's time; re-paint once
             // the offset lands so the first paint isn't local time.
@@ -216,7 +238,7 @@
                         method: 'PUT',
                         credentials: 'same-origin',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ widgets: widgets }),
+                        body: JSON.stringify({ widgets: widgets, widgetStyle: currentWidgetStyle }),
                     });
                     if (res.ok) {
                         ShellLogic.showToast('Layout saved');
@@ -283,15 +305,14 @@
                 dialogId: 'add-widget-dialog',
                 kindId: 'dialog-kind',
                 trackId: 'dialog-preset-track',
-                sizeLabelId: 'dialog-size-label',
-                prevId: 'carousel-prev',
-                nextId: 'carousel-next',
                 variableId: 'dialog-variable',
                 variableFieldId: 'dialog-variable-field',
                 automationId: 'dialog-automation',
                 automationFieldId: 'dialog-automation-field',
                 showNameId: 'dialog-show-name',
                 showNameFieldId: 'dialog-show-name-field',
+                showDateId: 'dialog-show-date',
+                showDateFieldId: 'dialog-show-date-field',
                 cancelId: 'dialog-cancel',
                 cancelTopId: 'dialog-cancel-top',
                 addBtnId: 'dialog-add',
@@ -311,10 +332,20 @@
                 }
             });
 
+            var stylePicker = document.getElementById('dashboard-widget-style');
+            if (stylePicker) {
+                stylePicker.addEventListener('change', function () {
+                    applyWidgetStyle(stylePicker.value);
+                    saveLayout(currentWidgets);
+                });
+            }
+            applyWidgetStyle('classic');
+
             function renderWidgets(data) {
                 liveVariables = data.variables || {};
                 liveCounts = data.counts || {};
                 liveAutomations = Array.isArray(data.automations) ? data.automations : [];
+                applyWidgetStyle((data.layout && data.layout.widgetStyle) || 'classic');
                 var widgets = (data.layout && Array.isArray(data.layout.widgets)) ? data.layout.widgets : [];
                 if (!widgets.length) {
                     widgets = [{ id: 'w1', type: 'clock', x: 0, y: 0, w: 4, h: 2 }];

@@ -293,6 +293,7 @@ body.shell-page {
 
 #dashboard-widgets .grid-stack-item-content > .shell-card {
     justify-content: center;
+    align-items: center;
     text-align: center;
 }
 
@@ -596,8 +597,11 @@ body.shell-page {
 }
 
 /* Keep widgets' inner content centered without breaking GridStack sizing */
-#panel-grid .grid-stack-item-content > .shell-card {
+#panel-grid .grid-stack-item-content > .shell-card,
+#panel-edit-grid .grid-stack-item-content > .shell-card,
+.grid-stack .grid-stack-item-content > .shell-card {
     justify-content: center;
+    align-items: center;
     text-align: center;
 }
 
@@ -690,24 +694,42 @@ body.shell-page {
     font-size: 1.7em;
 }
 
-/* Markdown: if content shorter than widget, center total size h+v within widget */
+/* Content widgets: size to intrinsic content, then center H+V in the cell */
 #panel-grid .grid-stack-item-content > .shell-card[data-widget-kind="markdown"],
 #panel-edit-grid .grid-stack-item-content > .shell-card[data-widget-kind="markdown"],
-.grid-stack .grid-stack-item-content > .shell-card[data-widget-kind="markdown"] {
-    justify-content: flex-start;
-    align-items: stretch;
+.grid-stack .grid-stack-item-content > .shell-card[data-widget-kind="markdown"],
+#panel-grid .grid-stack-item-content > .shell-card[data-widget-kind="html"],
+#panel-edit-grid .grid-stack-item-content > .shell-card[data-widget-kind="html"],
+.grid-stack .grid-stack-item-content > .shell-card[data-widget-kind="html"],
+#panel-grid .grid-stack-item-content > .shell-card[data-widget-kind="clock"],
+#panel-edit-grid .grid-stack-item-content > .shell-card[data-widget-kind="clock"],
+.grid-stack .grid-stack-item-content > .shell-card[data-widget-kind="clock"],
+#panel-grid .grid-stack-item-content > .shell-card[data-widget-kind="timer"],
+#panel-edit-grid .grid-stack-item-content > .shell-card[data-widget-kind="timer"],
+.grid-stack .grid-stack-item-content > .shell-card[data-widget-kind="timer"] {
+    justify-content: center;
+    align-items: center;
 }
 
 #panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose,
 #panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose,
-.grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose {
+.grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose,
+.widget-content-block {
     flex: 0 1 auto;
-    margin: auto;
+    margin: 0 auto;
     max-height: 100%;
     max-width: 100%;
     width: fit-content;
     overflow: auto;
     align-self: center;
+}
+
+.shell-card[data-widget-kind="html"] .shell-widget-frame.widget-content-block {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    flex: 1 1 auto;
 }
 
 .kiosk-clock-hero {
@@ -954,6 +976,8 @@ select.admin-input {
     margin: 0;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
 }
 
@@ -962,10 +986,14 @@ select.admin-input {
 }
 
 .grid-stack-item-content .shell-prose {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-height: 0;
+    max-width: 100%;
+    max-height: 100%;
+    width: fit-content;
     overflow: auto;
     padding: 0 20px;
+    margin: 0 auto;
 }
 
 .grid-stack-item-content .shell-widget-frame {
@@ -1035,12 +1063,34 @@ select.admin-input {
     text-align: center;
 }
 
-.widget-clock .shell-clock-value,
-.widget-clock .shell-stat-sub,
-.widget-clock [data-clock-time],
-.widget-clock [data-clock-date] {
+.widget-clock-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.widget-clock-date {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--shell-text);
+    opacity: 1;
     text-align: center;
     width: 100%;
+    line-height: 1.2;
+}
+
+.widget-clock .shell-clock-value,
+.widget-clock [data-clock-time] {
+    text-align: center;
+    width: 100%;
+    margin: 0;
 }
 
 .widget-clock-compact .shell-clock-value {
@@ -1048,13 +1098,20 @@ select.admin-input {
     font-size: 1.6rem;
 }
 
-.widget-clock-compact .shell-stat-sub {
-    font-family: var(--shell-font);
-    font-size: 0.72rem;
+.widget-clock-compact .widget-clock-date {
+    font-size: 0.85rem;
 }
 
-.widget-clock-compact [data-clock-date] {
-    display: none;
+#panel-grid .widget-clock-date,
+#panel-edit-grid .widget-clock-date,
+.grid-stack .widget-clock-date {
+    font-size: 1.35rem;
+}
+
+#panel-grid .widget-clock-compact .widget-clock-date,
+#panel-edit-grid .widget-clock-compact .widget-clock-date,
+.grid-stack .widget-clock-compact .widget-clock-date {
+    font-size: 1.05rem;
 }
 
 .widget-drag-handle,
@@ -1142,6 +1199,31 @@ select.admin-input {
     border: 1px dashed rgba(255, 255, 255, 0.14);
     border-radius: var(--shell-radius);
     min-height: 160px;
+}
+
+/* Drag-resize snaps to grid cells; handles only visible while editing */
+.grid-stack.editing > .grid-stack-item > .ui-resizable-handle {
+    display: block !important;
+    z-index: 4;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #000;
+    border-radius: 2px;
+    opacity: 0.95;
+}
+.grid-stack.editing > .grid-stack-item > .ui-resizable-se,
+.grid-stack.editing > .grid-stack-item > .ui-resizable-sw {
+    width: 12px;
+    height: 12px;
+}
+.grid-stack.editing > .grid-stack-item > .ui-resizable-e,
+.grid-stack.editing > .grid-stack-item > .ui-resizable-w {
+    width: 8px;
+}
+.grid-stack.editing > .grid-stack-item > .ui-resizable-s {
+    height: 8px;
+}
+.grid-stack:not(.editing) > .grid-stack-item > .ui-resizable-handle {
+    display: none !important;
 }
 
 /* ── Dashboard toolbar & Add widget dialog ──────────────────────────── */
@@ -1243,6 +1325,7 @@ dialog#panel-edit-dialog[open] {
 
 .panel-preview-grid .grid-stack-item-content > .shell-card {
     justify-content: center;
+    align-items: center;
     text-align: center;
 }
 
@@ -2509,6 +2592,354 @@ dialog#panel-edit-dialog[open] {
 .backup-close-footer:hover {
     color: #ccc;
 }
+
+/* ── Timer widget (iOS-like; instance-local state) ───────────────────── */
+.widget-timer {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+}
+
+.widget-timer-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    width: fit-content;
+    max-width: 100%;
+    max-height: 100%;
+    margin: 0 auto;
+    padding: 8px;
+}
+
+.widget-timer-picker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    user-select: none;
+    touch-action: none;
+}
+
+.widget-timer-wheel {
+    position: relative;
+    width: 56px;
+    height: 180px;
+    overflow: hidden;
+    cursor: grab;
+    outline: none;
+}
+
+.widget-timer-wheel:active {
+    cursor: grabbing;
+}
+
+.widget-timer-wheel-track {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    transition: transform 80ms ease-out;
+    will-change: transform;
+}
+
+.widget-timer-wheel-item {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.35rem;
+    font-weight: 500;
+    color: var(--shell-faint);
+    opacity: 0.55;
+}
+
+.widget-timer-wheel-item.is-selected {
+    color: var(--shell-text);
+    opacity: 1;
+    font-weight: 700;
+    font-size: 1.6rem;
+}
+
+.widget-timer-wheel-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 54px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.widget-timer-wheel-fade--top {
+    top: 0;
+    background: linear-gradient(to bottom, var(--shell-surface), transparent);
+}
+
+.widget-timer-wheel-fade--bottom {
+    bottom: 0;
+    background: linear-gradient(to top, var(--shell-surface), transparent);
+}
+
+.widget-timer-sep {
+    font-size: 1.6rem;
+    font-weight: 650;
+    opacity: 0.7;
+    padding-bottom: 4px;
+}
+
+.widget-timer-display {
+    font-size: clamp(2.4rem, 8vw, 4rem);
+    font-weight: 650;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.widget-timer-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+}
+
+.widget-timer-btn {
+    appearance: none;
+    border: none;
+    border-radius: 999px;
+    min-width: 88px;
+    min-height: 44px;
+    padding: 10px 18px;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.widget-timer-btn--cancel {
+    background: #2a2a2a;
+    color: #ffffff;
+}
+
+.widget-timer-btn--cancel:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.widget-timer-btn--toggle {
+    background: #34c759;
+    color: #000000;
+}
+
+.widget-timer-btn--toggle.is-running {
+    background: #ff9f0a;
+}
+
+.widget-timer--done {
+    animation: widget-timer-pulse 0.6s ease-in-out 2;
+}
+
+@keyframes widget-timer-pulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.45); }
+}
+
+#panel-grid .widget-timer-wheel,
+#panel-edit-grid .widget-timer-wheel,
+.grid-stack .widget-timer-wheel {
+    width: 64px;
+}
+
+#panel-grid .widget-timer-wheel-item,
+#panel-edit-grid .widget-timer-wheel-item,
+.grid-stack .widget-timer-wheel-item {
+    font-size: 1.5rem;
+}
+
+#panel-grid .widget-timer-wheel-item.is-selected,
+#panel-edit-grid .widget-timer-wheel-item.is-selected,
+.grid-stack .widget-timer-wheel-item.is-selected {
+    font-size: 1.85rem;
+}
+
+/* ── Widget design styles (page/panel bg stays #000) ─────────────────── */
+/* classic: default square-border look (existing rules) */
+
+[data-widget-style="minimal"] .shell-card,
+[data-widget-style="minimal"] .widget-run-btn,
+[data-widget-style="minimal"] .shell-widget-frame {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+
+[data-widget-style="minimal"] .widget-run-btn {
+    border: 1px dashed rgba(255, 255, 255, 0.22) !important;
+}
+
+[data-widget-style="minimal"] .widget-timer-wheel-fade--top,
+[data-widget-style="minimal"] .widget-timer-wheel-fade--bottom {
+    background: linear-gradient(to bottom, #000, transparent);
+}
+
+[data-widget-style="minimal"] .widget-timer-wheel-fade--bottom {
+    background: linear-gradient(to top, #000, transparent);
+}
+
+[data-widget-style="soft"] .shell-card,
+[data-widget-style="soft"] .widget-run-btn,
+[data-widget-style="soft"] .shell-widget-frame {
+    border-radius: 22px !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    background: #121212 !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+[data-widget-style="soft"] .grid-stack-item-content {
+    border-radius: 22px;
+    overflow: hidden;
+}
+
+[data-widget-style="soft"] .widget-run-btn {
+    background: linear-gradient(160deg, #1c1c1c, #0a0a0a) !important;
+}
+
+[data-widget-style="soft"] .widget-timer-btn--toggle {
+    border-radius: 16px;
+}
+
+/* Vivid: purpose-colored friendly gradients per widget kind */
+[data-widget-style="vivid"] .shell-card,
+[data-widget-style="vivid"] .widget-run-btn {
+    border: none !important;
+    border-radius: 20px !important;
+    color: #fff;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+[data-widget-style="vivid"] .grid-stack-item-content {
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+[data-widget-style="vivid"] .shell-card[data-widget-kind="clock"],
+[data-widget-style="vivid"] .widget-clock {
+    background: linear-gradient(145deg, #1e3a8a 0%, #3b82f6 45%, #06b6d4 100%) !important;
+}
+
+[data-widget-style="vivid"] .shell-card[data-widget-kind="markdown"] {
+    background: linear-gradient(145deg, #4c1d95 0%, #7c3aed 50%, #ec4899 100%) !important;
+}
+
+[data-widget-style="vivid"] .shell-card[data-widget-kind="html"] {
+    background: linear-gradient(145deg, #0f766e 0%, #14b8a6 55%, #84cc16 100%) !important;
+    padding: 8px !important;
+}
+
+[data-widget-style="vivid"] .shell-card[data-widget-kind="html"] .shell-widget-frame {
+    border-radius: 14px !important;
+}
+
+[data-widget-style="vivid"] .shell-card[data-widget-kind="timer"],
+[data-widget-style="vivid"] .widget-timer {
+    background: linear-gradient(145deg, #7c2d12 0%, #ea580c 45%, #fbbf24 100%) !important;
+}
+
+[data-widget-style="vivid"] .widget-run-btn,
+[data-widget-style="vivid"] .widget-run-btn[data-widget-kind="button"] {
+    background: linear-gradient(145deg, #14532d 0%, #22c55e 55%, #a3e635 100%) !important;
+    color: #052e16 !important;
+}
+
+[data-widget-style="vivid"] .widget-run-btn .material-symbols-outlined {
+    color: #052e16 !important;
+}
+
+[data-widget-style="vivid"] .widget-clock-date,
+[data-widget-style="vivid"] .shell-clock-value,
+[data-widget-style="vivid"] .shell-prose,
+[data-widget-style="vivid"] .widget-timer-display,
+[data-widget-style="vivid"] .widget-timer-wheel-item.is-selected {
+    color: #ffffff !important;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
+}
+
+[data-widget-style="vivid"] .widget-timer-wheel-fade--top {
+    background: linear-gradient(to bottom, rgba(234, 88, 12, 0.95), transparent);
+}
+
+[data-widget-style="vivid"] .widget-timer-wheel-fade--bottom {
+    background: linear-gradient(to top, rgba(251, 191, 36, 0.95), transparent);
+}
+
+[data-widget-style="vivid"] .widget-timer-btn--cancel {
+    background: rgba(0, 0, 0, 0.35);
+}
+
+[data-widget-style="vivid"] .widget-timer-btn--toggle {
+    background: #ffffff;
+    color: #7c2d12;
+}
+
+/* Neon: dark fills with glowing colored edges */
+[data-widget-style="neon"] .shell-card,
+[data-widget-style="neon"] .widget-run-btn {
+    background: #050505 !important;
+    border-radius: 12px !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+}
+
+[data-widget-style="neon"] .shell-card[data-widget-kind="clock"],
+[data-widget-style="neon"] .widget-clock {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25), 0 0 22px rgba(56, 189, 248, 0.35);
+}
+
+[data-widget-style="neon"] .shell-card[data-widget-kind="markdown"] {
+    border-color: #c084fc !important;
+    box-shadow: 0 0 0 1px rgba(192, 132, 252, 0.25), 0 0 22px rgba(192, 132, 252, 0.35);
+}
+
+[data-widget-style="neon"] .shell-card[data-widget-kind="html"] {
+    border-color: #34d399 !important;
+    box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.25), 0 0 22px rgba(52, 211, 153, 0.35);
+}
+
+[data-widget-style="neon"] .shell-card[data-widget-kind="timer"],
+[data-widget-style="neon"] .widget-timer {
+    border-color: #fb923c !important;
+    box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.25), 0 0 22px rgba(251, 146, 60, 0.35);
+}
+
+[data-widget-style="neon"] .widget-run-btn {
+    border-color: #4ade80 !important;
+    box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.25), 0 0 22px rgba(74, 222, 128, 0.35);
+}
+
+[data-widget-style="neon"] .widget-clock-date {
+    color: #7dd3fc;
+}
+
+[data-widget-style="neon"] .shell-clock-value {
+    color: #e0f2fe;
+    text-shadow: 0 0 18px rgba(56, 189, 248, 0.55);
+}
+
+[data-widget-style="neon"] .widget-timer-display {
+    color: #ffedd5;
+    text-shadow: 0 0 18px rgba(251, 146, 60, 0.55);
+}
+
+/* Panel page background must stay pure black regardless of style */
+.kiosk-wrap,
+#panel-content,
+body.shell-page {
+    background: #000000;
+}
+
 /* ── Hidden scrollbars (all shell pages): scrolling still works ────────── */
 * {
     scrollbar-width: none;

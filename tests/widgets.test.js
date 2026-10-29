@@ -57,6 +57,7 @@ describe('widgets render module', () => {
         const body = node.querySelector('[data-var-content="notes"]');
         assert.ok(body);
         assert.equal(body.innerHTML, '<p># Hi</p>');
+        assert.ok(body.className.includes('widget-content-block'));
     });
 
     it('renders html without a visible title inside a sandboxed iframe', () => {
@@ -71,19 +72,42 @@ describe('widgets render module', () => {
         assert.ok(frame.hasAttribute('sandbox'));
     });
 
-    it('renders compact and full landscape clocks with tick hooks and no title', () => {
+    it('renders clocks with optional date above the time', () => {
+        const withDate = Widgets.renderContent(
+            { id: 'c2', type: 'clock', x: 0, y: 0, w: 4, h: 2 }, {}, doc
+        );
+        assert.ok(!withDate.className.includes('widget-clock-compact'));
+        assert.ok(withDate.querySelector('[data-clock-time]'));
+        assert.ok(withDate.querySelector('[data-clock-date]'));
+        const stack = withDate.querySelector('.widget-clock-stack');
+        assert.ok(stack);
+        assert.equal(stack.children[0].getAttribute('data-clock-date') !== null, true);
+        assert.equal(stack.children[1].getAttribute('data-clock-time') !== null, true);
+
+        const noDate = Widgets.renderContent(
+            { id: 'c3', type: 'clock', x: 0, y: 0, w: 4, h: 2, showDate: false }, {}, doc
+        );
+        assert.equal(noDate.querySelector('[data-clock-date]'), null);
+        assert.ok(noDate.querySelector('[data-clock-time]'));
+
         const compact = Widgets.renderContent(
             { id: 'c1', type: 'clock', x: 0, y: 0, w: 2, h: 1 }, {}, doc
         );
         assert.ok(compact.className.includes('widget-clock-compact'));
-        assert.equal(compact.querySelector('h2'), null);
-        const full = Widgets.renderContent(
-            { id: 'c2', type: 'clock', x: 0, y: 0, w: 4, h: 2 }, {}, doc
+        assert.ok(compact.querySelector('[data-clock-date]'));
+    });
+
+    it('renders an interactive timer with local wheels and controls', () => {
+        const node = Widgets.renderContent(
+            { id: 't1', type: 'timer', x: 0, y: 0, w: 4, h: 4 }, {}, doc
         );
-        assert.ok(!full.className.includes('widget-clock-compact'));
-        assert.equal(full.querySelector('h2'), null);
-        assert.ok(full.querySelector('[data-clock-time]'));
-        assert.ok(full.querySelector('[data-clock-date]'));
+        assert.equal(node.getAttribute('data-widget-kind'), 'timer');
+        assert.ok(node.querySelector('.widget-timer-picker'));
+        assert.equal(node.querySelectorAll('.widget-timer-wheel').length, 3);
+        assert.ok(node.querySelector('.widget-timer-btn--toggle'));
+        assert.ok(node.querySelector('.widget-timer-btn--cancel'));
+        assert.equal(Widgets.formatTimer(65), '01:05');
+        assert.equal(Widgets.formatTimer(3661), '1:01:01');
     });
 
     it('builds full grid items with position attributes', () => {

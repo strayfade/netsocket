@@ -7,39 +7,29 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     'use strict';
 
-    var MAX_PRESET_SPAN = 4;
-
-    function buildSizePresets(maxSpan) {
-        var span = maxSpan || MAX_PRESET_SPAN;
-        var presets = [];
-        for (var w = 1; w <= span; w++) {
-            for (var h = 1; h <= span; h++) {
-                presets.push({ w: w, h: h });
-            }
-        }
-        return presets;
-    }
-
-    var ALL_SIZE_PRESETS = buildSizePresets(MAX_PRESET_SPAN);
-
-    var WIDGET_PRESETS = {
-        button: ALL_SIZE_PRESETS,
-        clock: ALL_SIZE_PRESETS,
-        markdown: ALL_SIZE_PRESETS,
-        html: ALL_SIZE_PRESETS,
+    var DEFAULT_SIZES = {
+        button: { w: 1, h: 1 },
+        clock: { w: 4, h: 2 },
+        markdown: { w: 4, h: 2 },
+        html: { w: 4, h: 2 },
+        timer: { w: 4, h: 4 },
     };
 
+    // Back-compat alias: one "preset" per type (the default size).
+    var WIDGET_PRESETS = {
+        button: [DEFAULT_SIZES.button],
+        clock: [DEFAULT_SIZES.clock],
+        markdown: [DEFAULT_SIZES.markdown],
+        html: [DEFAULT_SIZES.html],
+        timer: [DEFAULT_SIZES.timer],
+    };
+
+    function defaultSizeFor(type) {
+        return DEFAULT_SIZES[type] || DEFAULT_SIZES.markdown;
+    }
+
     function sortedPresets(type) {
-        var presets = WIDGET_PRESETS[type] || WIDGET_PRESETS.markdown;
-        var copy = presets.slice();
-        copy.sort(function (a, b) {
-            var sa = a.w * a.h;
-            var sb = b.w * b.h;
-            if (sa !== sb) return sa - sb;
-            if (a.w !== b.w) return a.w - b.w;
-            return a.h - b.h;
-        });
-        return copy;
+        return (WIDGET_PRESETS[type] || WIDGET_PRESETS.markdown).slice();
     }
 
     // Clock widgets paint the central server's time, falling back to the
@@ -73,6 +63,22 @@
         });
     }
 
+    function copyWidgetFields(prior, node) {
+        var obj = {
+            id: prior.id,
+            type: prior.type,
+            x: node && node.x != null ? node.x : (prior.x || 0),
+            y: node && node.y != null ? node.y : (prior.y || 0),
+            w: node && node.w != null ? node.w : prior.w,
+            h: node && node.h != null ? node.h : prior.h,
+        };
+        if (prior.automationId != null) obj.automationId = prior.automationId;
+        if (prior.variable != null) obj.variable = prior.variable;
+        if (prior.showName === true) obj.showName = true;
+        if (prior.showDate === false) obj.showDate = false;
+        return obj;
+    }
+
     function attach(opts) {
         opts = opts || {};
         var gridId = opts.gridId;
@@ -80,16 +86,15 @@
         var addOpenId = opts.addOpenId;
         var dialogId = opts.dialogId;
         var kindId = opts.kindId;
-        var trackId = opts.trackId;
-        var sizeLabelId = opts.sizeLabelId;
-        var prevId = opts.prevId;
-        var nextId = opts.nextId;
+        var previewId = opts.previewId || opts.trackId;
         var variableId = opts.variableId;
         var variableFieldId = opts.variableFieldId;
         var automationId = opts.automationId;
         var automationFieldId = opts.automationFieldId;
         var showNameId = opts.showNameId;
         var showNameFieldId = opts.showNameFieldId;
+        var showDateId = opts.showDateId;
+        var showDateFieldId = opts.showDateFieldId;
         var cancelId = opts.cancelId;
         var cancelTopId = opts.cancelTopId;
         var addBtnId = opts.addBtnId;
@@ -101,8 +106,8 @@
 
         var grid = null;
         var editing = false;
-        var dialogPresetIndex = 0;
         var lastDialogFocus = null;
+        var saveTimer = null;
 
         function isEditing() { return editing; }
 
@@ -129,24 +134,21 @@
             saved.forEach(function (node) {
                 var prior = byId[node.id];
                 if (!prior) return;
-                var obj = {
-                    id: prior.id,
-                    type: prior.type,
-                    x: node.x || 0,
-                    y: node.y || 0,
-                    w: node.w || prior.w,
-                    h: node.h || prior.h,
-                    automationId: prior.automationId,
-                    variable: prior.variable,
-                };
-                if (prior.showName === true) obj.showName = true;
-                next.push(obj);
+                next.push(copyWidgetFields(prior, node));
             });
             current.forEach(function (w) {
                 if (!next.some(function (n) { return n.id === w.id; })) next.push(w);
             });
             setWidgets(next);
             onSave(next);
+        }
+
+        function scheduleSavePositions() {
+            if (saveTimer) clearTimeout(saveTimer);
+            saveTimer = setTimeout(function () {
+                saveTimer = null;
+                if (editing) saveGridPositions();
+            }, 250);
         }
 
         function removeWidget(widget) {
@@ -161,7 +163,6 @@
             } else {
                 onSave(next);
             }
-            // Rebuild immediately for responsiveness; onSave may reload
             rebuild();
         }
 
@@ -185,12 +186,8 @@
                 grid = null;
             }
             container.innerHTML = '';
-            // Empty state handling: show placeholder if container has empty attr
             var emptyEl = document.getElementById(gridId + '-empty');
             if (emptyEl) emptyEl.hidden = widgets.length > 0;
-            if (!widgets.length && !editing) {
-                // Leave container empty; emptyEl shows
-            }
             // Center collective bounds horizontally (like panel kiosk) while preserving relative layout.
             var displayWidgets = widgets;
             if (widgets.length) {
@@ -230,10 +227,16 @@
                     animate: false,
                     float: true,
                     draggable: { handle: '.widget-drag-handle' },
-                    disableResize: true,
+                    disableResize: false,
+                    resizable: { handles: 'e,se,s,sw,w' },
                     columnOpts: { breakpoints: [{ w: 640, c: 4 }] },
                 }, container);
                 if (editing) container.classList.add('editing');
+                try {
+                    grid.on('change', function () { scheduleSavePositions(); });
+                    grid.on('resizestop', function () { scheduleSavePositions(); });
+                    grid.on('dragstop', function () { scheduleSavePositions(); });
+                } catch (_) { /* older GridStack */ }
             }
         }
 
@@ -269,56 +272,38 @@
             var varField = variableFieldId ? document.getElementById(variableFieldId) : null;
             var autoField = automationFieldId ? document.getElementById(automationFieldId) : null;
             var showNameField = showNameFieldId ? document.getElementById(showNameFieldId) : null;
+            var showDateField = showDateFieldId ? document.getElementById(showDateFieldId) : null;
             if (varField) varField.hidden = !(type === 'markdown' || type === 'html');
             if (autoField) autoField.hidden = type !== 'button';
             if (showNameField) showNameField.hidden = type !== 'button';
+            if (showDateField) showDateField.hidden = type !== 'clock';
         }
 
-        function renderPresetCarousel() {
+        function renderTypePreview() {
             var kindEl = kindId ? document.getElementById(kindId) : null;
-            var track = trackId ? document.getElementById(trackId) : null;
-            var sizeLabel = sizeLabelId ? document.getElementById(sizeLabelId) : null;
-            var prevBtn = prevId ? document.getElementById(prevId) : null;
-            var nextBtn = nextId ? document.getElementById(nextId) : null;
-            if (!kindEl || !track || !sizeLabel) return;
+            var track = previewId ? document.getElementById(previewId) : null;
+            if (!kindEl || !track) return;
             var type = kindEl.value;
-            var presets = sortedPresets(type);
+            var size = defaultSizeFor(type);
             track.innerHTML = '';
-            if (!presets.length) {
-                sizeLabel.textContent = '';
-                if (prevBtn) prevBtn.hidden = true;
-                if (nextBtn) nextBtn.hidden = true;
-                return;
-            }
-            if (dialogPresetIndex >= presets.length) dialogPresetIndex = 0;
-            if (dialogPresetIndex < 0) dialogPresetIndex = presets.length - 1;
-            var preset = presets[dialogPresetIndex];
-            if (prevBtn) prevBtn.hidden = presets.length <= 1;
-            if (nextBtn) nextBtn.hidden = presets.length <= 1;
-            sizeLabel.textContent = preset.w + 'x' + preset.h;
 
             var slide = document.createElement('div');
             slide.className = 'carousel-slide is-selected single';
             slide.setAttribute('role', 'option');
             slide.setAttribute('aria-selected', 'true');
-            slide.setAttribute('aria-label', preset.w + 'x' + preset.h);
+            slide.setAttribute('aria-label', type + ' preview');
 
             var previewWrap = document.createElement('div');
             previewWrap.className = 'carousel-preview';
             var unit = 42;
-            var pw = preset.w * unit;
-            var ph = preset.h * unit;
-            if (pw > 320) {
-                var scale = 320 / pw;
-                pw = 320;
-                ph = Math.round(ph * scale);
-            }
+            var pw = Math.min(size.w * unit, 320);
+            var ph = Math.round((size.h * unit) * (pw / (size.w * unit)));
             previewWrap.style.width = pw + 'px';
-            previewWrap.style.height = ph + 'px';
+            previewWrap.style.height = Math.max(ph, 96) + 'px';
             previewWrap.style.maxWidth = '100%';
 
             var ctx = getLiveContext();
-            var previewWidget = { id: 'preview', type: type, x: 0, y: 0, w: preset.w, h: preset.h };
+            var previewWidget = { id: 'preview', type: type, x: 0, y: 0, w: size.w, h: size.h };
             var previewCtx = {
                 variables: ctx.variables || {},
                 automations: ctx.automations || [],
@@ -334,6 +319,9 @@
                 }
                 var showNameEl = showNameId ? document.getElementById(showNameId) : null;
                 previewWidget.showName = !!(showNameEl && showNameEl.checked);
+            } else if (type === 'clock') {
+                var showDateEl = showDateId ? document.getElementById(showDateId) : null;
+                if (showDateEl && !showDateEl.checked) previewWidget.showDate = false;
             } else if (type === 'markdown' || type === 'html') {
                 var varInput = variableId ? document.getElementById(variableId) : null;
                 var varName = varInput && varInput.value.trim() ? varInput.value.trim() : null;
@@ -345,9 +333,9 @@
                 if (!previewCtx.variables[varName] && !(ctx.variables || {})[varName]) {
                     previewCtx.variables = Object.assign({}, previewCtx.variables);
                     if (type === 'markdown') {
-                        previewCtx.variables[varName] = '# Preview\nThis is **' + varName + '** markdown content for ' + preset.w + 'x' + preset.h + ' widget.';
+                        previewCtx.variables[varName] = '# Preview\nThis is **' + varName + '** markdown.';
                     } else {
-                        previewCtx.variables[varName] = '<div style="padding:12px;font-family:system-ui">HTML preview for <b>' + varName + '</b> (' + preset.w + 'x' + preset.h + ')</div>';
+                        previewCtx.variables[varName] = '<div style="padding:12px;font-family:system-ui">HTML preview for <b>' + varName + '</b></div>';
                     }
                 }
             }
@@ -361,7 +349,7 @@
             if (!content) {
                 var fallback = document.createElement('div');
                 fallback.className = 'shell-card';
-                fallback.textContent = type + ' ' + preset.w + 'x' + preset.h;
+                fallback.textContent = type;
                 content = fallback;
             }
             if (content) {
@@ -378,30 +366,24 @@
             try { tickClock(); } catch (_) {}
         }
 
-        function selectPreset(index) {
-            var kindEl = kindId ? document.getElementById(kindId) : null;
-            if (!kindEl) return;
-            var presets = sortedPresets(kindEl.value);
-            if (!presets.length) return;
-            dialogPresetIndex = ((index % presets.length) + presets.length) % presets.length;
-            renderPresetCarousel();
-        }
+        // Back-compat name used by HTML contract tests / older callers.
+        function renderPresetCarousel() { renderTypePreview(); }
 
         async function openAddDialog() {
             var dialog = dialogId ? document.getElementById(dialogId) : null;
             if (!dialog) return;
-            // Refresh automations from server so newly created Button nodes appear immediately.
             if (typeof opts.fetchAutomations === 'function') {
                 try { await opts.fetchAutomations(); } catch (_) { /* ignore, show cached */ }
             }
             lastDialogFocus = document.activeElement;
-            dialogPresetIndex = 0;
             var kindEl = kindId ? document.getElementById(kindId) : null;
             if (kindEl && !kindEl.value) kindEl.value = 'button';
             fillAutomationPicker();
             var showNameInit = showNameId ? document.getElementById(showNameId) : null;
             if (showNameInit) showNameInit.checked = false;
-            renderPresetCarousel();
+            var showDateInit = showDateId ? document.getElementById(showDateId) : null;
+            if (showDateInit) showDateInit.checked = true;
+            renderTypePreview();
             renderDialogFields();
             if (typeof dialog.showModal === 'function') {
                 try { dialog.showModal(); } catch (_) { dialog.setAttribute('open', ''); }
@@ -425,13 +407,8 @@
             var kindEl = kindId ? document.getElementById(kindId) : null;
             if (!kindEl) return;
             var type = kindEl.value;
-            var presets = sortedPresets(type);
-            var preset = presets[dialogPresetIndex] || presets[0];
-            if (!preset) {
-                if (window.ShellLogic) ShellLogic.showToast('Select a size');
-                return;
-            }
-            var widget = { type: type, x: 0, y: 0, w: preset.w, h: preset.h };
+            var size = defaultSizeFor(type);
+            var widget = { type: type, x: 0, y: 0, w: size.w, h: size.h };
             if (type === 'markdown' || type === 'html') {
                 var varInput = variableId ? document.getElementById(variableId) : null;
                 var varName = varInput ? varInput.value.trim() : '';
@@ -454,8 +431,11 @@
                 var showNameEl = showNameId ? document.getElementById(showNameId) : null;
                 if (showNameEl && showNameEl.checked) widget.showName = true;
             }
+            if (type === 'clock') {
+                var showDateEl = showDateId ? document.getElementById(showDateId) : null;
+                if (showDateEl && !showDateEl.checked) widget.showDate = false;
+            }
             var current = getWidgets();
-            // Generate next id
             var maxId = 0;
             current.forEach(function (w) {
                 var m = /^w(\d+)$/.exec(String(w.id || ''));
@@ -469,6 +449,8 @@
             if (varInput2) varInput2.value = '';
             var showNameEl2 = showNameId ? document.getElementById(showNameId) : null;
             if (showNameEl2) showNameEl2.checked = false;
+            var showDateEl2 = showDateId ? document.getElementById(showDateId) : null;
+            if (showDateEl2) showDateEl2.checked = true;
             closeAddDialog();
             rebuild();
             onSave(next);
@@ -481,35 +463,34 @@
             var cancelBtn = cancelId ? document.getElementById(cancelId) : null;
             var cancelTop = cancelTopId ? document.getElementById(cancelTopId) : null;
             var addBtn = addBtnId ? document.getElementById(addBtnId) : null;
-            var prevBtn = prevId ? document.getElementById(prevId) : null;
-            var nextBtn = nextId ? document.getElementById(nextId) : null;
             var editToggle = editToggleId ? document.getElementById(editToggleId) : null;
             if (kindEl) {
                 kindEl.addEventListener('change', function () {
-                    dialogPresetIndex = 0;
-                    renderPresetCarousel();
+                    renderTypePreview();
                     renderDialogFields();
                 });
             }
             var varInputBind = variableId ? document.getElementById(variableId) : null;
             if (varInputBind) {
-                varInputBind.addEventListener('input', function () { renderPresetCarousel(); });
-                varInputBind.addEventListener('change', function () { renderPresetCarousel(); });
+                varInputBind.addEventListener('input', function () { renderTypePreview(); });
+                varInputBind.addEventListener('change', function () { renderTypePreview(); });
             }
             var autoInputBind = automationId ? document.getElementById(automationId) : null;
             if (autoInputBind) {
-                autoInputBind.addEventListener('change', function () { renderPresetCarousel(); });
+                autoInputBind.addEventListener('change', function () { renderTypePreview(); });
             }
             var showNameBind = showNameId ? document.getElementById(showNameId) : null;
             if (showNameBind) {
-                showNameBind.addEventListener('change', function () { renderPresetCarousel(); });
+                showNameBind.addEventListener('change', function () { renderTypePreview(); });
+            }
+            var showDateBind = showDateId ? document.getElementById(showDateId) : null;
+            if (showDateBind) {
+                showDateBind.addEventListener('change', function () { renderTypePreview(); });
             }
             if (openBtn) openBtn.addEventListener('click', openAddDialog);
             if (cancelBtn) cancelBtn.addEventListener('click', closeAddDialog);
             if (cancelTop) cancelTop.addEventListener('click', closeAddDialog);
             if (addBtn) addBtn.addEventListener('click', handleDialogAdd);
-            if (prevBtn) prevBtn.addEventListener('click', function () { selectPreset(dialogPresetIndex - 1); });
-            if (nextBtn) nextBtn.addEventListener('click', function () { selectPreset(dialogPresetIndex + 1); });
             if (editToggle) editToggle.addEventListener('click', function () { setEditing(!editing); });
             if (dialog) {
                 dialog.addEventListener('click', function (e) {
@@ -528,6 +509,8 @@
 
         return {
             WIDGET_PRESETS: WIDGET_PRESETS,
+            DEFAULT_SIZES: DEFAULT_SIZES,
+            defaultSizeFor: defaultSizeFor,
             sortedPresets: sortedPresets,
             tickClock: tickClock,
             setEditing: setEditing,
@@ -536,6 +519,7 @@
             openAddDialog: openAddDialog,
             closeAddDialog: closeAddDialog,
             renderPresetCarousel: renderPresetCarousel,
+            renderTypePreview: renderTypePreview,
             fillAutomationPicker: fillAutomationPicker,
             renderDialogFields: renderDialogFields,
             saveGridPositions: saveGridPositions,
@@ -546,10 +530,11 @@
 
     return {
         WIDGET_PRESETS: WIDGET_PRESETS,
+        DEFAULT_SIZES: DEFAULT_SIZES,
+        defaultSizeFor: defaultSizeFor,
         sortedPresets: sortedPresets,
         tickClock: tickClock,
         attach: attach,
         create: attach,
     };
 }));
-

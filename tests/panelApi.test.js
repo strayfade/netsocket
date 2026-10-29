@@ -320,6 +320,26 @@ describe('panelApi', () => {
         assert.equal(badUpdate.body.error, 'invalid_show_borders');
     });
 
+    it('creates panels with classic widget style by default and validates styles', () => {
+        const created = mockRes();
+        panelApi.handleCreatePanel(
+            reqWith({ body: { name: 'Style Lab', widgetStyle: 'vivid' } }),
+            created,
+            { store, auth: adminAuth }
+        );
+        assert.equal(created.statusCode, 201);
+        assert.equal(created.body.panel.widgetStyle, 'vivid');
+
+        const bad = mockRes();
+        panelApi.handleCreatePanel(
+            reqWith({ body: { name: 'Nope', widgetStyle: 'pastel' } }),
+            bad,
+            { store, auth: adminAuth }
+        );
+        assert.equal(bad.statusCode, 400);
+        assert.equal(bad.body.error, 'invalid_widget_style');
+    });
+
     it('supports admin update and delete with 404s', () => {
         const created = mockRes();
         panelApi.handleCreatePanel(reqWith({ body: { name: 'Den' } }), created, { store, auth: adminAuth });

@@ -37,6 +37,7 @@ describe('dashboardLayout', () => {
         assert.deepEqual(fresh.getLayout().widgets, [
             { id: 'w1', type: 'clock', x: 0, y: 0, w: 4, h: 2 },
         ]);
+        assert.equal(fresh.getLayout().widgetStyle, 'classic');
         assert.deepEqual(fresh.boundVariableNames(), []);
         assert.ok(fs.existsSync(path.join(tmpDir, 'dashboard.json')));
     });
@@ -46,10 +47,11 @@ describe('dashboardLayout', () => {
             { type: 'markdown', x: 0, y: 0, w: 4, h: 2, variable: ' morning_briefing ' },
             { type: 'button', x: 4, y: 0, w: 1, h: 1, automationId: '3' },
             { type: 'clock', x: 5, y: 0, w: 4, h: 2 },
-        ]);
+        ], { widgetStyle: 'soft' });
         assert.equal(result.widgets[0].variable, 'morning_briefing');
         assert.equal(result.widgets[0].id, 'w1');
         assert.equal(result.widgets[1].automationId, '3');
+        assert.equal(result.widgetStyle, 'soft');
         assert.deepEqual(layout.boundVariableNames(), ['morning_briefing']);
     });
 

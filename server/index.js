@@ -775,10 +775,14 @@ app.put('/v1/dashboard/layout', (req, res) => {
     try {
         const widgets = req.body && Array.isArray(req.body.widgets) ? req.body.widgets : null
         if (!widgets) return res.status(400).json({ error: 'invalid_layout' })
-        return res.status(200).json(require('./manager/dashboardLayout.js').replaceLayout(widgets))
+        const options = {}
+        if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'widgetStyle')) {
+            options.widgetStyle = req.body.widgetStyle
+        }
+        return res.status(200).json(require('./manager/dashboardLayout.js').replaceLayout(widgets, options))
     } catch (e) {
         const code = typeof e.message === 'string' && e.message ? e.message : 'invalid_layout'
-        const status = ['invalid_layout', 'invalid_widget', 'invalid_type', 'variable_required', 'automation_required', 'too_many_widgets'].includes(code) ? 400 : 500
+        const status = ['invalid_layout', 'invalid_widget', 'invalid_type', 'variable_required', 'automation_required', 'too_many_widgets', 'invalid_widget_style'].includes(code) ? 400 : 500
         if (status === 500) log(`dashboard-layout-put: ${e}`, logColors.Error)
         return res.status(status).json({ error: code })
     }

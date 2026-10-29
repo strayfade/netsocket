@@ -38,27 +38,28 @@ describe('dashboard shell pages', () => {
             'dialog-automation',
             'dialog-add',
             'dialog-preset-track',
-            'dialog-size-label',
+            'dialog-show-date',
+            'dashboard-widget-style',
         ]) {
             assert.match(html, new RegExp(`id="${id}"`));
         }
-        for (const old of ['layout-kind', 'layout-preset', 'layout-variable', 'layout-automation', 'layout-add', 'layout-list']) {
+        for (const old of ['layout-kind', 'layout-preset', 'layout-variable', 'layout-automation', 'layout-add', 'layout-list', 'dialog-size-label', 'carousel-prev', 'carousel-next']) {
             assert.doesNotMatch(html, new RegExp(`id="${old}"`));
         }
         assert.match(html, /class="dashboard-toolbar"/);
         assert.match(html, /class="widget-carousel"/);
-        assert.match(html, /id="carousel-prev"/);
-        assert.match(html, /id="carousel-next"/);
         assert.match(html, />Run Button<\/option>/);
         assert.match(html, />Clock<\/option>/);
         assert.match(html, />Markdown<\/option>/);
         assert.match(html, />HTML<\/option>/);
+        assert.match(html, />Timer<\/option>/);
         assert.doesNotMatch(html, /Run button \(1x1\)/);
         assert.doesNotMatch(html, /Clock \(4x2 or 2x1\)/);
         assert.doesNotMatch(html, /id="layout-list"/);
         assert.match(html, /aria-label="Add widget"/);
         assert.match(html, />Add widget<\/h2>/);
-        assert.match(html, /<div class="grid-stack" id="dashboard-widgets">/);
+        assert.match(html, /id="dashboard-widgets"/);
+        assert.match(html, /data-widget-style/);
         assert.match(html, /<script src="\/js\/agentMarkdown\.js"><\/script>/);
         assert.match(html, /<script src="\/js\/shell\.js"><\/script>/);
         assert.match(html, /<script src="\/vendor\/gridstack-all\.js"><\/script>/);
@@ -80,25 +81,24 @@ describe('dashboard shell pages', () => {
         assert.match(editorJs, /saveGridPositions/);
         assert.match(editorJs, /draggable/);
         assert.match(editorJs, /widget-drag-handle/);
-        // Grid/dialog logic now lives in the shared module
         assert.match(editorJs, /sortedPresets/);
         assert.match(editorJs, /renderPresetCarousel/);
-        assert.match(editorJs, /selectPreset/);
+        assert.match(editorJs, /defaultSizeFor/);
         assert.match(editorJs, /openAddDialog/);
         assert.match(editorJs, /closeAddDialog/);
         assert.match(editorJs, /handleDialogAdd/);
         assert.match(editorJs, /renderDialogFields/);
-        assert.match(editorJs, /dialogPresetIndex/);
+        assert.match(editorJs, /showDate/);
         assert.match(editorJs, /carousel-slide/);
         assert.match(editorJs, /carousel-preview/);
-        assert.match(html, /carousel-controls/);
+        assert.match(editorJs, /disableResize:\s*false/);
+        assert.match(editorJs, /resizable/);
         assert.match(html, /dialog-close-btn/);
         assert.doesNotMatch(html, /<label for="dialog-kind">Widget type<\/label>/);
         assert.doesNotMatch(html, /<label>Size<\/label>/);
         assert.doesNotMatch(html, /Markdown and HTML widgets render a netsocket/);
         assert.doesNotMatch(html, /fillPresetOptions/);
         assert.doesNotMatch(html, /id="layout-kind"/);
-        assert.match(editorJs, /disableResize/);
         assert.match(html, /droppedLegacy/);
         assert.match(html, /layoutToast\.v2/);
         assert.doesNotMatch(html, /renderStatsCard/);

@@ -44,7 +44,7 @@
         </div>
 
         <div id="panel-content" hidden>
-            <div class="grid-stack" id="panel-grid"></div>
+            <div class="grid-stack" id="panel-grid" data-widget-style="classic"></div>
             <p class="shell-empty" id="panel-empty" hidden>No widgets assigned to this panel yet.</p>
         </div>
     </main>
@@ -256,8 +256,10 @@
                 document.getElementById('panel-login-required').hidden = true;
                 document.getElementById('panel-content').hidden = false;
                 document.title = (panel.room || panel.name || 'Panel') + ' - netsocket';
-                // Per-panel widget borders (default on; transparent 1px keeps layout identical).
-                document.getElementById('panel-grid').classList.toggle('no-borders', panel.showBorders === false);
+                // Per-panel widget borders / design style (page background stays #000).
+                var gridEl = document.getElementById('panel-grid');
+                gridEl.classList.toggle('no-borders', panel.showBorders === false);
+                gridEl.setAttribute('data-widget-style', panel.widgetStyle || 'classic');
 
                 var widgets = Array.isArray(panel.widgets) ? panel.widgets : [];
                 liveVariables = data.variables && typeof data.variables === 'object' ? data.variables : {};
