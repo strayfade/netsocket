@@ -233,10 +233,27 @@
                 }, container);
                 if (editing) container.classList.add('editing');
                 try {
-                    grid.on('change', function () { scheduleSavePositions(); });
-                    grid.on('resizestop', function () { scheduleSavePositions(); });
+                    grid.on('change', function (_event, items) {
+                        if (window.Widgets && typeof window.Widgets.syncItemSize === 'function' && Array.isArray(items)) {
+                            items.forEach(function (node) {
+                                if (node && node.el) window.Widgets.syncItemSize(node.el);
+                            });
+                        } else if (window.Widgets && typeof window.Widgets.syncGridSizes === 'function') {
+                            window.Widgets.syncGridSizes(container);
+                        }
+                        scheduleSavePositions();
+                    });
+                    grid.on('resizestop', function (_event, el) {
+                        if (window.Widgets && typeof window.Widgets.syncItemSize === 'function' && el) {
+                            window.Widgets.syncItemSize(el);
+                        }
+                        scheduleSavePositions();
+                    });
                     grid.on('dragstop', function () { scheduleSavePositions(); });
                 } catch (_) { /* older GridStack */ }
+                if (window.Widgets && typeof window.Widgets.syncGridSizes === 'function') {
+                    try { window.Widgets.syncGridSizes(container); } catch (_) { /* ignore */ }
+                }
             }
         }
 

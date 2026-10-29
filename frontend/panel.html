@@ -242,6 +242,9 @@
                         columnOpts: { breakpoints: [{ w: 640, c: 4 }] },
                     }, container);
                 }
+                if (window.Widgets && typeof window.Widgets.syncGridSizes === 'function') {
+                    try { window.Widgets.syncGridSizes(container); } catch (_) { /* ignore */ }
+                }
                 requestAnimationFrame(function () {
                     fitPanelContain();
                     // GridStack sizes cells after layout — re-fit once settled.

@@ -649,6 +649,9 @@
                         columnOpts: { breakpoints: [{ w: 640, c: 4 }] },
                     }, entry.gridEl);
                 }
+                if (window.Widgets && typeof window.Widgets.syncGridSizes === 'function') {
+                    try { window.Widgets.syncGridSizes(entry.gridEl); } catch (_) { /* ignore */ }
+                }
                 fitPreview(entry);
             }
 

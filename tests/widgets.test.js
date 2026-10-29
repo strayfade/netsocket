@@ -106,8 +106,47 @@ describe('widgets render module', () => {
         assert.equal(node.querySelectorAll('.widget-timer-wheel').length, 3);
         assert.ok(node.querySelector('.widget-timer-btn--toggle'));
         assert.ok(node.querySelector('.widget-timer-btn--cancel'));
+        assert.ok(node.querySelector('.widget-timer-controls'));
+        assert.ok(node.querySelector('.widget-timer-stage'));
         assert.equal(Widgets.formatTimer(65), '01:05');
         assert.equal(Widgets.formatTimer(3661), '1:01:01');
+    });
+
+    it('picks timer column count from widget width', () => {
+        assert.equal(Widgets.timerColsForWidth(2), 1);
+        assert.equal(Widgets.timerColsForWidth(3), 1);
+        assert.equal(Widgets.timerColsForWidth(4), 2);
+        assert.equal(Widgets.timerColsForWidth(5), 2);
+        assert.equal(Widgets.timerColsForWidth(6), 3);
+        assert.equal(Widgets.timerColsForWidth(12), 3);
+        const narrow = Widgets.renderContent(
+            { id: 't2', type: 'timer', x: 0, y: 0, w: 2, h: 4 }, {}, doc
+        );
+        assert.equal(narrow.getAttribute('data-timer-cols'), '1');
+        assert.equal(narrow.getAttribute('data-widget-w'), '2');
+        const mid = Widgets.renderContent(
+            { id: 't3', type: 'timer', x: 0, y: 0, w: 4, h: 4 }, {}, doc
+        );
+        assert.equal(mid.getAttribute('data-timer-cols'), '2');
+        const wide = Widgets.renderContent(
+            { id: 't4', type: 'timer', x: 0, y: 0, w: 6, h: 4 }, {}, doc
+        );
+        assert.equal(wide.getAttribute('data-timer-cols'), '3');
+    });
+
+    it('syncs size attrs from a grid-stack item after resize', () => {
+        const item = Widgets.createItem(
+            { id: 't5', type: 'timer', x: 0, y: 0, w: 2, h: 2 },
+            {},
+            doc
+        );
+        item.setAttribute('gs-w', '6');
+        item.setAttribute('gs-h', '4');
+        Widgets.syncItemSize(item);
+        const root = item.querySelector('[data-widget-kind="timer"]');
+        assert.equal(root.getAttribute('data-widget-w'), '6');
+        assert.equal(root.getAttribute('data-widget-h'), '4');
+        assert.equal(root.getAttribute('data-timer-cols'), '3');
     });
 
     it('builds full grid items with position attributes', () => {

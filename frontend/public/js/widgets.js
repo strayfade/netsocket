@@ -16,6 +16,8 @@
     // ctx: { automations: [{id,title,type,runnable}], variables: {name:value},
     //        onRun(item, button), renderMarkdown(text)->html }
 
+    var WHEEL_ITEM_H = 36;
+
     function getDoc(explicit) {
         if (explicit) return explicit;
         if (typeof document !== 'undefined') return document;
@@ -26,6 +28,14 @@
         var node = doc.createElement(tag);
         if (className) node.className = className;
         if (text != null) node.textContent = text;
+        return node;
+    }
+
+    function sizeAttrs(node, widget) {
+        var w = widget && widget.w != null ? widget.w : 1;
+        var h = widget && widget.h != null ? widget.h : 1;
+        node.setAttribute('data-widget-w', String(w));
+        node.setAttribute('data-widget-h', String(h));
         return node;
     }
 
@@ -43,6 +53,7 @@
         var btn = el(doc, 'button', 'widget-run-btn');
         btn.type = 'button';
         btn.setAttribute('data-widget-kind', 'button');
+        sizeAttrs(btn, widget);
         var label = item.title || item.type || ('Automation ' + widget.automationId);
         btn.setAttribute('aria-label', 'Run ' + label);
         btn.title = label;
@@ -67,12 +78,15 @@
     }
 
     function renderClock(widget, doc) {
-        var compact = widget.w <= 2 && widget.h <= 1;
+        var w = widget.w || 1;
+        var h = widget.h || 1;
+        var compact = w <= 2 && h <= 1;
         var showDate = widget.showDate !== false;
         var card = el(doc, 'section', 'shell-card widget-clock' + (compact ? ' widget-clock-compact' : ''));
         card.setAttribute('aria-label', 'Clock');
         card.setAttribute('data-widget-kind', 'clock');
-        var stack = el(doc, 'div', 'widget-clock-stack');
+        sizeAttrs(card, widget);
+        var stack = el(doc, 'div', 'widget-clock-stack widget-content-block');
         if (showDate) {
             var date = el(doc, 'p', 'widget-clock-date', 'Loading date');
             date.setAttribute('data-clock-date', '');
@@ -90,6 +104,7 @@
         card.setAttribute('aria-label', 'Markdown widget');
         card.setAttribute('data-widget-kind', 'markdown');
         card.setAttribute('data-widget-var', widget.variable);
+        sizeAttrs(card, widget);
         var body = el(doc, 'div', 'shell-prose widget-content-block');
         body.setAttribute('data-var-content', widget.variable);
         var variables = ctx.variables || {};
@@ -105,6 +120,7 @@
         card.setAttribute('aria-label', 'HTML widget');
         card.setAttribute('data-widget-kind', 'html');
         card.setAttribute('data-widget-var', widget.variable);
+        sizeAttrs(card, widget);
         var frame = doc.createElement('iframe');
         frame.setAttribute('sandbox', '');
         frame.setAttribute('title', 'Widget: ' + widget.variable);
@@ -129,8 +145,16 @@
         return pad2(m) + ':' + pad2(sec);
     }
 
+    /** Visible timer columns from grid width: 1=mm, 2=mm/ss, 3=hh/mm/ss */
+    function timerColsForWidth(w) {
+        var width = w == null ? 4 : Number(w);
+        if (width >= 6) return 3;
+        if (width >= 4) return 2;
+        return 1;
+    }
+
     function buildWheel(doc, unit, max, initial) {
-        var col = el(doc, 'div', 'widget-timer-wheel');
+        var col = el(doc, 'div', 'widget-timer-wheel widget-timer-unit--' + unit);
         col.setAttribute('data-timer-unit', unit);
         col.setAttribute('role', 'listbox');
         col.setAttribute('aria-label', unit);
@@ -151,15 +175,21 @@
     }
 
     function syncWheel(col) {
-        var itemH = 36;
         var track = col.querySelector('.widget-timer-wheel-track');
         if (!track) return;
         var value = col._timerValue || 0;
-        track.style.transform = 'translateY(' + ((2 * itemH) - (value * itemH)) + 'px)';
+        track.style.transform = 'translateY(' + ((2 * WHEEL_ITEM_H) - (value * WHEEL_ITEM_H)) + 'px)';
         Array.prototype.forEach.call(track.children, function (item) {
             var v = parseInt(item.getAttribute('data-value'), 10);
-            item.classList.toggle('is-selected', v === value);
-            item.setAttribute('aria-selected', v === value ? 'true' : 'false');
+            var dist = Math.abs(v - value);
+            item.classList.toggle('is-selected', dist === 0);
+            item.setAttribute('aria-selected', dist === 0 ? 'true' : 'false');
+            item.style.setProperty('--wheel-dist', String(dist));
+            // Selected: full opacity, no blur. Farther numbers fade + blur.
+            var opacity = dist === 0 ? 1 : Math.max(0.12, 0.7 - dist * 0.22);
+            var blur = dist === 0 ? 0 : Math.min(6, dist * 1.6);
+            item.style.opacity = String(opacity);
+            item.style.filter = blur > 0 ? ('blur(' + blur + 'px)') : 'none';
         });
     }
 
@@ -170,8 +200,7 @@
         var startValue = 0;
 
         function setFromDelta(dy) {
-            var itemH = 36;
-            var next = Math.round(startValue - (dy / itemH));
+            var next = Math.round(startValue - (dy / WHEEL_ITEM_H));
             if (next < 0) next = 0;
             if (next > col._timerMax) next = col._timerMax;
             col._timerValue = next;
@@ -213,25 +242,36 @@
         });
     }
 
+    function applyTimerCols(card, w) {
+        var cols = timerColsForWidth(w);
+        card.setAttribute('data-timer-cols', String(cols));
+        return cols;
+    }
+
     function renderTimer(widget, doc) {
         var card = el(doc, 'section', 'shell-card widget-timer');
         card.setAttribute('aria-label', 'Timer');
         card.setAttribute('data-widget-kind', 'timer');
+        sizeAttrs(card, widget);
+        applyTimerCols(card, widget.w);
         if (widget && widget.id) card.setAttribute('data-timer-id', String(widget.id));
 
-        var body = el(doc, 'div', 'widget-timer-body widget-content-block');
+        var body = el(doc, 'div', 'widget-timer-body');
+        var stage = el(doc, 'div', 'widget-timer-stage');
         var picker = el(doc, 'div', 'widget-timer-picker');
         var hours = buildWheel(doc, 'hours', 23, 0);
         var minutes = buildWheel(doc, 'minutes', 59, 0);
         var seconds = buildWheel(doc, 'seconds', 59, 0);
+        var sepHours = el(doc, 'div', 'widget-timer-sep widget-timer-sep--hours', ':');
+        var sepMins = el(doc, 'div', 'widget-timer-sep widget-timer-sep--mins', ':');
         picker.appendChild(hours);
-        picker.appendChild(el(doc, 'div', 'widget-timer-sep', ':'));
+        picker.appendChild(sepHours);
         picker.appendChild(minutes);
-        picker.appendChild(el(doc, 'div', 'widget-timer-sep', ':'));
+        picker.appendChild(sepMins);
         picker.appendChild(seconds);
 
         var display = el(doc, 'div', 'widget-timer-display', '00:00');
-        display.hidden = true;
+        display.setAttribute('aria-live', 'polite');
 
         var controls = el(doc, 'div', 'widget-timer-controls');
         var cancelBtn = el(doc, 'button', 'widget-timer-btn widget-timer-btn--cancel', 'Cancel');
@@ -242,8 +282,9 @@
         controls.appendChild(cancelBtn);
         controls.appendChild(toggleBtn);
 
-        body.appendChild(picker);
-        body.appendChild(display);
+        stage.appendChild(picker);
+        stage.appendChild(display);
+        body.appendChild(stage);
         body.appendChild(controls);
         card.appendChild(body);
 
@@ -256,14 +297,19 @@
             status: 'idle', // idle | running | paused
             remainingMs: 0,
             endsAt: 0,
-            raf: null,
             interval: null,
         };
 
+        function visibleCols() {
+            return timerColsForWidth(card.getAttribute('data-widget-w'));
+        }
+
         function selectedSeconds() {
-            return (hours._timerValue || 0) * 3600
-                + (minutes._timerValue || 0) * 60
-                + (seconds._timerValue || 0);
+            var cols = visibleCols();
+            var h = cols >= 3 ? (hours._timerValue || 0) : 0;
+            var m = minutes._timerValue || 0;
+            var s = cols >= 2 ? (seconds._timerValue || 0) : 0;
+            return h * 3600 + m * 60 + s;
         }
 
         function stopTicker() {
@@ -281,13 +327,12 @@
             }
             display.textContent = formatTimer(remaining / 1000);
             var active = state.status === 'running' || state.status === 'paused';
-            picker.hidden = active;
-            display.hidden = !active;
+            card.classList.toggle('is-active', active);
+            card.classList.toggle('widget-timer--running', state.status === 'running');
+            card.classList.toggle('widget-timer--paused', state.status === 'paused');
             cancelBtn.disabled = !active;
             toggleBtn.textContent = state.status === 'running' ? 'Pause' : (state.status === 'paused' ? 'Resume' : 'Start');
             toggleBtn.classList.toggle('is-running', state.status === 'running');
-            card.classList.toggle('widget-timer--running', state.status === 'running');
-            card.classList.toggle('widget-timer--paused', state.status === 'paused');
             if (state.status === 'running' && remaining <= 0) {
                 finish();
             }
@@ -369,6 +414,34 @@
     }
 
     /**
+     * Sync data-widget-w/h (and timer column mode) from a GridStack item's
+     * current gs-w/gs-h after drag-resize. Safe to call on any grid root.
+     */
+    function syncItemSize(itemEl) {
+        if (!itemEl || !itemEl.getAttribute) return;
+        var w = parseInt(itemEl.getAttribute('gs-w'), 10);
+        var h = parseInt(itemEl.getAttribute('gs-h'), 10);
+        if (!Number.isFinite(w) || w < 1) w = 1;
+        if (!Number.isFinite(h) || h < 1) h = 1;
+        var root = itemEl.querySelector('[data-widget-kind]');
+        if (!root) return;
+        root.setAttribute('data-widget-w', String(w));
+        root.setAttribute('data-widget-h', String(h));
+        if (root.getAttribute('data-widget-kind') === 'timer') {
+            applyTimerCols(root, w);
+        }
+        var compact = w <= 2 && h <= 1;
+        if (root.getAttribute('data-widget-kind') === 'clock') {
+            root.classList.toggle('widget-clock-compact', compact);
+        }
+    }
+
+    function syncGridSizes(gridRoot) {
+        if (!gridRoot) return;
+        Array.prototype.forEach.call(gridRoot.querySelectorAll('.grid-stack-item'), syncItemSize);
+    }
+
+    /**
      * Build a full GridStack item element for a widget. The caller appends
      * it to the grid container and lets GridStack position it from the
      * gs-x/gs-y/gs-w/gs-h/gs-id attributes.
@@ -415,5 +488,8 @@
         renderContent: renderContent,
         createItem: createItem,
         formatTimer: formatTimer,
+        timerColsForWidth: timerColsForWidth,
+        syncItemSize: syncItemSize,
+        syncGridSizes: syncGridSizes,
     };
 }));

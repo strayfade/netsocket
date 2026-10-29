@@ -120,6 +120,12 @@ describe('panel pages', () => {
         assert.match(html, /panel-preview-card/);
         assert.match(html, /panel-preview-viewport/);
         assert.match(html, /panel-preview-grid-/);
+        const css = fs.readFileSync(
+            path.join(__dirname, '..', 'frontend', 'public', 'css', 'shell.css'),
+            'utf8'
+        );
+        assert.match(css, /\.panel-preview-viewport\s*\{[^}]*background:\s*#000/);
+        assert.doesNotMatch(css, /\[data-widget-style="minimal"\]\s*\.widget-run-btn\s*\{[^}]*dashed/);
         assert.match(html, /panel-preview-actions/);
         assert.match(html, /\/config/);
         assert.match(html, /\/execute/);
