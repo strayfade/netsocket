@@ -717,11 +717,16 @@ body.shell-page {
 .widget-content-block {
     flex: 0 1 auto;
     margin: 0 auto;
-    max-height: 100%;
+    max-height: none;
     max-width: 100%;
     width: fit-content;
-    overflow: auto;
+    overflow: visible;
     align-self: center;
+}
+
+.widget-fit-scale {
+    will-change: transform;
+    transition: transform 0.2s ease;
 }
 
 .shell-card[data-widget-kind="html"] .shell-widget-frame.widget-content-block {
@@ -991,11 +996,11 @@ select.admin-input {
     flex: 0 1 auto;
     min-height: 0;
     max-width: 100%;
-    max-height: 100%;
     width: fit-content;
-    overflow: auto;
-    padding: 0 20px;
+    overflow: visible;
+    padding: 0;
     margin: 0 auto;
+    text-align: center;
 }
 
 .grid-stack-item-content .shell-widget-frame {
@@ -2607,19 +2612,20 @@ dialog#panel-edit-dialog[open] {
 
 /* ── Timer widget (iOS-like; instance-local state) ───────────────────── */
 .widget-timer {
+    --widget-timer-btn-radius: 16px;
     justify-content: stretch;
     align-items: stretch;
     text-align: center;
     overflow: hidden;
-    padding: clamp(6px, 2cqi, 16px);
+    padding: 0;
 }
 
 .widget-timer-body {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    gap: clamp(8px, 2.5cqh, 18px);
     width: 100%;
     height: 100%;
     min-height: 0;
@@ -2627,14 +2633,36 @@ dialog#panel-edit-dialog[open] {
     padding: 0;
 }
 
+/* Picker fills the entire card; controls float above it. */
 .widget-timer-stage {
-    flex: 1 1 auto;
-    min-height: 0;
-    width: 100%;
+    position: absolute;
+    inset: 0;
     display: grid;
     place-items: center;
-    position: relative;
     overflow: hidden;
+    z-index: 0;
+}
+
+.widget-timer-controls {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: clamp(8px, 2cqi, 12px);
+    align-items: stretch;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 100%;
+    margin: 0;
+    padding: clamp(8px, 2.5cqi, 14px);
+    transition: gap 0.25s ease;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), transparent);
+}
+
+.widget-timer[data-widget-w="1"] .widget-timer-controls,
+.widget-timer[data-widget-w="2"] .widget-timer-controls {
+    flex-direction: column;
 }
 
 .widget-timer-picker,
@@ -2644,18 +2672,19 @@ dialog#panel-edit-dialog[open] {
         opacity 0.35s ease,
         filter 0.35s ease,
         transform 0.35s ease,
-        max-height 0.4s ease,
         visibility 0.35s ease;
     will-change: opacity, filter, transform;
 }
 
 .widget-timer-picker {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(2px, 1cqi, 8px);
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 0;
     user-select: none;
     touch-action: none;
+    width: 100%;
+    height: 100%;
     max-width: 100%;
     max-height: 100%;
     opacity: 1;
@@ -2663,6 +2692,7 @@ dialog#panel-edit-dialog[open] {
     transform: scale(1);
     visibility: visible;
     pointer-events: auto;
+    padding: 0;
 }
 
 .widget-timer.is-active .widget-timer-picker {
@@ -2674,7 +2704,7 @@ dialog#panel-edit-dialog[open] {
 }
 
 .widget-timer-display {
-    font-size: clamp(1.4rem, 18cqi, 4.5rem);
+    font-size: clamp(1.6rem, 22cqi, 5rem);
     font-weight: 650;
     letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
@@ -2696,12 +2726,29 @@ dialog#panel-edit-dialog[open] {
 
 .widget-timer-wheel {
     position: relative;
-    width: clamp(40px, 14cqi, 72px);
-    height: clamp(120px, 55cqh, 220px);
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    height: 100%;
     overflow: hidden;
     cursor: grab;
     outline: none;
-    transition: opacity 0.3s ease, width 0.35s ease, margin 0.35s ease, filter 0.3s ease;
+    transition: opacity 0.3s ease, flex-basis 0.35s ease, max-width 0.35s ease, margin 0.35s ease, filter 0.3s ease;
+    /* Fade numbers to transparency (no solid color bars). */
+    -webkit-mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        #000 18%,
+        #000 82%,
+        transparent 100%
+    );
+    mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        #000 18%,
+        #000 82%,
+        transparent 100%
+    );
 }
 
 .widget-timer-wheel:active {
@@ -2723,7 +2770,7 @@ dialog#panel-edit-dialog[open] {
     align-items: center;
     justify-content: center;
     font-variant-numeric: tabular-nums;
-    font-size: clamp(0.95rem, 4.5cqi, 1.7rem);
+    font-size: clamp(1.1rem, 8cqi, 2.4rem);
     font-weight: 500;
     color: var(--shell-text);
     transition: opacity 0.18s ease, filter 0.18s ease, font-size 0.18s ease, font-weight 0.18s ease;
@@ -2731,34 +2778,24 @@ dialog#panel-edit-dialog[open] {
 
 .widget-timer-wheel-item.is-selected {
     font-weight: 700;
-    font-size: clamp(1.15rem, 5.5cqi, 2rem);
+    font-size: clamp(1.35rem, 10cqi, 3rem);
 }
 
+/* Legacy fade overlays — hidden; masking handles soft edges now. */
 .widget-timer-wheel-fade {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 54px;
-    pointer-events: none;
-    z-index: 1;
-}
-
-.widget-timer-wheel-fade--top {
-    top: 0;
-    background: linear-gradient(to bottom, var(--shell-surface), transparent);
-}
-
-.widget-timer-wheel-fade--bottom {
-    bottom: 0;
-    background: linear-gradient(to top, var(--shell-surface), transparent);
+    display: none !important;
 }
 
 .widget-timer-sep {
-    font-size: clamp(1.1rem, 5cqi, 1.8rem);
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(1.2rem, 7cqi, 2.2rem);
     font-weight: 650;
     opacity: 0.7;
-    padding-bottom: 4px;
-    transition: opacity 0.3s ease, width 0.35s ease, margin 0.35s ease, transform 0.3s ease;
+    padding: 0 2px;
+    transition: opacity 0.3s ease, width 0.35s ease, margin 0.35s ease, transform 0.3s ease, max-width 0.35s ease;
 }
 
 /* Width → visible columns: 1=mm, 2=mm:ss, 3=hh:mm:ss */
@@ -2766,13 +2803,12 @@ dialog#panel-edit-dialog[open] {
 .widget-timer-unit--seconds,
 .widget-timer-sep--hours,
 .widget-timer-sep--mins {
-    flex: 0 0 auto;
-    max-width: 80px;
     transition:
         opacity 0.3s ease,
         filter 0.3s ease,
         transform 0.3s ease,
         max-width 0.35s ease,
+        flex-basis 0.35s ease,
         margin 0.35s ease,
         padding 0.35s ease;
 }
@@ -2792,40 +2828,27 @@ dialog#panel-edit-dialog[open] {
     overflow: hidden;
     pointer-events: none;
     transform: scale(0.8);
-    flex-basis: 0;
-}
-
-.widget-timer-controls {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    gap: clamp(8px, 2cqi, 14px);
-    align-items: stretch;
-    justify-content: center;
-    flex: 0 0 auto;
-    width: 100%;
-    margin-top: auto;
-    transition: gap 0.25s ease;
-}
-
-.widget-timer[data-widget-w="1"] .widget-timer-controls,
-.widget-timer[data-widget-w="2"] .widget-timer-controls {
-    flex-direction: column;
+    flex: 0 0 0 !important;
 }
 
 .widget-timer-btn {
     appearance: none;
     border: none;
-    border-radius: 999px;
+    border-radius: var(--widget-timer-btn-radius);
     min-width: 0;
     flex: 1 1 0;
-    min-height: clamp(36px, 10cqh, 48px);
+    min-height: clamp(36px, 9cqh, 48px);
     padding: clamp(8px, 2cqh, 12px) clamp(12px, 3cqi, 20px);
     font: inherit;
     font-size: clamp(0.8rem, 3.2cqi, 1rem);
     font-weight: 650;
     cursor: pointer;
-    transition: background 0.2s ease, opacity 0.25s ease, transform 0.2s ease;
+    transition: background 0.2s ease, opacity 0.25s ease, transform 0.2s ease, border-radius 0.2s ease;
+}
+
+.widget-timer-btn--cancel,
+.widget-timer-btn--toggle {
+    border-radius: var(--widget-timer-btn-radius);
 }
 
 .widget-timer-btn--cancel {
@@ -2947,17 +2970,21 @@ dialog#panel-edit-dialog[open] {
 /* ── Markdown / HTML size-aware content ──────────────────────────────── */
 .shell-card[data-widget-kind="markdown"],
 .shell-card[data-widget-kind="html"] {
-    padding: clamp(6px, 2cqi, 18px);
+    padding: clamp(4px, 1.5cqi, 12px);
 }
 
 .shell-card[data-widget-kind="html"] {
     padding: 0;
 }
 
+.shell-card[data-widget-kind="markdown"] {
+    justify-content: center;
+    align-items: center;
+}
+
 .grid-stack-item-content .shell-prose {
-    font-size: clamp(0.85rem, 4.2cqi, 1.9rem);
+    font-size: 1.25rem;
     line-height: 1.35;
-    transition: font-size 0.25s ease, opacity 0.3s ease, filter 0.3s ease;
 }
 
 #panel-grid .shell-prose,
@@ -2966,7 +2993,7 @@ dialog#panel-edit-dialog[open] {
 #panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose,
 #panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose,
 .grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose {
-    font-size: clamp(0.85rem, 4.2cqi, 1.9rem);
+    font-size: 1.25rem;
 }
 
 #panel-grid .shell-prose h1,
@@ -2975,7 +3002,7 @@ dialog#panel-edit-dialog[open] {
 #panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose h1,
 #panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose h1,
 .grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose h1 {
-    font-size: clamp(1.1rem, 6cqi, 2.6rem);
+    font-size: 1.75em;
 }
 #panel-grid .shell-prose h2,
 #panel-edit-grid .shell-prose h2,
@@ -2983,7 +3010,7 @@ dialog#panel-edit-dialog[open] {
 #panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose h2,
 #panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose h2,
 .grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose h2 {
-    font-size: clamp(1rem, 5.2cqi, 2.2rem);
+    font-size: 1.45em;
 }
 #panel-grid .shell-prose h3,
 #panel-edit-grid .shell-prose h3,
@@ -2991,7 +3018,7 @@ dialog#panel-edit-dialog[open] {
 #panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose h3,
 #panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose h3,
 .grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose h3 {
-    font-size: clamp(0.95rem, 4.6cqi, 2rem);
+    font-size: 1.25em;
 }
 #panel-grid .shell-prose h4,
 #panel-edit-grid .shell-prose h4,
@@ -2999,7 +3026,7 @@ dialog#panel-edit-dialog[open] {
 #panel-grid .shell-card[data-widget-kind="markdown"] .shell-prose h4,
 #panel-edit-grid .shell-card[data-widget-kind="markdown"] .shell-prose h4,
 .grid-stack .shell-card[data-widget-kind="markdown"] .shell-prose h4 {
-    font-size: clamp(0.9rem, 4.2cqi, 1.8rem);
+    font-size: 1.1em;
 }
 
 /* ── Widget design styles (page/panel bg stays #000) ─────────────────── */
@@ -3031,13 +3058,8 @@ dialog#panel-edit-dialog[open] {
     border-radius: 0 !important;
 }
 
-[data-widget-style="minimal"] .widget-timer-wheel-fade--top,
-[data-widget-style="minimal"] .widget-timer-wheel-fade--bottom {
-    background: linear-gradient(to bottom, #000, transparent);
-}
-
-[data-widget-style="minimal"] .widget-timer-wheel-fade--bottom {
-    background: linear-gradient(to top, #000, transparent);
+[data-widget-style="minimal"] .widget-timer-controls {
+    background: transparent;
 }
 
 [data-widget-style="soft"] .shell-card,
@@ -3058,8 +3080,13 @@ dialog#panel-edit-dialog[open] {
     background: linear-gradient(160deg, #1c1c1c, #0a0a0a) !important;
 }
 
+[data-widget-style="soft"] .widget-timer {
+    --widget-timer-btn-radius: 14px;
+}
+[data-widget-style="soft"] .widget-timer-btn,
+[data-widget-style="soft"] .widget-timer-btn--cancel,
 [data-widget-style="soft"] .widget-timer-btn--toggle {
-    border-radius: 16px;
+    border-radius: var(--widget-timer-btn-radius) !important;
 }
 
 /* Vivid: purpose-colored friendly gradients per widget kind */
@@ -3118,12 +3145,13 @@ dialog#panel-edit-dialog[open] {
     text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
 }
 
-[data-widget-style="vivid"] .widget-timer-wheel-fade--top {
-    background: linear-gradient(to bottom, rgba(234, 88, 12, 0.95), transparent);
+[data-widget-style="vivid"] .widget-timer {
+    --widget-timer-btn-radius: 14px;
 }
-
-[data-widget-style="vivid"] .widget-timer-wheel-fade--bottom {
-    background: linear-gradient(to top, rgba(251, 191, 36, 0.95), transparent);
+[data-widget-style="vivid"] .widget-timer-btn,
+[data-widget-style="vivid"] .widget-timer-btn--cancel,
+[data-widget-style="vivid"] .widget-timer-btn--toggle {
+    border-radius: var(--widget-timer-btn-radius) !important;
 }
 
 [data-widget-style="vivid"] .widget-timer-btn--cancel {
@@ -3133,6 +3161,15 @@ dialog#panel-edit-dialog[open] {
 [data-widget-style="vivid"] .widget-timer-btn--toggle {
     background: #ffffff;
     color: #7c2d12;
+}
+
+[data-widget-style="neon"] .widget-timer {
+    --widget-timer-btn-radius: 10px;
+}
+[data-widget-style="neon"] .widget-timer-btn,
+[data-widget-style="neon"] .widget-timer-btn--cancel,
+[data-widget-style="neon"] .widget-timer-btn--toggle {
+    border-radius: var(--widget-timer-btn-radius) !important;
 }
 
 /* Neon: dark fills with glowing colored edges */

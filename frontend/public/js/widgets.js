@@ -39,6 +39,45 @@
         return node;
     }
 
+    /**
+     * Scale a content block up/down so it fills the card without overflowing.
+     * Keeps intrinsic text layout, then applies a uniform transform.
+     */
+    function bindFitScale(card, content) {
+        if (!card || !content) return;
+        content.classList.add('widget-fit-scale');
+        function update() {
+            content.style.transform = 'none';
+            var padX = 8;
+            var padY = 8;
+            var cw = Math.max(0, card.clientWidth - padX * 2);
+            var ch = Math.max(0, card.clientHeight - padY * 2);
+            var bw = content.scrollWidth || content.offsetWidth || 1;
+            var bh = content.scrollHeight || content.offsetHeight || 1;
+            if (!cw || !ch) return;
+            var scale = Math.min(cw / bw, ch / bh);
+            if (!isFinite(scale) || scale <= 0) scale = 1;
+            // Cap extreme blow-ups for tiny strings in huge cells.
+            if (scale > 6) scale = 6;
+            content.style.transformOrigin = 'center center';
+            content.style.transform = 'scale(' + scale + ')';
+        }
+        content._fitScale = update;
+        if (typeof ResizeObserver !== 'undefined') {
+            var ro = new ResizeObserver(function () { update(); });
+            ro.observe(card);
+            try { ro.observe(content); } catch (_) { /* ignore */ }
+        }
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(function () {
+                update();
+                requestAnimationFrame(update);
+            });
+        } else {
+            setTimeout(update, 0);
+        }
+    }
+
     function automationFor(widget, automations) {
         var list = Array.isArray(automations) ? automations : [];
         var want = widget ? String(widget.automationId) : '';
@@ -96,6 +135,7 @@
         time.setAttribute('data-clock-time', '');
         stack.appendChild(time);
         card.appendChild(stack);
+        bindFitScale(card, stack);
         return card;
     }
 
@@ -112,6 +152,14 @@
             ? ctx.renderMarkdown(variables[widget.variable] || '')
             : '';
         card.appendChild(body);
+        bindFitScale(card, body);
+        // Re-fit when live variable updates rewrite innerHTML.
+        if (typeof MutationObserver !== 'undefined') {
+            var mo = new MutationObserver(function () {
+                if (typeof body._fitScale === 'function') body._fitScale();
+            });
+            mo.observe(body, { childList: true, characterData: true, subtree: true });
+        }
         return card;
     }
 
@@ -178,7 +226,9 @@
         var track = col.querySelector('.widget-timer-wheel-track');
         if (!track) return;
         var value = col._timerValue || 0;
-        track.style.transform = 'translateY(' + ((2 * WHEEL_ITEM_H) - (value * WHEEL_ITEM_H)) + 'px)';
+        var wheelH = col.clientHeight || (5 * WHEEL_ITEM_H);
+        var centerOffset = (wheelH / 2) - (WHEEL_ITEM_H / 2);
+        track.style.transform = 'translateY(' + (centerOffset - (value * WHEEL_ITEM_H)) + 'px)';
         Array.prototype.forEach.call(track.children, function (item) {
             var v = parseInt(item.getAttribute('data-value'), 10);
             var dist = Math.abs(v - value);
@@ -240,6 +290,10 @@
             col._timerValue = next;
             syncWheel(col);
         });
+        if (typeof ResizeObserver !== 'undefined') {
+            var ro = new ResizeObserver(function () { syncWheel(col); });
+            ro.observe(col);
+        }
     }
 
     function applyTimerCols(card, w) {
@@ -284,8 +338,9 @@
 
         stage.appendChild(picker);
         stage.appendChild(display);
-        body.appendChild(stage);
+        // Controls sit above the picker; the stage fills the card behind them.
         body.appendChild(controls);
+        body.appendChild(stage);
         card.appendChild(body);
 
         bindWheel(hours);
@@ -433,6 +488,17 @@
         var compact = w <= 2 && h <= 1;
         if (root.getAttribute('data-widget-kind') === 'clock') {
             root.classList.toggle('widget-clock-compact', compact);
+        }
+        var fitTarget = root.querySelector('.widget-fit-scale') || (
+            root.classList.contains('widget-fit-scale') ? root : null
+        );
+        if (fitTarget && typeof fitTarget._fitScale === 'function') {
+            try { fitTarget._fitScale(); } catch (_) { /* ignore */ }
+        }
+        // Clock stack is the scaled target.
+        var clockStack = root.querySelector('.widget-clock-stack.widget-fit-scale');
+        if (clockStack && typeof clockStack._fitScale === 'function') {
+            try { clockStack._fitScale(); } catch (_) { /* ignore */ }
         }
     }
 
