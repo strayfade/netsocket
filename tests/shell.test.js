@@ -41,6 +41,19 @@ describe('shell tab logic', () => {
         assert.equal(ShellLogic.setServerTime(5000, 5000), 0);
     });
 
+    it('anchors NTP time and formats Eastern wall clocks with DST zone', () => {
+        assert.equal(ShellLogic.CLOCK_TIME_ZONE, 'America/New_York');
+        ShellLogic.setNtpTime(Date.UTC(2026, 0, 15, 17, 30, 0)); // 12:30 EST
+        const winter = ShellLogic.formatEasternClock(Date.UTC(2026, 0, 15, 17, 30, 0));
+        assert.equal(winter.time, '12:30');
+        assert.equal(winter.date, 'Thursday, January 15');
+        const summer = ShellLogic.formatEasternClock(Date.UTC(2026, 6, 15, 16, 30, 0)); // 12:30 EDT
+        assert.equal(summer.time, '12:30');
+        assert.equal(summer.date, 'Wednesday, July 15');
+        // Reset NTP anchor for other tests.
+        ShellLogic.setServerTime(5000, 5000);
+    });
+
     it('ensureSession returns false without navigating when no fetcher exists', async () => {
         const originalFetch = globalThis.fetch;
         try {

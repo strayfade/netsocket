@@ -47,6 +47,8 @@ app.use(compression())
 
 const { getNodes, setNodes, populateNodes } = require('./manager/saveState')
 const settingsManager = require('./manager/settingsManager.js')
+const serverTime = require('./manager/serverTime.js')
+serverTime.startPeriodicSync()
 const cronTriggerManager = require('./utils/cronTriggerManager')
 const { reloadVars, getVarsSnapshot, replaceVarsAndPersist, onVarsChanged } = require('./utils/vars.js')
 const { reloadMcpAgentMemory } = require('./utils/mcpAgentMemory.js')
@@ -749,7 +751,7 @@ app.get('/v1/dashboard/summary', (req, res) => {
             devices: deviceRegistry.listDevices(),
         })
         summary.layout = dashboardLayout.getLayout()
-        summary.now = Date.now()
+        summary.now = serverTime.getNtpNow()
         summary.variables = {}
         for (const name of dashboardLayout.boundVariableNames()) {
             const entry = varList.find((v) => v && v.name === name)
@@ -823,8 +825,7 @@ app.patch('/v1/panels/:panelId', (req, res) => panelApi.handleUpdatePanel(req, r
 app.delete('/v1/panels/:panelId', (req, res) => panelApi.handleDeletePanel(req, res))
 app.post('/v1/panels/:panelId/execute', (req, res) => panelApi.handlePanelExecute(req, res))
 
-// MARK: Server time (central clock for widgets; session-gated like other private APIs)
-const serverTime = require('./manager/serverTime.js')
+// MARK: NTP-backed time for clock widgets (EST/EDT); session-gated
 app.get('/v1/time', (req, res) => serverTime.handleGetServerTime(req, res))
 
 const {

@@ -67,48 +67,59 @@
                 if (id) document.getElementById('panel-content').hidden = true;
             }
 
-            // Clock widgets paint the central server's time (synced in
-            // loadConfig), falling back to the local clock before sync.
-            function serverDateNow() {
+            // Clock widgets paint NTP-anchored Eastern time (EST/EDT).
+            function clockNowMs() {
                 try {
-                    if (window.ShellLogic && typeof window.ShellLogic.serverNow === 'function') {
-                        return window.ShellLogic.serverNow();
+                    if (window.ShellLogic) {
+                        if (typeof window.ShellLogic.ntpNow === 'function') return window.ShellLogic.ntpNow();
+                        if (typeof window.ShellLogic.serverNow === 'function') return window.ShellLogic.serverNow();
                     }
-                } catch (_) { /* fall through to local clock */ }
+                } catch (_) { /* fall through */ }
                 return Date.now();
             }
 
             function tickClock() {
-                var now = new Date(serverDateNow());
-                var h = now.getHours();
-                h = h % 12;
-                if (h === 0) h = 12;
-                var mm = String(now.getMinutes()).padStart(2, '0');
-                var time = h + ':' + mm;
-                var date = now.toLocaleDateString(undefined, {
-                    year: 'numeric', month: 'long', day: 'numeric'
-                });
+                var parts = null;
+                try {
+                    if (window.ShellLogic && typeof window.ShellLogic.formatEasternClock === 'function') {
+                        parts = window.ShellLogic.formatEasternClock(clockNowMs());
+                    }
+                } catch (_) { parts = null; }
+                if (!parts) {
+                    var now = new Date(clockNowMs());
+                    var h = now.getHours() % 12;
+                    if (h === 0) h = 12;
+                    parts = {
+                        time: h + ':' + String(now.getMinutes()).padStart(2, '0'),
+                        date: now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }),
+                    };
+                }
                 Array.prototype.forEach.call(document.querySelectorAll('[data-clock-time]'), function (el) {
-                    el.textContent = time;
+                    el.textContent = parts.time;
                     el.classList.remove('shell-skeleton');
                 });
                 Array.prototype.forEach.call(document.querySelectorAll('[data-clock-date]'), function (el) {
-                    el.textContent = date;
+                    el.textContent = parts.date;
                 });
             }
             tickClock();
             setInterval(tickClock, 15000);
 
-            // Sync clock widgets to the central server's time; re-paint once
-            // the offset lands so the first paint isn't local time.
+            // Sync from NTP (via /v1/time) on load and every 24h.
             async function syncServerTime() {
                 try {
-                    var timeRes = await fetch('/v1/time', { credentials: 'same-origin' });
-                    if (!timeRes.ok) return;
-                    var timeData = await timeRes.json();
-                    if (window.ShellLogic) window.ShellLogic.setServerTime(timeData.now);
+                    if (window.ShellLogic && typeof window.ShellLogic.syncNtpTime === 'function') {
+                        await window.ShellLogic.syncNtpTime();
+                    } else {
+                        var timeRes = await fetch('/v1/time', { credentials: 'same-origin' });
+                        if (!timeRes.ok) return;
+                        var timeData = await timeRes.json();
+                        if (window.ShellLogic) window.ShellLogic.setNtpTime
+                            ? window.ShellLogic.setNtpTime(timeData.now)
+                            : window.ShellLogic.setServerTime(timeData.now);
+                    }
                     tickClock();
-                } catch (_) { /* keep local clock */ }
+                } catch (_) { /* keep last anchor */ }
             }
 
             async function loadConfig() {
@@ -136,7 +147,10 @@
                     return;
                 }
                 var data = await res.json();
-                if (window.ShellLogic) window.ShellLogic.setServerTime(data.now);
+                if (window.ShellLogic && data.now != null) {
+                    if (typeof window.ShellLogic.setNtpTime === 'function') window.ShellLogic.setNtpTime(data.now);
+                    else window.ShellLogic.setServerTime(data.now);
+                }
                 renderConfig(data);
                 connectPanelSocket();
             }
@@ -358,6 +372,9 @@
             } else {
                 loadConfig();
                 syncServerTime();
+                if (window.ShellLogic && typeof window.ShellLogic.startNtpResync === 'function') {
+                    window.ShellLogic.startNtpResync();
+                }
                 setInterval(loadConfig, 60000);
             }
         })();

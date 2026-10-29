@@ -31,29 +31,125 @@
         return '/login?redirect=' + encodeURIComponent(target);
     }
 
-    // Offset between the central server clock and this device's clock, in
-    // milliseconds. Pages sync it from GET /v1/time and from the `now`
-    // field on dashboard-summary / panel-config payloads, then paint clock
-    // widgets with serverNow() instead of local time.
+    // NTP-anchored wall clock for panel/dashboard clock widgets.
+    // After sync, time advances with performance.now() so it does not follow
+    // the browser, device, or netsocket host wall clock. Values come from
+    // GET /v1/time (server queries NTP) on load and every 24h.
+    var CLOCK_TIME_ZONE = 'America/New_York';
+    var NTP_RESYNC_MS = 24 * 60 * 60 * 1000;
+    var ntpAtSyncMs = null;
+    var perfAtSyncMs = null;
+    // Legacy offset kept for getServerTimeOffset() callers / tests.
     var serverTimeOffsetMs = 0;
+    var ntpResyncTimer = null;
 
+    function performanceNowMs() {
+        try {
+            if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+                return performance.now();
+            }
+        } catch (_) { /* fall through */ }
+        return Date.now();
+    }
+
+    function setNtpTime(ntpNowMs) {
+        var ntp = Number(ntpNowMs);
+        if (!isFinite(ntp)) return ntpAtSyncMs;
+        ntpAtSyncMs = ntp;
+        perfAtSyncMs = performanceNowMs();
+        // Keep legacy offset roughly in sync for older helpers.
+        serverTimeOffsetMs = ntp - Date.now();
+        return ntpAtSyncMs;
+    }
+
+    // Back-compat: treat setServerTime as an NTP anchor when only one arg
+    // (or when local is omitted). Two-arg form still sets the offset for tests.
     function setServerTime(serverNowMs, nowMs) {
         var server = Number(serverNowMs);
         if (!isFinite(server)) return serverTimeOffsetMs;
-        var local = nowMs === undefined ? Date.now() : Number(nowMs);
+        if (nowMs === undefined) {
+            setNtpTime(server);
+            return serverTimeOffsetMs;
+        }
+        var local = Number(nowMs);
         if (!isFinite(local)) return serverTimeOffsetMs;
         serverTimeOffsetMs = server - local;
+        // Also seed the NTP anchor so serverNow()/ntpNow() agree in tests.
+        ntpAtSyncMs = server;
+        perfAtSyncMs = performanceNowMs() - (Date.now() - local);
         return serverTimeOffsetMs;
     }
 
+    function ntpNow() {
+        if (ntpAtSyncMs == null || perfAtSyncMs == null) return Date.now();
+        return Math.floor(ntpAtSyncMs + (performanceNowMs() - perfAtSyncMs));
+    }
+
     function serverNow(nowMs) {
-        var local = nowMs === undefined ? Date.now() : Number(nowMs);
-        if (!isFinite(local)) local = Date.now();
-        return local + serverTimeOffsetMs;
+        if (nowMs !== undefined) {
+            var local = Number(nowMs);
+            if (!isFinite(local)) local = Date.now();
+            return local + serverTimeOffsetMs;
+        }
+        return ntpNow();
     }
 
     function getServerTimeOffset() {
         return serverTimeOffsetMs;
+    }
+
+    function formatEasternClock(ms) {
+        var instant = new Date(typeof ms === 'number' ? ms : ntpNow());
+        var timeParts = new Intl.DateTimeFormat('en-US', {
+            timeZone: CLOCK_TIME_ZONE,
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        }).formatToParts(instant);
+        var hour = '12';
+        var minute = '00';
+        for (var i = 0; i < timeParts.length; i++) {
+            if (timeParts[i].type === 'hour') hour = timeParts[i].value;
+            if (timeParts[i].type === 'minute') minute = timeParts[i].value;
+        }
+        var date = instant.toLocaleDateString('en-US', {
+            timeZone: CLOCK_TIME_ZONE,
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+        });
+        return { time: hour + ':' + minute, date: date, timeZone: CLOCK_TIME_ZONE };
+    }
+
+    async function syncNtpTime(fetcher) {
+        var runFetch = fetcher || (typeof fetch !== 'undefined' ? fetch : null);
+        if (!runFetch) return null;
+        try {
+            var res = await runFetch('/v1/time', { credentials: 'same-origin' });
+            if (!res || !res.ok) return null;
+            var data = await res.json();
+            if (data && data.now != null) setNtpTime(data.now);
+            return data;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function startNtpResync(fetcher, intervalMs) {
+        var every = intervalMs == null ? NTP_RESYNC_MS : intervalMs;
+        stopNtpResync();
+        syncNtpTime(fetcher);
+        ntpResyncTimer = setInterval(function () {
+            syncNtpTime(fetcher);
+        }, every);
+        return ntpResyncTimer;
+    }
+
+    function stopNtpResync() {
+        if (ntpResyncTimer) {
+            clearInterval(ntpResyncTimer);
+            ntpResyncTimer = null;
+        }
     }
 
     async function ensureSession(fetcher, redirectFn) {
@@ -365,9 +461,17 @@
         getTabHref: getTabHref,
         buildLoginRedirect: buildLoginRedirect,
         ensureSession: ensureSession,
+        CLOCK_TIME_ZONE: CLOCK_TIME_ZONE,
+        NTP_RESYNC_MS: NTP_RESYNC_MS,
         setServerTime: setServerTime,
+        setNtpTime: setNtpTime,
         serverNow: serverNow,
+        ntpNow: ntpNow,
         getServerTimeOffset: getServerTimeOffset,
+        formatEasternClock: formatEasternClock,
+        syncNtpTime: syncNtpTime,
+        startNtpResync: startNtpResync,
+        stopNtpResync: stopNtpResync,
         showToast: showToast,
         markActiveTab: markActiveTab,
         initSidebar: initSidebar,

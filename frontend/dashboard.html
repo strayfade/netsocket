@@ -220,16 +220,20 @@
                 if (picker && picker.value !== currentWidgetStyle) picker.value = currentWidgetStyle;
             }
 
-            // Sync clock widgets to the central server's time; re-paint once
-            // the offset lands so the first paint isn't local time.
+            // Sync clock widgets from NTP (via /v1/time); re-paint once the
+            // anchor lands. Resync every 24h so panels stay on real time.
             async function syncServerTime() {
                 try {
-                    var timeRes = await fetch('/v1/time', { credentials: 'same-origin' });
-                    if (!timeRes.ok) return;
-                    var timeData = await timeRes.json();
-                    ShellLogic.setServerTime(timeData.now);
+                    if (typeof ShellLogic.syncNtpTime === 'function') {
+                        await ShellLogic.syncNtpTime();
+                    } else {
+                        var timeRes = await fetch('/v1/time', { credentials: 'same-origin' });
+                        if (!timeRes.ok) return;
+                        var timeData = await timeRes.json();
+                        ShellLogic.setServerTime(timeData.now);
+                    }
                     WidgetEditor.tickClock();
-                } catch (_) { /* keep local clock */ }
+                } catch (_) { /* keep last anchor */ }
             }
 
             async function saveLayout(widgets) {
@@ -429,6 +433,7 @@
 
             loadSummary();
             syncServerTime();
+            if (typeof ShellLogic.startNtpResync === 'function') ShellLogic.startNtpResync();
             setInterval(loadSummary, 60000);
         })();
     </script>

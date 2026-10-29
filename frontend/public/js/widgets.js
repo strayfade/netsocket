@@ -16,7 +16,16 @@
     // ctx: { automations: [{id,title,type,runnable}], variables: {name:value},
     //        onRun(item, button), renderMarkdown(text)->html }
 
-    var WHEEL_ITEM_H = 36;
+    var WHEEL_ITEM_H = 56;
+
+    function wheelItemHeight(col) {
+        var item = col && col.querySelector ? col.querySelector('.widget-timer-wheel-item') : null;
+        if (item) {
+            var h = item.offsetHeight;
+            if (h > 0) return h;
+        }
+        return WHEEL_ITEM_H;
+    }
 
     function getDoc(explicit) {
         if (explicit) return explicit;
@@ -48,17 +57,26 @@
         content.classList.add('widget-fit-scale');
         function update() {
             content.style.transform = 'none';
-            var padX = 8;
-            var padY = 8;
-            var cw = Math.max(0, card.clientWidth - padX * 2);
-            var ch = Math.max(0, card.clientHeight - padY * 2);
+            // Keep readable inset so clocks/markdown don't edge-bleed the card.
+            var styles = (typeof getComputedStyle === 'function') ? getComputedStyle(card) : null;
+            var padX = styles
+                ? (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0)
+                : 0;
+            var padY = styles
+                ? (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0)
+                : 0;
+            var minPad = 28;
+            padX = Math.max(padX, minPad * 2);
+            padY = Math.max(padY, minPad * 2);
+            var cw = Math.max(0, card.clientWidth - padX);
+            var ch = Math.max(0, card.clientHeight - padY);
             var bw = content.scrollWidth || content.offsetWidth || 1;
             var bh = content.scrollHeight || content.offsetHeight || 1;
             if (!cw || !ch) return;
             var scale = Math.min(cw / bw, ch / bh);
             if (!isFinite(scale) || scale <= 0) scale = 1;
             // Cap extreme blow-ups for tiny strings in huge cells.
-            if (scale > 6) scale = 6;
+            if (scale > 3.25) scale = 3.25;
             content.style.transformOrigin = 'center center';
             content.style.transform = 'scale(' + scale + ')';
         }
@@ -226,9 +244,10 @@
         var track = col.querySelector('.widget-timer-wheel-track');
         if (!track) return;
         var value = col._timerValue || 0;
-        var wheelH = col.clientHeight || (5 * WHEEL_ITEM_H);
-        var centerOffset = (wheelH / 2) - (WHEEL_ITEM_H / 2);
-        track.style.transform = 'translateY(' + (centerOffset - (value * WHEEL_ITEM_H)) + 'px)';
+        var itemH = wheelItemHeight(col);
+        var wheelH = col.clientHeight || (5 * itemH);
+        var centerOffset = (wheelH / 2) - (itemH / 2);
+        track.style.transform = 'translateY(' + (centerOffset - (value * itemH)) + 'px)';
         Array.prototype.forEach.call(track.children, function (item) {
             var v = parseInt(item.getAttribute('data-value'), 10);
             var dist = Math.abs(v - value);
@@ -250,7 +269,8 @@
         var startValue = 0;
 
         function setFromDelta(dy) {
-            var next = Math.round(startValue - (dy / WHEEL_ITEM_H));
+            var itemH = wheelItemHeight(col);
+            var next = Math.round(startValue - (dy / itemH));
             if (next < 0) next = 0;
             if (next > col._timerMax) next = col._timerMax;
             col._timerValue = next;
@@ -338,9 +358,9 @@
 
         stage.appendChild(picker);
         stage.appendChild(display);
-        // Controls sit above the picker; the stage fills the card behind them.
-        body.appendChild(controls);
+        // Picker fills remaining space; controls stay pinned to the bottom.
         body.appendChild(stage);
+        body.appendChild(controls);
         card.appendChild(body);
 
         bindWheel(hours);

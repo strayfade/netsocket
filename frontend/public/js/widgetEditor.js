@@ -32,34 +32,40 @@
         return (WIDGET_PRESETS[type] || WIDGET_PRESETS.markdown).slice();
     }
 
-    // Clock widgets paint the central server's time, falling back to the
-    // local clock when no sync has happened yet (or outside a browser).
-    function serverDateNow() {
+    // Clock widgets paint NTP-anchored Eastern time (EST/EDT).
+    function clockNowMs() {
         try {
-            if (typeof window !== 'undefined' && window.ShellLogic &&
-                typeof window.ShellLogic.serverNow === 'function') {
-                return window.ShellLogic.serverNow();
+            if (typeof window !== 'undefined' && window.ShellLogic) {
+                if (typeof window.ShellLogic.ntpNow === 'function') return window.ShellLogic.ntpNow();
+                if (typeof window.ShellLogic.serverNow === 'function') return window.ShellLogic.serverNow();
             }
-        } catch (_) { /* fall through to local clock */ }
+        } catch (_) { /* fall through */ }
         return Date.now();
     }
 
     function tickClock() {
-        var now = new Date(serverDateNow());
-        var h = now.getHours();
-        h = h % 12;
-        if (h === 0) h = 12;
-        var mm = String(now.getMinutes()).padStart(2, '0');
-        var time = h + ':' + mm;
-        var date = now.toLocaleDateString(undefined, {
-            year: 'numeric', month: 'long', day: 'numeric'
-        });
+        var parts;
+        try {
+            if (typeof window !== 'undefined' && window.ShellLogic &&
+                typeof window.ShellLogic.formatEasternClock === 'function') {
+                parts = window.ShellLogic.formatEasternClock(clockNowMs());
+            }
+        } catch (_) { parts = null; }
+        if (!parts) {
+            var now = new Date(clockNowMs());
+            var h = now.getHours() % 12;
+            if (h === 0) h = 12;
+            parts = {
+                time: h + ':' + String(now.getMinutes()).padStart(2, '0'),
+                date: now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }),
+            };
+        }
         Array.prototype.forEach.call(document.querySelectorAll('[data-clock-time]'), function (el) {
-            el.textContent = time;
+            el.textContent = parts.time;
             el.classList.remove('shell-skeleton');
         });
         Array.prototype.forEach.call(document.querySelectorAll('[data-clock-date]'), function (el) {
-            el.textContent = date;
+            el.textContent = parts.date;
         });
     }
 

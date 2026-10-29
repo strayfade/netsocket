@@ -1,3 +1,19 @@
+@font-face {
+    font-family: 'SF UI';
+    src: url('/fonts/SFUI.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'SF UI Soft';
+    src: url('/fonts/SFUISoft-RegularG4.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
     --shell-bg: #000000;
     --shell-surface: #000000;
@@ -12,6 +28,28 @@
     --shell-font: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --shell-mono: 'Google Sans Code', 'Courier New', Courier, monospace;
     --shell-sidebar-width: 240px;
+    --panel-font: 'SF UI', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --panel-clock-time-font: 'SF UI Soft', 'SF UI', system-ui, sans-serif;
+}
+
+/* Panel surfaces only — leave dashboard / automate / shell chrome on Geist. */
+.kiosk-wrap,
+#panel-grid,
+#panel-edit-grid,
+.panel-preview-grid {
+    --shell-font: var(--panel-font);
+    font-family: var(--panel-font);
+}
+
+.kiosk-wrap .shell-clock-value,
+.kiosk-wrap [data-clock-time],
+#panel-grid .shell-clock-value,
+#panel-grid [data-clock-time],
+#panel-edit-grid .shell-clock-value,
+#panel-edit-grid [data-clock-time],
+.panel-preview-grid .shell-clock-value,
+.panel-preview-grid [data-clock-time] {
+    font-family: var(--panel-clock-time-font);
 }
 
 *,
@@ -905,7 +943,8 @@ select.admin-input {
 .shell-prose h2,
 .shell-prose h3,
 .shell-prose h4 {
-    margin: 0.75em 0;
+    /* Match H3's absolute margin (0.75em at 1rem) so larger headers don't get larger gaps. */
+    margin: 0.75rem 0;
     letter-spacing: -0.02em;
 }
 
@@ -1101,7 +1140,6 @@ select.admin-input {
 }
 
 .widget-clock-compact .shell-clock-value {
-    font-family: var(--shell-font);
     font-size: 1.6rem;
 }
 
@@ -2633,10 +2671,12 @@ dialog#panel-edit-dialog[open] {
     padding: 0;
 }
 
-/* Picker fills the entire card; controls float above it. */
+/* Picker uses remaining height; controls stay at the bottom. */
 .widget-timer-stage {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
     display: grid;
     place-items: center;
     overflow: hidden;
@@ -2655,9 +2695,10 @@ dialog#panel-edit-dialog[open] {
     flex: 0 0 auto;
     width: 100%;
     margin: 0;
+    margin-top: auto;
     padding: clamp(8px, 2.5cqi, 14px);
     transition: gap 0.25s ease;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), transparent);
+    background: transparent;
 }
 
 .widget-timer[data-widget-w="1"] .widget-timer-controls,
@@ -2765,20 +2806,30 @@ dialog#panel-edit-dialog[open] {
 }
 
 .widget-timer-wheel-item {
-    height: 36px;
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-variant-numeric: tabular-nums;
-    font-size: clamp(1.1rem, 8cqi, 2.4rem);
+    font-size: clamp(1.4rem, 11cqi, 3rem);
     font-weight: 500;
     color: var(--shell-text);
-    transition: opacity 0.18s ease, filter 0.18s ease, font-size 0.18s ease, font-weight 0.18s ease;
+    transition: opacity 0.18s ease, filter 0.18s ease, font-size 0.18s ease, font-weight 0.18s ease, height 0.2s ease;
 }
 
 .widget-timer-wheel-item.is-selected {
     font-weight: 700;
-    font-size: clamp(1.35rem, 10cqi, 3rem);
+    font-size: clamp(1.75rem, 14cqi, 3.6rem);
+}
+
+/* One column (w≤3) has the full picker — use larger type than the multi-col clamps. */
+.widget-timer[data-timer-cols="1"] .widget-timer-wheel-item {
+    height: clamp(64px, 18cqh, 100px);
+    font-size: clamp(2rem, 26cqi, 5rem);
+}
+
+.widget-timer[data-timer-cols="1"] .widget-timer-wheel-item.is-selected {
+    font-size: clamp(2.4rem, 32cqi, 5.75rem);
 }
 
 /* Legacy fade overlays — hidden; masking handles soft edges now. */
@@ -2791,10 +2842,10 @@ dialog#panel-edit-dialog[open] {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(1.2rem, 7cqi, 2.2rem);
+    font-size: clamp(1.5rem, 9cqi, 2.8rem);
     font-weight: 650;
     opacity: 0.7;
-    padding: 0 2px;
+    padding: 0 4px;
     transition: opacity 0.3s ease, width 0.35s ease, margin 0.35s ease, transform 0.3s ease, max-width 0.35s ease;
 }
 
@@ -2881,7 +2932,8 @@ dialog#panel-edit-dialog[open] {
 
 /* ── Clock size-aware typography ─────────────────────────────────────── */
 .widget-clock {
-    padding: clamp(6px, 2cqi, 18px);
+    padding: max(20px, clamp(16px, 4cqi, 28px));
+    box-sizing: border-box;
 }
 
 .widget-clock-stack {
@@ -2969,12 +3021,15 @@ dialog#panel-edit-dialog[open] {
 
 /* ── Markdown / HTML size-aware content ──────────────────────────────── */
 .shell-card[data-widget-kind="markdown"],
+.shell-card[data-widget-kind="clock"],
 .shell-card[data-widget-kind="html"] {
-    padding: clamp(4px, 1.5cqi, 12px);
+    padding: max(20px, clamp(16px, 4cqi, 28px));
+    box-sizing: border-box;
 }
 
 .shell-card[data-widget-kind="html"] {
-    padding: 0;
+    /* HTML frames still fill the card; keep a modest inset via the frame itself. */
+    padding: max(12px, clamp(10px, 2.5cqi, 18px));
 }
 
 .shell-card[data-widget-kind="markdown"] {

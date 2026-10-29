@@ -161,7 +161,7 @@ const handleGetPanelConfig = (req, res, deps = {}) => {
         panel: store.publicPanelView(access.panel),
         automations: resolvePanelAutomations(access.panel, graphRoot),
         variables: resolvePanelVariables(access.panel, varList),
-        now: Date.now(),
+        now: (deps.serverTime || require('./serverTime')).getNtpNow(),
     })
 }
 

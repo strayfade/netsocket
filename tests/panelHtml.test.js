@@ -126,6 +126,18 @@ describe('panel pages', () => {
         );
         assert.match(css, /\.panel-preview-viewport\s*\{[^}]*background:\s*#000/);
         assert.doesNotMatch(css, /\[data-widget-style="minimal"\]\s*\.widget-run-btn\s*\{[^}]*dashed/);
+        assert.match(css, /font-family:\s*'SF UI'/);
+        assert.match(css, /url\('\/fonts\/SFUI\.ttf'\)/);
+        assert.match(css, /font-family:\s*'SF UI Soft'/);
+        assert.match(css, /url\('\/fonts\/SFUISoft-RegularG4\.otf'\)/);
+        assert.match(css, /--panel-font:/);
+        assert.match(css, /--panel-clock-time-font:/);
+        assert.match(css, /#panel-grid[^{]*\{[^}]*--shell-font:\s*var\(--panel-font\)/);
+        assert.match(css, /\[data-clock-time\][^{]*\{[^}]*font-family:\s*var\(--panel-clock-time-font\)/);
+        assert.ok(fs.existsSync(path.join(__dirname, '..', 'frontend', 'public', 'fonts', 'SFUI.ttf')));
+        assert.ok(fs.existsSync(path.join(
+            __dirname, '..', 'frontend', 'public', 'fonts', 'SFUISoft-RegularG4.otf'
+        )));
         assert.match(html, /panel-preview-actions/);
         assert.match(html, /\/config/);
         assert.match(html, /\/execute/);

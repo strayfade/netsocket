@@ -332,16 +332,19 @@
             WidgetEditor.tickClock();
             setInterval(WidgetEditor.tickClock, 15000);
 
-            // Sync clock widgets to the central server's time; re-paint once
-            // the offset lands so the first paint isn't local time.
+            // Sync clock widgets from NTP (via /v1/time); resync every 24h.
             async function syncServerTime() {
                 try {
-                    var timeRes = await api('/v1/time');
-                    if (!timeRes.ok) return;
-                    var timeData = await timeRes.json();
-                    ShellLogic.setServerTime(timeData.now);
+                    if (typeof ShellLogic.syncNtpTime === 'function') {
+                        await ShellLogic.syncNtpTime(api);
+                    } else {
+                        var timeRes = await api('/v1/time');
+                        if (!timeRes.ok) return;
+                        var timeData = await timeRes.json();
+                        ShellLogic.setServerTime(timeData.now);
+                    }
                     WidgetEditor.tickClock();
-                } catch (e) { /* keep local clock */ }
+                } catch (e) { /* keep last anchor */ }
             }
 
             // Live border / style preview in the edit grid.
@@ -900,6 +903,9 @@
                 await loadDevices();
                 await loadPanels();
                 syncServerTime();
+                if (typeof ShellLogic.startNtpResync === 'function') {
+                    ShellLogic.startNtpResync(api);
+                }
             })();
         })();
     </script>
