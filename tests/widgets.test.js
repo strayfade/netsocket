@@ -112,6 +112,53 @@ describe('widgets render module', () => {
         assert.equal(Widgets.formatTimer(3661), '1:01:01');
     });
 
+    it('plays a swelling done chime and can stop it', () => {
+        const gainRamps = [];
+        const oscillators = [];
+        function mockGain() {
+            const gain = {
+                value: 1,
+                setValueAtTime(v) { gain.value = v; },
+                linearRampToValueAtTime(v, t) { gainRamps.push({ v, t }); },
+                exponentialRampToValueAtTime(v, t) { gainRamps.push({ v, t }); },
+                cancelScheduledValues() {},
+                setTargetAtTime() {},
+            };
+            return { gain, connect() {}, stop() {} };
+        }
+        function mockOsc() {
+            const osc = {
+                type: 'sine',
+                frequency: { value: 0 },
+                connect() {},
+                start() { oscillators.push(osc); },
+                stop() {},
+            };
+            return osc;
+        }
+        const prevAC = globalThis.AudioContext;
+        globalThis.AudioContext = function MockAudioContext() {
+            this.currentTime = 10;
+            this.state = 'running';
+            this.destination = {};
+            this.createGain = mockGain;
+            this.createOscillator = mockOsc;
+            this.resume = async () => {};
+        };
+        try {
+            Widgets.stopTimerDoneSound();
+            const stop = Widgets.playTimerDoneSound();
+            assert.equal(typeof stop, 'function');
+            assert.ok(oscillators.length >= 4);
+            assert.ok(gainRamps.some((r) => r.v > 0.1 && r.t > 10));
+            Widgets.stopTimerDoneSound();
+        } finally {
+            if (prevAC) globalThis.AudioContext = prevAC;
+            else delete globalThis.AudioContext;
+            Widgets.stopTimerDoneSound();
+        }
+    });
+
     it('picks timer column count from widget width', () => {
         assert.equal(Widgets.timerColsForWidth(2), 1);
         assert.equal(Widgets.timerColsForWidth(3), 1);

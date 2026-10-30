@@ -17,6 +17,92 @@
     //        onRun(item, button), renderMarkdown(text)->html }
 
     var WHEEL_ITEM_H = 56;
+    var timerAudioCtx = null;
+    var timerAlarmStop = null;
+
+    function getTimerAudioCtx() {
+        var root = typeof globalThis !== 'undefined' ? globalThis : null;
+        if (!root) return null;
+        var AC = root.AudioContext || root.webkitAudioContext;
+        if (!AC) return null;
+        if (!timerAudioCtx) timerAudioCtx = new AC();
+        if (timerAudioCtx.state === 'suspended' && typeof timerAudioCtx.resume === 'function') {
+            try { timerAudioCtx.resume(); } catch (_) { /* ignore */ }
+        }
+        return timerAudioCtx;
+    }
+
+    function stopTimerDoneSound() {
+        if (typeof timerAlarmStop === 'function') {
+            try { timerAlarmStop(); } catch (_) { /* ignore */ }
+        }
+        timerAlarmStop = null;
+    }
+
+    /**
+     * Friendly soft chime that swells louder over a few seconds.
+     * Uses Web Audio (no asset). No-ops when AudioContext is unavailable.
+     */
+    function playTimerDoneSound() {
+        stopTimerDoneSound();
+        var ctx = getTimerAudioCtx();
+        if (!ctx) return null;
+        var now = ctx.currentTime;
+        var master = ctx.createGain();
+        // Audible from the first hit, then swell louder, then release.
+        master.gain.setValueAtTime(0.28, now);
+        master.gain.linearRampToValueAtTime(1, now + 2.4);
+        master.gain.exponentialRampToValueAtTime(0.0001, now + 4.5);
+        master.connect(ctx.destination);
+
+        // Warm C-major bell notes; each hit is a little stronger than the last.
+        var notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+        var nodes = [];
+        for (var i = 0; i < notes.length; i++) {
+            var freq = notes[i];
+            var t0 = now + i * 0.58;
+            var osc = ctx.createOscillator();
+            var harmonic = ctx.createOscillator();
+            var noteGain = ctx.createGain();
+            var harmGain = ctx.createGain();
+            osc.type = 'sine';
+            harmonic.type = 'triangle';
+            osc.frequency.value = freq;
+            harmonic.frequency.value = freq * 2;
+            harmGain.gain.value = 0.35;
+            var peak = 0.55 + i * 0.12;
+            noteGain.gain.setValueAtTime(0.0001, t0);
+            noteGain.gain.exponentialRampToValueAtTime(peak, t0 + 0.04);
+            noteGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.15);
+            osc.connect(noteGain);
+            harmonic.connect(harmGain);
+            harmGain.connect(noteGain);
+            noteGain.connect(master);
+            osc.start(t0);
+            osc.stop(t0 + 1.25);
+            harmonic.start(t0);
+            harmonic.stop(t0 + 1.25);
+            nodes.push(osc, harmonic, noteGain, harmGain);
+        }
+        nodes.push(master);
+
+        timerAlarmStop = function () {
+            var t = ctx.currentTime;
+            try {
+                master.gain.cancelScheduledValues(t);
+                master.gain.setTargetAtTime(0.0001, t, 0.04);
+            } catch (_) { /* ignore */ }
+            for (var n = 0; n < nodes.length; n++) {
+                try {
+                    if (typeof nodes[n].stop === 'function') nodes[n].stop(t + 0.05);
+                } catch (_) { /* already stopped */ }
+            }
+        };
+        setTimeout(function () {
+            if (timerAlarmStop) timerAlarmStop = null;
+        }, 5000);
+        return timerAlarmStop;
+    }
 
     function wheelItemHeight(col) {
         var item = col && col.querySelector ? col.querySelector('.widget-timer-wheel-item') : null;
@@ -423,6 +509,7 @@
             try {
                 if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([200, 100, 200]);
             } catch (_) { /* ignore */ }
+            try { playTimerDoneSound(); } catch (_) { /* ignore */ }
             card.classList.add('widget-timer--done');
             setTimeout(function () { card.classList.remove('widget-timer--done'); }, 1200);
         }
@@ -464,6 +551,7 @@
 
         cancelBtn.addEventListener('click', function () {
             stopTicker();
+            stopTimerDoneSound();
             state.status = 'idle';
             state.remainingMs = 0;
             state.endsAt = 0;
@@ -577,5 +665,7 @@
         timerColsForWidth: timerColsForWidth,
         syncItemSize: syncItemSize,
         syncGridSizes: syncGridSizes,
+        playTimerDoneSound: playTimerDoneSound,
+        stopTimerDoneSound: stopTimerDoneSound,
     };
 }));
