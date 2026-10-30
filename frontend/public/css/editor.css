@@ -485,16 +485,6 @@ header #node-count-visible {
     gap: 2px;
 }
 
-.settings-tabs-container-header {
-    padding: 8px 8px 6px;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--shell-muted, rgba(255,255,255,0.6));
-    opacity: 1;
-}
-
 .settings-close-btn {
     display: inline-flex;
     align-items: center;
@@ -718,6 +708,11 @@ header #node-count-visible {
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--shell-muted, rgba(255,255,255,0.6));
+}
+
+/* Wins over #settings-modal .settings-panel h3 { margin: 0 } */
+#settings-modal .settings-panel .devices-section h3 {
+    margin-bottom: 12px;
 }
 
 .devices-empty {
@@ -1627,10 +1622,6 @@ a:visited {
         border: none;
         border-radius: 8px;
         font-family: inherit;
-    }
-
-    .settings-tabs-container-header {
-        padding: 8px 52px 0 12px;
     }
 
     #settings-tabs-container {

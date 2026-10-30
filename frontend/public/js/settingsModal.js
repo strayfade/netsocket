@@ -62,7 +62,367 @@
         var panelsScrollEl = document.getElementById('settings-panels-scroll');
         if (!tabsContainerEl || !panelsScrollEl) return;
 
+        var parseOtpAccountString = function (raw) {
+            var accounts = [];
+            var invalid = [];
+            if (raw == null) return { accounts: accounts, invalid: invalid };
+            var segments = String(raw).split(',');
+            for (var i = 0; i < segments.length; i++) {
+                var seg = segments[i].trim();
+                if (!seg) continue;
+                var firstColon = seg.indexOf(':');
+                var lastColon = seg.lastIndexOf(':');
+                if (firstColon === -1 || firstColon === lastColon) {
+                    invalid.push(seg);
+                    continue;
+                }
+                var issuer = seg.slice(0, firstColon).trim();
+                var account = seg.slice(firstColon + 1, lastColon).trim();
+                var secret = seg.slice(lastColon + 1).trim().replace(/\s+/g, '');
+                if (!issuer || !account || !secret) {
+                    invalid.push(seg);
+                    continue;
+                }
+                accounts.push({ issuer: issuer, account: account, secret: secret });
+            }
+            return { accounts: accounts, invalid: invalid };
+        };
+
+        var buildOtpAccountsField = function (pref) {
+            var field = document.createElement('div');
+            field.className = 'settings-field otp-accounts-field';
+
+            var title = document.createElement('div');
+            title.className = 'settings-label-block';
+            title.textContent = pref.displayName || 'OTP accounts';
+            field.appendChild(title);
+
+            var hint = document.createElement('p');
+            hint.className = 'otp-accounts-hint';
+            hint.textContent = 'Each account is an issuer, a name, and a Base32 secret. They are still saved as Issuer:Account:Secret, separated by commas.';
+            field.appendChild(hint);
+
+            var countEl = document.createElement('p');
+            countEl.className = 'otp-accounts-count';
+            field.appendChild(countEl);
+
+            var list = document.createElement('div');
+            list.className = 'otp-accounts-list';
+            field.appendChild(list);
+
+            var parsed = parseOtpAccountString(pref.value);
+            var invalidRaw = parsed.invalid.slice();
+            if (invalidRaw.length) {
+                var note = document.createElement('p');
+                note.className = 'otp-accounts-invalid';
+                note.textContent = invalidRaw.length === 1
+                    ? '1 stored entry could not be parsed and will be kept when you save.'
+                    : invalidRaw.length + ' stored entries could not be parsed and will be kept when you save.';
+                field.appendChild(note);
+            }
+
+            var status = document.createElement('div');
+            status.className = 'otp-accounts-status';
+            status.setAttribute('role', 'status');
+            field.appendChild(status);
+
+            var actions = document.createElement('div');
+            actions.className = 'settings-field-row otp-accounts-actions';
+            var addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'otp-accounts-secondary';
+            addBtn.textContent = 'Add account';
+            var saveBtn = document.createElement('button');
+            saveBtn.type = 'button';
+            saveBtn.textContent = 'Save';
+            actions.appendChild(addBtn);
+            actions.appendChild(saveBtn);
+            field.appendChild(actions);
+
+            var setStatus = function (msg, kind) {
+                status.textContent = msg || '';
+                status.className = 'otp-accounts-status' + (msg ? ' is-visible is-' + (kind || 'info') : '');
+            };
+
+            var syncCount = function () {
+                var n = list.querySelectorAll('.otp-account-card').length;
+                countEl.textContent = n === 1 ? '1 account' : n + ' accounts';
+            };
+
+            var renderEmpty = function () {
+                if (list.querySelector('.otp-account-card') || list.querySelector('.otp-accounts-empty')) return;
+                var empty = document.createElement('p');
+                empty.className = 'otp-accounts-empty';
+                empty.textContent = 'No accounts yet.';
+                list.appendChild(empty);
+            };
+
+            var clearEmpty = function () {
+                var empty = list.querySelector('.otp-accounts-empty');
+                if (empty) empty.remove();
+            };
+
+            var addCard = function (account, startOpen) {
+                clearEmpty();
+                var card = document.createElement('div');
+                card.className = 'otp-account-card';
+
+                var row = document.createElement('button');
+                row.type = 'button';
+                row.className = 'otp-account-row';
+                row.setAttribute('aria-expanded', 'false');
+                var chevron = document.createElement('span');
+                chevron.className = 'material-symbols-outlined otp-account-chevron';
+                chevron.setAttribute('aria-hidden', 'true');
+                chevron.textContent = 'chevron_right';
+                var label = document.createElement('span');
+                label.className = 'otp-account-card-title';
+                var issuerLabel = document.createElement('span');
+                issuerLabel.className = 'otp-account-issuer';
+                var nameLabel = document.createElement('span');
+                nameLabel.className = 'otp-account-name';
+                label.appendChild(issuerLabel);
+                label.appendChild(nameLabel);
+                row.appendChild(chevron);
+                row.appendChild(label);
+                card.appendChild(row);
+
+                var body = document.createElement('div');
+                body.className = 'otp-account-body';
+                body.hidden = true;
+
+                var removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'otp-account-remove';
+                removeBtn.title = 'Remove account';
+                removeBtn.setAttribute('aria-label', 'Remove account');
+                removeBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">delete</span> Remove';
+
+                var grid = document.createElement('div');
+                grid.className = 'otp-account-grid';
+
+                var makeTextField = function (caption, value, placeholder) {
+                    var wrap = document.createElement('label');
+                    wrap.className = 'otp-account-field';
+                    var span = document.createElement('span');
+                    span.textContent = caption;
+                    var input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = value || '';
+                    input.placeholder = placeholder || '';
+                    input.autocomplete = 'off';
+                    input.spellcheck = false;
+                    input.setAttribute('autocapitalize', 'off');
+                    input.setAttribute('autocorrect', 'off');
+                    wrap.appendChild(span);
+                    wrap.appendChild(input);
+                    return { wrap: wrap, input: input };
+                };
+
+                var issuer = makeTextField('Issuer', account.issuer, 'Google');
+                var name = makeTextField('Account', account.account, 'name@example.com');
+                issuer.input.setAttribute('aria-label', 'Issuer');
+                name.input.setAttribute('aria-label', 'Account');
+
+                var secretWrap = document.createElement('div');
+                secretWrap.className = 'otp-account-field otp-account-secret';
+                var secretSpan = document.createElement('span');
+                secretSpan.textContent = 'Secret';
+                var secretRow = document.createElement('div');
+                secretRow.className = 'otp-secret-row';
+                var secretInput = document.createElement('input');
+                secretInput.type = 'password';
+                secretInput.value = account.secret || '';
+                secretInput.placeholder = 'Base32 secret';
+                secretInput.autocomplete = 'off';
+                secretInput.spellcheck = false;
+                secretInput.setAttribute('aria-label', 'Secret');
+                secretInput.setAttribute('autocapitalize', 'off');
+                secretInput.setAttribute('autocorrect', 'off');
+                var toggle = document.createElement('button');
+                toggle.type = 'button';
+                toggle.className = 'otp-secret-toggle';
+                toggle.title = 'Show secret';
+                toggle.setAttribute('aria-label', 'Show secret');
+                toggle.setAttribute('aria-pressed', 'false');
+                toggle.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">visibility</span>';
+                var copyBtn = document.createElement('button');
+                copyBtn.type = 'button';
+                copyBtn.className = 'otp-secret-toggle';
+                copyBtn.title = 'Copy secret';
+                copyBtn.setAttribute('aria-label', 'Copy secret');
+                copyBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">content_copy</span>';
+                secretRow.appendChild(secretInput);
+                secretRow.appendChild(toggle);
+                secretRow.appendChild(copyBtn);
+                secretWrap.appendChild(secretSpan);
+                secretWrap.appendChild(secretRow);
+
+                var syncTitle = function () {
+                    var iss = issuer.input.value.trim();
+                    var acc = name.input.value.trim();
+                    issuerLabel.textContent = iss || (acc ? 'Account' : 'New account');
+                    nameLabel.textContent = acc;
+                    nameLabel.hidden = !acc;
+                };
+                var clearCardError = function () {
+                    card.classList.remove('otp-account-card-error');
+                };
+                issuer.input.addEventListener('input', function () { syncTitle(); clearCardError(); });
+                name.input.addEventListener('input', function () { syncTitle(); clearCardError(); });
+                secretInput.addEventListener('input', clearCardError);
+                syncTitle();
+
+                toggle.addEventListener('click', function () {
+                    var hidden = secretInput.type === 'password';
+                    secretInput.type = hidden ? 'text' : 'password';
+                    var nextLabel = hidden ? 'Hide secret' : 'Show secret';
+                    toggle.title = nextLabel;
+                    toggle.setAttribute('aria-label', nextLabel);
+                    toggle.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+                    toggle.innerHTML = hidden
+                        ? '<span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>'
+                        : '<span class="material-symbols-outlined" aria-hidden="true">visibility</span>';
+                });
+                copyBtn.addEventListener('click', async function () {
+                    var text = secretInput.value;
+                    if (!text) {
+                        setStatus('Nothing to copy.', 'error');
+                        return;
+                    }
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            await navigator.clipboard.writeText(text);
+                        } else {
+                            var shown = secretInput.type === 'text';
+                            secretInput.type = 'text';
+                            secretInput.focus();
+                            secretInput.select();
+                            document.execCommand('copy');
+                            if (!shown) secretInput.type = 'password';
+                        }
+                        copyBtn.title = 'Copied';
+                        setTimeout(function () { copyBtn.title = 'Copy secret'; }, 1200);
+                    } catch (err) {
+                        setStatus('Could not copy secret.', 'error');
+                    }
+                });
+
+                grid.appendChild(issuer.wrap);
+                grid.appendChild(name.wrap);
+                grid.appendChild(secretWrap);
+                body.appendChild(grid);
+                var footer = document.createElement('div');
+                footer.className = 'otp-account-footer';
+                footer.appendChild(removeBtn);
+                body.appendChild(footer);
+                card.appendChild(body);
+
+                var resetSecretVisibility = function () {
+                    secretInput.type = 'password';
+                    toggle.title = 'Show secret';
+                    toggle.setAttribute('aria-label', 'Show secret');
+                    toggle.setAttribute('aria-pressed', 'false');
+                    toggle.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">visibility</span>';
+                };
+                var setExpanded = function (expanded) {
+                    var isOpen = !!expanded;
+                    card.classList.toggle('is-open', isOpen);
+                    row.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                    body.hidden = !isOpen;
+                    if (!isOpen) resetSecretVisibility();
+                };
+                card._otpSetExpanded = setExpanded;
+                row.addEventListener('click', function () {
+                    setExpanded(body.hidden);
+                });
+
+                removeBtn.addEventListener('click', function () {
+                    card.remove();
+                    if (!list.querySelector('.otp-account-card')) renderEmpty();
+                    syncCount();
+                });
+
+                list.appendChild(card);
+                syncCount();
+                if (startOpen) setExpanded(true);
+                return issuer.input;
+            };
+
+            if (!parsed.accounts.length) {
+                renderEmpty();
+                syncCount();
+            } else {
+                parsed.accounts.forEach(function (account) { addCard(account); });
+            }
+
+            addBtn.addEventListener('click', function () {
+                var input = addCard({ issuer: '', account: '', secret: '' }, true);
+                if (input) input.focus();
+            });
+
+            saveBtn.addEventListener('click', async function () {
+                var cards = list.querySelectorAll('.otp-account-card');
+                var entries = [];
+                var seen = {};
+                var duplicate = false;
+                for (var i = 0; i < cards.length; i++) {
+                    cards[i].classList.remove('otp-account-card-error');
+                    var inputs = cards[i].querySelectorAll('input');
+                    var issuerVal = inputs[0].value.trim();
+                    var accountVal = inputs[1].value.trim();
+                    var secretVal = inputs[2].value.replace(/\s+/g, '');
+                    if (!issuerVal && !accountVal && !secretVal) continue;
+                    var fail = function (message, input) {
+                        if (cards[i]._otpSetExpanded) cards[i]._otpSetExpanded(true);
+                        cards[i].classList.add('otp-account-card-error');
+                        setStatus(message, 'error');
+                        if (input) input.focus();
+                    };
+                    if (!issuerVal || !accountVal || !secretVal) {
+                        fail('Each account needs an issuer, an account name, and a secret.', !issuerVal ? inputs[0] : (!accountVal ? inputs[1] : inputs[2]));
+                        return;
+                    }
+                    if (issuerVal.indexOf(':') !== -1 || issuerVal.indexOf(',') !== -1) {
+                        fail('Issuer cannot contain a colon or comma.', inputs[0]);
+                        return;
+                    }
+                    if (accountVal.indexOf(',') !== -1) {
+                        fail('Account name cannot contain a comma.', inputs[1]);
+                        return;
+                    }
+                    if (secretVal.indexOf(':') !== -1 || secretVal.indexOf(',') !== -1) {
+                        fail('Secret cannot contain a colon or comma.', inputs[2]);
+                        return;
+                    }
+                    var key = issuerVal + ':' + accountVal;
+                    if (seen[key]) duplicate = true;
+                    seen[key] = true;
+                    entries.push(key + ':' + secretVal);
+                }
+                var serialized = entries.concat(invalidRaw).join(',');
+                try {
+                    saveBtn.disabled = true;
+                    await saveSetting(pref.id, serialized);
+                    setStatus(duplicate ? 'Saved. Duplicate accounts keep the last secret.' : 'Saved.', 'success');
+                    saveBtn.textContent = 'Saved';
+                    setTimeout(function () { saveBtn.textContent = 'Save'; }, 1400);
+                } catch (err) {
+                    console.warn('Save failed', err);
+                    setStatus('Save failed.', 'error');
+                } finally {
+                    saveBtn.disabled = false;
+                }
+            });
+
+            return field;
+        };
+
         var buildFieldRow = function (pref) {
+            if (pref.id === 'authentication.otp_accounts') {
+                return buildOtpAccountsField(pref);
+            }
+
             var field = document.createElement('div');
             field.className = 'settings-field';
 

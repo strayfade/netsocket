@@ -1767,16 +1767,6 @@ dialog#panel-edit-dialog[open] {
     gap: 2px;
 }
 
-.settings-tabs-container-header {
-    padding: 8px 8px 6px;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--shell-muted, rgba(255,255,255,0.6));
-    opacity: 1;
-}
-
 .settings-close-btn {
     display: inline-flex;
     align-items: center;
@@ -2009,6 +1999,289 @@ dialog#panel-edit-dialog[open] {
     color: #000000;
 }
 
+#settings-modal .settings-field.otp-accounts-field {
+    margin-bottom: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+}
+
+#settings-modal .otp-accounts-hint,
+#settings-modal .otp-accounts-count,
+#settings-modal .otp-accounts-invalid {
+    margin: 0 0 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--shell-muted, rgba(255,255,255,0.6));
+}
+
+#settings-modal .otp-accounts-count {
+    margin-top: -6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #888;
+}
+
+#settings-modal .otp-accounts-invalid {
+    color: #e6c35c;
+}
+
+#settings-modal .otp-accounts-empty {
+    margin: 0 0 12px;
+    padding: 16px;
+    font-size: 13px;
+    color: var(--shell-muted, rgba(255,255,255,0.55));
+    background: rgba(255,255,255,0.03);
+    border: 1px dashed rgba(255,255,255,0.10);
+    border-radius: 10px;
+    text-align: center;
+}
+
+#settings-modal .otp-account-card {
+    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--shell-surface-raised, #141414);
+    border-radius: 10px;
+    padding: 0;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+#settings-modal .otp-account-card-error {
+    border-color: rgba(224,122,122,0.45);
+}
+
+#settings-modal .otp-account-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin: 0;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: #fff;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+}
+
+#settings-modal .otp-account-row:hover {
+    background: rgba(255,255,255,0.04);
+}
+
+#settings-modal .otp-account-card.is-open .otp-account-row {
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+#settings-modal .otp-account-chevron {
+    flex-shrink: 0;
+    font-size: 18px;
+    color: #888;
+    transition: transform 0.15s ease;
+}
+
+#settings-modal .otp-account-card.is-open .otp-account-chevron {
+    transform: rotate(90deg);
+}
+
+#settings-modal .otp-account-card-title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+#settings-modal .otp-account-issuer,
+#settings-modal .otp-account-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#settings-modal .otp-account-issuer {
+    flex-shrink: 0;
+    max-width: 42%;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+}
+
+#settings-modal .otp-account-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--shell-muted, rgba(255,255,255,0.62));
+}
+
+#settings-modal .otp-account-body {
+    padding: 12px 14px 14px;
+}
+
+#settings-modal .otp-account-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+#settings-modal .otp-account-remove {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    height: 32px;
+    padding: 0 10px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    color: #e07a7a;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#settings-modal .otp-account-remove:hover {
+    background: #2a1414;
+    border-color: rgba(224,122,122,0.22);
+}
+
+#settings-modal .otp-account-remove .material-symbols-outlined {
+    font-size: 16px;
+}
+
+#settings-modal .otp-account-grid {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.8fr) minmax(160px, 1.4fr);
+    gap: 10px 12px;
+}
+
+#settings-modal .otp-account-secret {
+    grid-column: 1 / -1;
+}
+
+#settings-modal .otp-account-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+#settings-modal .otp-account-field > span {
+    font-size: 11px;
+    font-weight: 600;
+    color: #bbb;
+}
+
+#settings-modal .otp-account-field input {
+    width: 100%;
+    min-width: 0;
+    padding: 9px 12px;
+    background: #0a0a0a;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    font-size: 13px;
+    color: #e8e8e8;
+    box-sizing: border-box;
+}
+
+#settings-modal .otp-account-field input:focus {
+    outline: none;
+    border-color: rgba(255,255,255,0.28);
+    background: #111111;
+}
+
+#settings-modal .otp-account-field input::placeholder {
+    color: #555;
+}
+
+#settings-modal .otp-account-secret input {
+    font-family: 'Google Sans Code', 'Courier New', Courier, monospace;
+    letter-spacing: 0.03em;
+}
+
+#settings-modal .otp-secret-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#settings-modal .otp-secret-row input {
+    flex: 1;
+}
+
+#settings-modal .otp-secret-toggle {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    background: #0a0a0a;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    color: #888;
+    cursor: pointer;
+}
+
+#settings-modal .otp-secret-toggle:hover {
+    background: #141414;
+    color: #ddd;
+    border-color: rgba(255,255,255,0.18);
+}
+
+#settings-modal .otp-secret-toggle .material-symbols-outlined {
+    font-size: 18px;
+}
+
+#settings-modal .otp-accounts-actions {
+    margin-top: 4px;
+}
+
+#settings-modal .settings-field-row button.otp-accounts-secondary {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.14);
+    color: #e8e8e8;
+}
+
+#settings-modal .settings-field-row button.otp-accounts-secondary:hover {
+    background: rgba(255,255,255,0.06);
+    filter: none;
+}
+
+#settings-modal .otp-accounts-status {
+    display: none;
+    margin: 0 0 10px;
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 8px;
+}
+
+#settings-modal .otp-accounts-status.is-visible {
+    display: block;
+}
+
+#settings-modal .otp-accounts-status.is-success {
+    background: #0f1f14;
+    color: #6dca8b;
+    border: 1px solid rgba(109,202,139,0.22);
+}
+
+#settings-modal .otp-accounts-status.is-error {
+    background: #2a1414;
+    color: #e07a7a;
+    border: 1px solid rgba(224,122,122,0.22);
+}
+
+@media (max-width: 640px) {
+    #settings-modal .otp-account-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .devices-section {
     margin-bottom: 20px;
 }
@@ -2020,6 +2293,11 @@ dialog#panel-edit-dialog[open] {
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--shell-muted, rgba(255,255,255,0.6));
+}
+
+/* Wins over #settings-modal .settings-panel h3 { margin: 0 } */
+#settings-modal .settings-panel .devices-section h3 {
+    margin-bottom: 12px;
 }
 
 .devices-empty {
@@ -2581,10 +2859,6 @@ dialog#panel-edit-dialog[open] {
         border: none;
         border-radius: 8px;
         font-family: inherit;
-    }
-
-    .settings-tabs-container-header {
-        padding: 8px 52px 0 12px;
     }
 
     #settings-tabs-container {
