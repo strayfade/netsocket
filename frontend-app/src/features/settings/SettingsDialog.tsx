@@ -1,8 +1,8 @@
 import * as React from 'react'
 import { useLocation } from 'react-router-dom'
-import { Settings2 } from 'lucide-react'
+import { Settings2, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   getPreferences,
@@ -165,14 +165,21 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        hideClose
+        // The per-section blurb was intentionally removed; silence Radix's
+        // missing-description warning.
+        aria-describedby={undefined}
         className="grid h-[min(760px,88svh)] w-[min(1080px,calc(100vw-1.5rem))] max-w-none gap-0 overflow-hidden p-0 sm:rounded-xl sm:grid-rows-[auto_minmax(0,1fr)]"
       >
-        <div className="flex flex-col gap-1 border-b border-border px-6 py-4 pr-12">
+        <div className="flex items-center justify-between gap-4 border-b border-border px-6 py-4">
           <DialogHeader className="flex-row items-center gap-2 space-y-0">
             <Settings2 className="h-4 w-4 text-muted-foreground" aria-hidden />
             <DialogTitle>Settings</DialogTitle>
           </DialogHeader>
-          <DialogDescription className="text-xs">{active?.description}</DialogDescription>
+          <DialogClose className="shrink-0 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
         </div>
 
         <div className="flex min-h-0 flex-col sm:flex-row">
