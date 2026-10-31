@@ -118,12 +118,12 @@ export function DevicesSection({
               {group.title}
             </h3>
             {matching.length === 0 ? (
-              <p className="border-b border-border/60 py-4 text-sm text-muted-foreground last:border-b-0">{group.empty}</p>
+              <p className="py-3 text-sm text-muted-foreground">{group.empty}</p>
             ) : (
               matching.map((device) => (
                 <div
                   key={device.deviceId}
-                  className="grid gap-3 border-b border-border/60 py-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                  className="mb-2 grid gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-4 last:mb-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">

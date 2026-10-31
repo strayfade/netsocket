@@ -59,7 +59,7 @@ function SmartHomeCard({
   const model = `${device.manufacturer || ''} ${device.model || ''}`.trim() || '—'
 
   return (
-    <div className="border-b border-border/60 py-4 last:border-b-0">
+    <div className="mb-2 rounded-lg border border-white/10 bg-white/[0.04] p-4 last:mb-0">
       <div className="flex flex-wrap items-center gap-2">
         <span className="truncate text-sm font-medium">{device.friendlyName || device.deviceId}</span>
         {statusBadge(device.status)}

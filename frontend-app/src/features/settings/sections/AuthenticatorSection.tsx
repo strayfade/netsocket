@@ -39,7 +39,7 @@ function AccountRow({
   }
 
   return (
-    <div className={cn('border-b border-border/60 last:border-b-0', error && 'text-foreground')}>
+    <div className={cn('mb-2 rounded-lg border border-white/10 bg-white/[0.04] p-4 last:mb-0', error && 'text-foreground')}>
       <button
         type="button"
         className="flex w-full items-center gap-3 py-3 text-left hover:bg-accent/50"

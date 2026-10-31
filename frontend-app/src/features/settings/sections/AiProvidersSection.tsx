@@ -170,7 +170,7 @@ function ProviderRowItem({
   onMakeDefault: () => void
 }) {
   return (
-    <div className="grid gap-3 border-b border-border/60 py-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+    <div className="mb-2 grid gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-4 last:mb-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-sm font-medium">{provider.name}</span>
