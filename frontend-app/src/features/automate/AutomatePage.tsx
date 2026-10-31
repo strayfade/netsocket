@@ -105,7 +105,7 @@ export function AutomatePage() {
   return (
     <div className="editor-stage relative h-full min-h-[100svh] w-full min-w-0 overflow-hidden bg-black">
       <div
-        className="editor-floating-toolbar pointer-events-auto absolute right-3 top-3 z-20 flex items-center gap-1 rounded-[10px] border border-white/10 bg-[rgba(20,20,20,0.92)] p-1.5 shadow-lg backdrop-blur"
+        className="editor-floating-toolbar pointer-events-auto absolute right-3 top-3 z-20 flex items-center gap-1 rounded-[10px] border border-white/10 bg-black p-1.5 shadow-lg backdrop-blur"
         role="toolbar"
         aria-label="Graph tools"
       >
