@@ -248,15 +248,28 @@ const PROTECTED_PAGE_PATHS = new Set([
     '/css/shell.css',
     '/js/shell.js',
     '/js/widgets.js',
+    '/js/widgeteditor.js',
+    '/js/settingsmodal.js',
+    '/js/editorbootstrap.js',
+    '/js/panelsbootstrap.js',
+    '/js/panelkioskbootstrap.js',
+    '/js/paneldevicepicker.js',
+    '/js/agentmarkdown.js',
     '/downloads/overlay',
     '/downloads/android',
     '/vendor/gridstack-all.js',
     '/inset.browser.js',
+    '/graphmigration.js',
+    '/aiproviders.js',
+    '/subgrapheditor.js',
 ])
 
 const isProtectedPagePath = (url) => {
     const pathOnly = String(url || '').split('?')[0].toLowerCase()
-    return PROTECTED_PAGE_PATHS.has(pathOnly)
+    if (PROTECTED_PAGE_PATHS.has(pathOnly)) return true
+    // SPA hashed bundles under /assets are public (login page needs them);
+    // hub HTML routes stay gated above. Panel kiosk is gated via requireUserSession.
+    return false
 }
 
 const requireUserSession = (req, res, next) => {

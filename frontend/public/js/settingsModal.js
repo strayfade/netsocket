@@ -954,7 +954,7 @@
                 } catch (e) {}
                 // Aria agent gateway connection (used by the Language Processing/Aria node).
                 var ariaCard = document.createElement('div');
-                ariaCard.className = 'provider-form-card';
+                ariaCard.className = 'provider-form-card provider-form-card-lead';
                 var ariaHead = document.createElement('div'); ariaHead.className = 'provider-form-head';
                 ariaHead.innerHTML = '<p class="provider-form-title">Aria Gateway</p><p class="provider-form-sub">Connected Aria instance for the <strong>Language Processing/Aria</strong> node.</p>';
                 ariaCard.appendChild(ariaHead);
@@ -1294,7 +1294,7 @@
                 keybindsRow.style.cursor = 'pointer';
                 var keybindsCb = document.createElement('input');
                 keybindsCb.type = 'checkbox';
-                keybindsCb.checked = typeof window.getNetsocketShowSelectionKeybinds === 'function' ? window.getNetsocketShowSelectionKeybinds() : true;
+                keybindsCb.checked = typeof window.getNetsocketShowSelectionKeybinds === 'function' ? window.getNetsocketShowSelectionKeybinds() : false;
                 var keybindsSpan = document.createElement('span');
                 keybindsSpan.textContent = 'Enabled';
                 keybindsSpan.style.fontSize = '13px';

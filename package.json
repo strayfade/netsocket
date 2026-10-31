@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
+    "dev:frontend": "npm --prefix frontend-app run dev",
+    "build:frontend": "npm --prefix frontend-app run build",
     "dev:noauth": "npm i && node server/index.js --skip-auth",
     "dev-noauth": "npm i && node server/index.js --skip-auth",
     "develop": "node server/index.js",

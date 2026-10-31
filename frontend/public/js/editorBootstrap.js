@@ -1,132 +1,17 @@
-<!DOCTYPE html>
-<html>
+(function () {
+    'use strict';
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="description" content="An easy nodegraph-based automation manager">
-    <meta property="og:description" content="An easy nodegraph-based automation manager">
-    <meta property="twitter:description" content="An easy nodegraph-based automation manager">
-    <meta name="theme-color" content="#ffffff">
-    <meta name="keywords" content="automation, AI, nodegraph, netsocket">
-    <meta name="author" content="strayfade">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta property="og:site_name" content="netsocket.strayfade.com">
-    <meta property="og:url" content="netsocket.strayfade.com">
-    <meta name="twitter:url" content="netsocket.strayfade.com">
-    <meta property="og:title" content="netsocket">
-    <meta property="twitter:title" content="netsocket">
-    <link rel="stylesheet" type="text/css" href="litegraph.css">
-    <link rel="stylesheet" type="text/css" href="litegraph-editor.css">
-    <script type="text/javascript" src="litegraph.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&family=Instrument+Serif:ital@0;1&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-            font-size: 18px;
+    let __netsocketEditorStop = null;
+
+    window.startNetsocketEditor = function startNetsocketEditor() {
+        if (__netsocketEditorStop) {
+            window.stopNetsocketEditor();
         }
-    </style>
-    <link rel="stylesheet" href="/css/editor.css">
-    <link rel="stylesheet" href="/css/shell.css">
-    <title>netsocket</title>
-    <style>
-        body:has(#node-panel) canvas,
-        body:has(#node-panel) #log,
-        body:has(#node-panel) .editor-floating-toolbar,
-        body:has(#node-panel) #editor-keybinds-bar {
-            filter: brightness(50%);
-        }
-    </style>
-    <script src="inset.browser.js"></script>
-</head>
 
-<body class="litegraph litegraph-editor shell-page has-sidebar" style="margin: 0;">
-    <div class="shell-layout">
-        <nav class="shell-sidebar" id="shell-sidebar" aria-label="Primary">
-            <div class="shell-sidebar-brand">
-                <a class="shell-brand" href="/dashboard" aria-label="netsocket home">
-                    <img src="/favicon.png" alt="">
-                </a>
-            </div>
-            <div class="shell-sidebar-nav">
-                <a class="shell-tab" data-shell-tab="automate" href="/automate" aria-current="page">
-                    <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
-                    <span class="shell-tab-label">Automate</span>
-                </a>
-                <a class="shell-tab" data-shell-tab="dashboard" href="/dashboard">
-                    <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
-                    <span class="shell-tab-label">Dashboard</span>
-                </a>
-                <a class="shell-tab" data-shell-tab="panels" href="/panels">
-                    <span class="material-symbols-outlined" aria-hidden="true">wall_art</span>
-                    <span class="shell-tab-label">Panels</span>
-                </a>
-            </div>
-            <div class="shell-sidebar-spacer" aria-hidden="true"></div>
-            <div class="shell-sidebar-bottom">
-                <a class="shell-sidebar-link" href="/downloads/overlay" id="download-overlay" title="Download the desktop overlay installer" aria-label="Download Overlay">
-                    <span class="material-symbols-outlined" aria-hidden="true">download</span>
-                    <span>Download Overlay</span>
-                </a>
-                <a class="shell-sidebar-link" href="/downloads/android" id="download-android" title="Download the Android companion app" aria-label="Download Android app">
-                    <span class="material-symbols-outlined" aria-hidden="true">smartphone</span>
-                    <span>Download Android</span>
-                </a>
-                <a class="shell-sidebar-link" href="#" id="open-backup" title="Move your graph and settings to another machine" aria-label="Backup">
-                    <span class="material-symbols-outlined" aria-hidden="true">cloud_download</span>
-                    <span>Backup</span>
-                </a>
-                <a class="shell-sidebar-link" href="#" id="open-settings" aria-label="Settings">
-                    <span class="material-symbols-outlined" aria-hidden="true">settings</span>
-                    <span>Settings</span>
-                </a>
-                <a class="shell-sidebar-link shell-sidebar-link--logout" href="/logout" aria-label="Log out">
-                    <span class="material-symbols-outlined" aria-hidden="true">arrow_outward</span>
-                    <span>Log Out</span>
-                </a>
-            </div>
-        </nav>
-        <div class="shell-content editor-stage">
-            <div class="editor-floating-toolbar" role="toolbar" aria-label="Graph tools">
-                <button type="button" id="editor-undo" class="header-toolbar-btn" disabled title="Undo (Ctrl+Z)">
-                    <span class="material-symbols-outlined" aria-hidden="true">undo</span>
-                </button>
-                <button type="button" id="editor-redo" class="header-toolbar-btn" disabled title="Redo (Ctrl+Y or Ctrl+Shift+Z)">
-                    <span class="material-symbols-outlined" aria-hidden="true">redo</span>
-                </button>
-                <button type="button" id="editor-fit-view" class="header-toolbar-btn" title="Fit all nodes to view">
-                    <span class="material-symbols-outlined" aria-hidden="true">fit_screen</span>
-                </button>
-                <button type="button" id="editor-toggle-log" class="header-toolbar-btn" title="Show log" aria-pressed="false" aria-controls="log">
-                    <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
-                </button>
-            </div>
-            <div id="editor-keybinds-bar" class="editor-keybinds-bar" hidden aria-hidden="true">
-                <div class="editor-keybinds-inner" id="editor-keybinds-inner"></div>
-            </div>
-            <div class="connection-banner"></div>
-            <canvas id='nodegraph'></canvas>
-            <textarea id="log" spellcheck="false" readonly tabindex="-1" aria-label="Server log" hidden></textarea>
-        </div>
-    </div>
-    <div id="shell-sidebar-backdrop" class="shell-sidebar-backdrop" hidden aria-hidden="true"></div>
-    <button id="shell-sidebar-toggle" class="shell-sidebar-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="shell-sidebar">
-        <span class="material-symbols-outlined" aria-hidden="true">menu</span>
-    </button>
-    <script>
-
-        (async () => {
-            const session = await fetch('/v1/session', { credentials: 'same-origin' });
-            if (!session.ok) {
-                const redirect = encodeURIComponent('/automate');
-                window.location.replace(`/login?redirect=${redirect}`);
-            }
-        })();
+        const log = document.getElementById("log");
+        const nodegraph = document.getElementById("nodegraph");
+        let __netsocketResizeIntervalId = null;
+        let __netsocketPingIntervalId = null;
 
         LiteGraph.use_uuids = true;
         let graph = new LGraph();
@@ -474,10 +359,10 @@
         const readStoredShowSelectionKeybinds = () => {
             try {
                 const raw = localStorage.getItem(SHOW_SELECTION_KEYBINDS_STORAGE_KEY);
-                if (raw === null) return true;
+                if (raw === null) return false;
                 return raw === "true";
             } catch (e) {
-                return true;
+                return false;
             }
         };
         const writeStoredShowSelectionKeybinds = (enabled) => {
@@ -965,11 +850,19 @@
             const bar = document.getElementById("editor-keybinds-bar");
             return bar && !bar.hidden ? bar.offsetHeight : 0;
         };
-        const measureSidebarInset = () => {
+        const measureStageSize = () => {
+            const stage = nodegraph.closest(".editor-stage") || nodegraph.parentElement;
+            if (stage && stage.clientWidth > 0 && stage.clientHeight > 0) {
+                return { w: stage.clientWidth, h: stage.clientHeight };
+            }
             const sb = document.getElementById("shell-sidebar");
-            if (!sb) return 0;
-            if (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) return 0;
-            return sb.offsetWidth || 0;
+            const sidebarInset = (sb && !(window.matchMedia && window.matchMedia("(max-width: 768px)").matches))
+                ? (sb.offsetWidth || 0)
+                : 0;
+            return {
+                w: Math.max(1, window.innerWidth - sidebarInset),
+                h: Math.max(1, window.innerHeight),
+            };
         };
         const measureLogInset = () => {
             if (!logVisible) return 0;
@@ -978,11 +871,11 @@
         const resize = () => {
             const topInset = measureEditorChrome();
             const bottomInset = measureLogInset();
-            const sidebarInset = measureSidebarInset();
-            const w = Math.max(1, window.innerWidth - sidebarInset);
-            const h = Math.max(1, window.innerHeight - topInset - bottomInset);
+            const stage = measureStageSize();
+            const w = Math.max(1, stage.w);
+            const h = Math.max(1, stage.h - topInset - bottomInset);
             const renderPct = canvas.render_resolution != null ? canvas.render_resolution : 100;
-            lastSize = [w, h, topInset, bottomInset, renderPct, sidebarInset];
+            lastSize = [w, h, topInset, bottomInset, renderPct, 0];
             nodegraph.style.top = `${topInset}px`;
             nodegraph.style.left = `0px`;
             nodegraph.style.width = `${w}px`;
@@ -996,21 +889,21 @@
             // Use LGraphCanvas.resize so bgcanvas stays in sync and setDirty triggers a full redraw
             // (setting canvas width/height alone clears the bitmap without marking dirty).
             canvas.resize(bw, bh);
+            canvas.setDirty(true, true);
         };
         const detectResizeNeeded = () => {
             const topInset = measureEditorChrome();
             const bottomInset = measureLogInset();
-            const sidebarInset = measureSidebarInset();
-            const w = Math.max(1, window.innerWidth - sidebarInset);
-            const h = Math.max(1, window.innerHeight - topInset - bottomInset);
+            const stage = measureStageSize();
+            const w = Math.max(1, stage.w);
+            const h = Math.max(1, stage.h - topInset - bottomInset);
             const renderPct = canvas.render_resolution != null ? canvas.render_resolution : 100;
             if (
                 w !== lastSize[0] ||
                 h !== lastSize[1] ||
                 topInset !== lastSize[2] ||
                 bottomInset !== lastSize[3] ||
-                renderPct !== lastSize[4] ||
-                sidebarInset !== lastSize[5]
+                renderPct !== lastSize[4]
             ) {
                 resize();
             }
@@ -1019,7 +912,7 @@
             lastSize = [0, 0, 0, 0, -1, -1];
             detectResizeNeeded();
         };
-        setInterval(detectResizeNeeded, 6)
+        __netsocketResizeIntervalId = setInterval(detectResizeNeeded, 6)
         detectResizeNeeded()
 
         async function loadGraph() {
@@ -1045,7 +938,7 @@
                 }))
             }
         }
-        setInterval(ping, 3000);
+        __netsocketPingIntervalId = setInterval(ping, 3000);
 
         window.__netsocketEditorApi = {
             getGraph: () => graph,
@@ -1063,57 +956,29 @@
                 flush: () => flushViewportSave(),
             },
         };
-    </script>
-    <!-- Settings modal (sidebar + panels built from server preference registry) -->
-    <div id="backup-modal" class="backup-modal-root" hidden aria-hidden="true">
-        <div id="backup-backdrop" class="settings-backdrop" aria-hidden="true"></div>
-        <div class="backup-dialog" role="dialog" aria-modal="true" aria-labelledby="backup-modal-title">
-            <h2 id="backup-modal-title">Backup &amp; restore</h2>
-            <p class="backup-intro">Download or upload a single file with your entire node graph, workflow variables, and
-                integration settings (including API keys and OAuth tokens stored in settings). Your netsocket login name
-                and password are never included.</p>
-            <p id="backup-status" class="backup-status" role="status"></p>
-            <div class="backup-actions">
-                <button type="button" id="backup-export-btn" class="backup-primary-btn">Export everything</button>
-                <button type="button" id="backup-import-btn" class="backup-secondary-btn">Import from file…</button>
-            </div>
-            <input type="file" id="backup-file-input" accept=".json,application/json" hidden />
-            <button type="button" id="backup-close-btn" class="backup-close-footer">Close</button>
-        </div>
-    </div>
-    <div id="settings-modal" style="display:none; position:fixed; inset:0; z-index:50;">
-        <div id="settings-backdrop" class="settings-backdrop" aria-hidden="true"></div>
-        <div class="settings-shell" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
-            <div id="settings-sidebar">
-                <div class="settings-sidebar-top">
-                    <button type="button" id="close-settings" class="settings-close-btn" aria-label="Close settings">
-                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
-                    </button>
-                </div>
-                <div id="settings-tabs-container">
-                </div>
-            </div>
-            <div id="settings-content">
-                <span id="settings-modal-title" class="visually-hidden">Application settings</span>
-                <div id="settings-panels-scroll"></div>
-            </div>
-        </div>
-    </div>
-    <script src="/js/settingsModal.js"></script>
-    <script src="/js/shell.js"></script>
-    <script>
-        if (window.ShellLogic) ShellLogic.markActiveTab(document);
-    </script>
-    <script type="text/javascript" src="graphMigration.js"></script>
-    <script type="text/javascript" src="aiProviders.js"></script>
-    <script type="text/javascript" src="createNode.js"></script>
-    <script type="text/javascript" src="constructNodes.js"></script>
-    <script type="text/javascript" src="subgraphEditor.js"></script>
-    <script type="text/javascript">
-        if (window.NetsocketSubgraphs && window.__netsocketEditorApi) {
-            window.NetsocketSubgraphs.init(window.__netsocketEditorApi);
-        }
-    </script>
-</body>
+        __netsocketEditorStop = function stopNetsocketEditorInternal() {
+            if (__netsocketResizeIntervalId != null) {
+                clearInterval(__netsocketResizeIntervalId);
+                __netsocketResizeIntervalId = null;
+            }
+            if (__netsocketPingIntervalId != null) {
+                clearInterval(__netsocketPingIntervalId);
+                __netsocketPingIntervalId = null;
+            }
+            clearWsReconnectTimer();
+            disposeCurrentWebSocket();
+            cancelViewportAnimation();
+            if (viewportSaveTimer) {
+                clearTimeout(viewportSaveTimer);
+                viewportSaveTimer = null;
+            }
+            __netsocketEditorStop = null;
+        };
+    };
 
-</html>
+    window.stopNetsocketEditor = function stopNetsocketEditor() {
+        if (typeof __netsocketEditorStop === "function") {
+            __netsocketEditorStop();
+        }
+    };
+}());

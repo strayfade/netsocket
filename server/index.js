@@ -726,18 +726,14 @@ let constructedNodes = ""
 app.get('/constructNodes.js', (req, res) => {
     res.status(200).type("application/javascript").send(constructedNodes)
 })
-app.get("/dashboard", (req, res) => {
+const spaIndexPath = path.join(__dirname, '../frontend/dist/index.html')
+const sendSpa = (req, res) => {
     res.setHeader('Cache-Control', 'no-store')
-    res.status(200).sendFile(path.join(__dirname, "../frontend/dashboard.html"))
-})
-app.get("/automate", (req, res) => {
-    res.setHeader('Cache-Control', 'no-store')
-    res.status(200).sendFile(path.join(__dirname, "../frontend/editor.html"))
-})
-app.get("/panels", (req, res) => {
-    res.setHeader('Cache-Control', 'no-store')
-    res.status(200).sendFile(path.join(__dirname, "../frontend/panels.html"))
-})
+    res.status(200).sendFile(spaIndexPath)
+}
+app.get("/dashboard", sendSpa)
+app.get("/automate", sendSpa)
+app.get("/panels", sendSpa)
 app.get('/v1/dashboard/summary', (req, res) => {
     if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
     try {
@@ -814,10 +810,7 @@ app.post('/v1/dashboard/run', async (req, res) => {
 
 // MARK: Panels (room touch surfaces; session-gated, device grants for native clients)
 const panelApi = require('./manager/panelApi.js')
-app.get('/panel/:panelId', requireUserSession, (req, res) => {
-    res.setHeader('Cache-Control', 'no-store')
-    res.status(200).sendFile(path.join(__dirname, '../frontend/panel.html'))
-})
+app.get('/panel/:panelId', requireUserSession, sendSpa)
 app.get('/v1/panels', (req, res) => panelApi.handleListPanels(req, res))
 app.post('/v1/panels', (req, res) => panelApi.handleCreatePanel(req, res))
 app.get('/v1/panels/:panelId/config', (req, res) => panelApi.handleGetPanelConfig(req, res))
@@ -858,7 +851,16 @@ app.get('/v1/updates/:platform/download', (req, res) => {
     appUpdates.handleDownloadUpdateArtifact(req, res, logDownloadError)
 })
 
+app.use('/assets', express.static(path.join(__dirname, '../frontend/dist/assets')))
 app.use('/', express.static(path.join(__dirname, '../frontend/public')));
+app.use('/', express.static(path.join(__dirname, '../frontend/dist'), {
+    index: false,
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('index.html')) {
+            res.setHeader('Cache-Control', 'no-store')
+        }
+    },
+}))
 app.get("/", (req, res) => {
     const target = resolveDefaultTabPath()
     if (authSkipped() || hasUserSession(req, res)) {
@@ -1206,11 +1208,9 @@ app.get("/login", (req, res) => {
     if (authSkipped() || hasUserSession(req, res)) {
         return res.redirect(302, resolveDefaultTabPath());
     }
-    res.status(200).sendFile(path.join(__dirname, "../frontend/index.html"));
+    return sendSpa(req, res)
 });
-app.get("/documentation", (req, res) => {
-    res.status(200).sendFile(path.join(__dirname, "../frontend/index.html"))
-})
+app.get("/documentation", (req, res) => sendSpa(req, res))
 app.get("/v1/session", (req, res) => {
     if (authSkipped() || hasUserSession(req, res)) res.sendStatus(200);
     else res.sendStatus(401);

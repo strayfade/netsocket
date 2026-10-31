@@ -1,0 +1,152 @@
+
+        <div class="panels-header">
+            <div>
+                <h1 class="shell-page-title" style="margin: 0;">Room panels</h1>
+                <p class="shell-page-subtitle" style="margin-bottom: 0;">Live previews with real data. Actions sit underneath each preview.</p>
+            </div>
+            <button class="shell-btn" id="new-panel-open" type="button"><span class="material-symbols-outlined" aria-hidden="true">add</span> New Panel</button>
+        </div>
+        <div class="panels-grid" id="panels-list" role="list" aria-label="Panels list">
+            <div class="shell-card"><p class="shell-stat-sub shell-skeleton" style="margin: 0;">Loading panels</p></div>
+        </div>
+        <p class="shell-empty" id="panels-empty" hidden>No panels yet. Create one to provision a wall surface.</p>
+    </main>
+
+    <dialog id="panel-create-dialog" class="shell-card" aria-label="New panel" aria-labelledby="panel-create-title">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px;">
+            <h2 id="panel-create-title" class="shell-card-title" style="margin: 0;">New panel</h2>
+            <button class="dialog-close-btn" id="panel-create-close-top" type="button" aria-label="Close"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+            <div class="admin-field">
+                <label for="new-panel-name">Name</label>
+                <input class="admin-input" id="new-panel-name" type="text" autocomplete="off"
+                    placeholder="Kitchen display" maxlength="120">
+            </div>
+            <div class="admin-field">
+                <label for="new-panel-room">Room (optional)</label>
+                <input class="admin-input" id="new-panel-room" type="text" autocomplete="off"
+                    placeholder="Kitchen" maxlength="120">
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="shell-btn shell-btn-secondary" id="panel-create-cancel" type="button">Cancel</button>
+                <button class="shell-btn" id="create-panel-btn" type="button">Create panel</button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="panel-edit-dialog" class="shell-card" style="color: var(--shell-text);">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px;">
+            <h2 class="shell-card-title" style="margin: 0;">Edit panel</h2>
+            <button class="dialog-close-btn" id="edit-panel-close-top" type="button" aria-label="Close"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+        </div>
+        <p class="shell-stat-sub shell-mono" id="panel-edit-id" style="margin: 4px 0 12px;"></p>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="admin-field" style="margin: 0;">
+                    <label for="edit-panel-name">Name</label>
+                    <input class="admin-input" id="edit-panel-name" type="text" maxlength="120">
+                </div>
+                <div class="admin-field" style="margin: 0;">
+                    <label for="edit-panel-room">Room</label>
+                    <input class="admin-input" id="edit-panel-room" type="text" maxlength="120">
+                </div>
+            </div>
+            <div class="admin-field" style="margin: 0;">
+                <label class="admin-check" for="edit-panel-borders" style="margin: 0;">
+                    <input type="checkbox" id="edit-panel-borders" checked>
+                    Show widget borders
+                </label>
+            </div>
+            <div class="admin-field" style="margin: 0;">
+                <label for="edit-panel-widget-style">Widget design style</label>
+                <select class="admin-input" id="edit-panel-widget-style" aria-label="Widget design style">
+                    <option value="classic">Classic — square borders</option>
+                    <option value="minimal">Minimal — content only</option>
+                    <option value="soft">Soft — rounded cards</option>
+                    <option value="vivid">Vivid — purpose gradients</option>
+                    <option value="neon">Neon — glowing edges</option>
+                </select>
+            </div>
+            <div class="admin-field" style="margin: 0;">
+                <label>Layout</label>
+                <div class="grid-stack" id="panel-edit-grid" data-widget-style="classic"></div>
+                <p class="shell-empty" id="panel-edit-grid-empty" hidden>No widgets. Add one below.</p>
+                <div class="dashboard-toolbar" style="margin: 12px 0 0;">
+                    <button class="shell-btn shell-btn-secondary" id="panel-layout-edit-toggle" type="button">Edit layout</button>
+                    <button class="shell-btn" id="panel-add-widget-open" type="button"><span class="material-symbols-outlined" aria-hidden="true">add</span> Add widget</button>
+                </div>
+            </div>
+            <div class="admin-field" style="margin: 0;">
+                <label for="edit-panel-device-search">Devices that show this panel <span class="shell-stat-sub" id="edit-panel-device-count"></span></label>
+                <p class="shell-stat-sub" style="margin: 0 0 8px;">Search by name, platform, device ID, or another panel. Only assigned devices stay in the list.</p>
+                <div class="panel-device-picker" id="edit-panel-devices">
+                    <div class="panel-device-search">
+                        <input class="admin-input" id="edit-panel-device-search" type="text" placeholder="Search devices to add…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="edit-panel-device-results" aria-autocomplete="list">
+                        <div class="panel-device-results" id="edit-panel-device-results" role="listbox" hidden></div>
+                    </div>
+                    <p class="shell-stat-sub" id="edit-panel-device-empty">No devices assigned. Search to add one.</p>
+                    <ul class="panel-device-assigned" id="edit-panel-device-assigned"></ul>
+                    <p class="shell-stat-sub" id="edit-panel-device-note" hidden></p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                <button class="shell-btn shell-btn-secondary" id="edit-panel-close" type="button">Cancel</button>
+                <button class="shell-btn" id="edit-panel-save" type="button">Save</button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="panel-add-widget-dialog" class="shell-card" aria-label="Add widget" aria-labelledby="panel-add-widget-title">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px;">
+            <h2 id="panel-add-widget-title" class="shell-card-title" style="margin: 0;">Add widget</h2>
+            <button class="dialog-close-btn" id="panel-dialog-cancel-top" type="button" aria-label="Close"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="admin-field">
+                <select class="admin-input" id="panel-dialog-kind" aria-label="Widget type">
+                    <option value="button">Run Button</option>
+                    <option value="clock">Clock</option>
+                    <option value="markdown">Markdown</option>
+                    <option value="html">HTML</option>
+                    <option value="timer">Timer</option>
+                </select>
+            </div>
+            <div class="admin-field" id="panel-dialog-carousel-field">
+                <div class="widget-carousel">
+                    <div class="carousel-viewport">
+                        <div class="carousel-track" id="panel-dialog-preset-track" role="listbox" aria-label="Widget preview"></div>
+                    </div>
+                </div>
+                <p class="shell-stat-sub" style="margin:8px 0 0;">Placed at a default size — drag the corners in Edit layout to resize on the grid.</p>
+            </div>
+            <div id="panel-dialog-fields" style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="admin-field" id="panel-dialog-variable-field" hidden>
+                    <label for="panel-dialog-variable">Variable name</label>
+                    <input class="admin-input shell-mono" id="panel-dialog-variable" type="text" autocomplete="off" spellcheck="false" placeholder="morning_briefing" maxlength="128">
+                </div>
+                <div class="admin-field" id="panel-dialog-automation-field" hidden>
+                    <label for="panel-dialog-automation">Automation</label>
+                    <select class="admin-input shell-mono" id="panel-dialog-automation"></select>
+                    <p class="shell-stat-sub" style="margin-top:6px">An automation is a <span class="shell-mono">Triggers/Button</span> node in <a href="/automate" style="color:inherit;text-decoration:underline">Automate</a>. Set its <span class="shell-mono">Name</span> property to label it here.</p>
+                </div>
+                <div class="admin-field" id="panel-dialog-show-name-field" hidden>
+                    <label class="admin-check" for="panel-dialog-show-name" style="margin:0">
+                        <input type="checkbox" id="panel-dialog-show-name">
+                        Show name
+                    </label>
+                </div>
+                <div class="admin-field" id="panel-dialog-show-date-field" hidden>
+                    <label class="admin-check" for="panel-dialog-show-date" style="margin:0">
+                        <input type="checkbox" id="panel-dialog-show-date" checked>
+                        Show date
+                    </label>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="shell-btn shell-btn-secondary" id="panel-dialog-cancel" type="button">Cancel</button>
+                <button class="shell-btn" id="panel-dialog-add" type="button">Add widget</button>
+            </div>
+        </div>
+    </dialog>
+            

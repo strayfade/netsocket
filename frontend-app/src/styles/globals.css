@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Google Sans Code", "Courier New", Courier, monospace;
+  --radius-lg: 0.5rem;
+  --radius-md: calc(0.5rem - 2px);
+  --radius-sm: calc(0.5rem - 4px);
+  --color-background: #000000;
+  --color-foreground: #ffffff;
+  --color-card: #141414;
+  --color-card-foreground: #ffffff;
+  --color-popover: #141414;
+  --color-popover-foreground: #ffffff;
+  --color-primary: #ffffff;
+  --color-primary-foreground: #000000;
+  --color-secondary: #1a1a1a;
+  --color-secondary-foreground: #ffffff;
+  --color-muted: #1a1a1a;
+  --color-muted-foreground: rgba(255, 255, 255, 0.6);
+  --color-accent: #222222;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #333333;
+  --color-input: #111111;
+  --color-ring: #ffffff;
+}
+
+:root,
+[data-theme="oled"] {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 8%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 0 0% 100%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 10%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 60%;
+  --accent: 0 0% 13%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 20%;
+  --input: 0 0% 7%;
+  --ring: 0 0% 100%;
+  --radius: 0.5rem;
+  color-scheme: dark;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hide scrollbars while keeping scroll (parity with shell.css) */
+.ns-scroll {
+  scrollbar-width: none;
+}
+.ns-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  font-size: 18px;
+}
+
+/* Tailwind preflight: canvas { max-width:100%; height:auto } collapses LiteGraph */
+#nodegraph {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* The LiteGraph island sizes its own chrome in em units (.litegraph.litesearchbox,
+   .litegraph .dialog .node_type, .graphdialog .name, .litegraph .subgraph_property span.name),
+   so it inherits its base font size from <body>. The legacy editor page used to supply that from
+   body.litegraph-editor, whose button/active rules also leaked onto shell chrome - keep the 14px
+   base under the island-only body.litegraph hook so the island renders unchanged. */
+body.litegraph {
+  font-size: 14px;
+}
+
+/* Align legacy island form controls with shadcn OLED tokens */
+.shell-btn,
+.backup-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.shell-btn-secondary,
+.backup-secondary-btn,
+.backup-close-footer {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border-color: hsl(var(--border));
+}
+.admin-input,
+.shell-mono {
+  height: 2.5rem;
+  width: 100%;
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--input));
+  color: hsl(var(--foreground));
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+}
+.admin-input:focus,
+.shell-mono:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+.admin-check input[type="checkbox"] {
+  accent-color: #fff;
+}
+dialog.shell-card,
+.shell-card[role="dialog"] {
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 2px);
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+}

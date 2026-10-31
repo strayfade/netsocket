@@ -2591,6 +2591,10 @@ dialog#panel-edit-dialog[open] {
     padding: 16px;
     margin-top: 20px;
 }
+.provider-form-card-lead {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
 .provider-form-head { margin-bottom:14px; }
 .provider-form-title { font-size:13px; font-weight:600; color:#fff; margin:0 0 4px; display:flex; align-items:center; gap:6px; }
 .provider-form-title .material-symbols-outlined { font-size:16px; color:#888; }
