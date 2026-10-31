@@ -154,7 +154,7 @@ function PrefRow({ pref }: { pref: Preference }) {
           type="button"
           variant="ghost"
           size="icon"
-          className="h-9 w-9 shrink-0 text-muted-foreground"
+          className="w-9 shrink-0 text-muted-foreground"
           aria-label={revealed ? 'Hide value' : 'Show value'}
           aria-pressed={revealed}
           onClick={() => setRevealed((v) => !v)}

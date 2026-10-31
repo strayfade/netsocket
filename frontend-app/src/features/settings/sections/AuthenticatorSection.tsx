@@ -91,7 +91,7 @@ function AccountRow({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 shrink-0 text-muted-foreground"
+                className="w-9 shrink-0 text-muted-foreground"
                 aria-label={revealed ? 'Hide secret' : 'Show secret'}
                 aria-pressed={revealed}
                 onClick={() => setRevealed((v) => !v)}
@@ -102,7 +102,7 @@ function AccountRow({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 shrink-0 text-muted-foreground"
+                className="w-9 shrink-0 text-muted-foreground"
                 aria-label="Copy secret"
                 onClick={() => void revealCopy()}
               >
