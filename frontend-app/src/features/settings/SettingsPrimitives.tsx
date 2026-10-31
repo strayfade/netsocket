@@ -19,7 +19,7 @@ export function SettingsRow({
   actions?: React.ReactNode
 }) {
   return (
-    <div className="grid items-start gap-3 border-b border-border/60 py-4 first:pt-0 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] sm:gap-6">
+    <div className="grid items-center gap-3 border-b border-border/60 py-4 first:pt-0 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] sm:gap-6">
       <div className="min-w-0">
         {htmlFor ? (
           <label htmlFor={htmlFor} className="block text-sm font-medium leading-tight">
