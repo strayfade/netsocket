@@ -826,8 +826,10 @@
                     case "populateLog":
                         log.innerHTML = (() => {
                             let newText = ""
-                            for (i of parsedMessage.broadcastData)
-                                newText += `\n${i}`
+                            // `const` matters: this file is strict, so an undeclared loop variable
+                            // throws "i is not defined" and the backlog never reaches #log.
+                            for (const line of parsedMessage.broadcastData)
+                                newText += `\n${line}`
                             newText = newText.trim().replace(/(^\s*(?!.+)\n+)|(\n+\s+(?!.+)$)/g, "").trim();
                             return newText
                         })()

@@ -47,6 +47,16 @@ describe('React hub shell + dashboard', () => {
         assert.match(bootstrap, /__netsocketEditorApi/);
     });
 
+    it('log backlog handler declares its loop variable (strict mode)', () => {
+        const bootstrap = read('frontend', 'public', 'js', 'editorBootstrap.js');
+        assert.match(bootstrap, /^\(function \(\) \{\s*\n\s*'use strict';/, 'bootstrap runs in strict mode');
+        const handler = bootstrap.match(/case "populateLog":[\s\S]*?scrollToBottom\(\)/);
+        assert.ok(handler, 'populateLog handler should build the log backlog');
+        // An undeclared loop variable in strict mode throws "i is not defined", so #log stays empty.
+        assert.doesNotMatch(handler[0], /for \((?!const|let|var)\s*\w+\s+of /);
+        assert.match(handler[0], /for \(const \w+ of parsedMessage\.broadcastData\)/);
+    });
+
     it('automate page keeps legacy editor-page styles off the shell buttons', () => {
         const page = read('frontend-app', 'src', 'features', 'automate', 'AutomatePage.tsx');
         const globals = read('frontend-app', 'src', 'styles', 'globals.css');
