@@ -212,7 +212,7 @@ export function SmartHomeSection({
           const matching = (devices || []).filter((d) => d.status === group.key)
           return (
             <section key={group.key}>
-              <h4 className="mb-1 mt-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">{group.title}</h4>
+              <SubHeading title={group.title} />
               {matching.length === 0 ? (
                 <p className="py-3 text-sm text-muted-foreground">{group.empty}</p>
               ) : (

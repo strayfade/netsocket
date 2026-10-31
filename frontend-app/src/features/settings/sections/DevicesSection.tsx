@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from '@/components/ui/toast'
 import { removeDevice, setDeviceStatus, type PairedDevice } from '@/lib/api'
-import { ConfirmDialog, MetaPair, formatTime, shortId } from '../SettingsPrimitives'
+import { ConfirmDialog, MetaPair, SubHeading, formatTime, shortId } from '../SettingsPrimitives'
 
 const GROUPS = [
   { key: 'pending', title: 'Pending approval', empty: 'No devices waiting for approval.' },
@@ -114,9 +114,7 @@ export function DevicesSection({
         const matching = list.filter((d) => d.status === group.key)
         return (
           <section key={group.key}>
-            <h3 className="mb-1 mt-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground first:mt-0">
-              {group.title}
-            </h3>
+            <SubHeading title={group.title} />
             {matching.length === 0 ? (
               <p className="py-3 text-sm text-muted-foreground">{group.empty}</p>
             ) : (
