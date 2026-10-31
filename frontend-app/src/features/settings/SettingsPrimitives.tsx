@@ -43,8 +43,8 @@ export function SubHeading({ title, actions }: { title: string; actions?: React.
     // Full-bleed darker band across the content pane with the section name
     // centered; actions (buttons, counters) float at the pane's right padding.
     // The -mx-6 cancels the content pane's px-6 so the band spans edge to edge.
-    <div className="relative -mx-6 mb-3 mt-8 bg-background py-2.5 first:mt-0">
-      <h3 className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
+    <div className="relative -mx-6 mb-3 mt-8 bg-black/60 py-1.5 first:mt-0">
+      <h3 className="text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
       {actions && <div className="absolute inset-y-0 right-6 flex items-center gap-2">{actions}</div>}
     </div>
   )
