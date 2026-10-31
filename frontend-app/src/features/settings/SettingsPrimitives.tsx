@@ -30,7 +30,10 @@ export function SettingsRow({
         )}
         {description && <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>}
       </div>
-      <div className="flex min-w-0 items-center gap-2 justify-self-stretch sm:justify-self-end">
+      {/* The control column stretches to the grid track (instead of shrinking
+          to content and right-aligning) so a plain input and an input group
+          with embedded buttons get the same outer width. */}
+      <div className="flex min-w-0 items-center gap-2 justify-self-stretch">
         <div className="min-w-0 flex-1 sm:max-w-[21rem]">{control}</div>
         {actions}
       </div>

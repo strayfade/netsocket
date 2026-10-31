@@ -126,10 +126,10 @@ export function AppSidebar({ onOpenBackup, onOpenSettings }: AppSidebarProps) {
               closeMobile()
               onOpenSettings()
             }}
-            aria-label="Settings"
+            aria-label="Preferences"
           >
             <Settings className="h-4 w-4" />
-            Settings
+            Preferences
           </Button>
           <Separator className="my-1" />
           <SidebarMenuButton type="button" asChild>

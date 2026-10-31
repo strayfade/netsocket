@@ -169,12 +169,12 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
         // The per-section blurb was intentionally removed; silence Radix's
         // missing-description warning.
         aria-describedby={undefined}
-        className="grid h-[min(760px,88svh)] w-[min(1080px,calc(100vw-1.5rem))] max-w-none gap-0 overflow-hidden bg-background p-0 sm:rounded-xl sm:grid-rows-[auto_minmax(0,1fr)]"
+        className="grid h-[min(760px,88svh)] w-[min(1080px,calc(100vw-1.5rem))] max-w-none gap-0 overflow-hidden border-0 bg-background p-0 sm:rounded-xl sm:grid-rows-[auto_minmax(0,1fr)]"
       >
-        <div className="flex items-center justify-between gap-4 border-b border-border px-6 py-4">
+        <div className="flex items-center justify-between gap-4 px-6 py-4">
           <DialogHeader className="flex-row items-center gap-2 space-y-0">
             <Settings2 className="h-4 w-4 text-muted-foreground" aria-hidden />
-            <DialogTitle>Settings</DialogTitle>
+            <DialogTitle>Preferences</DialogTitle>
           </DialogHeader>
           <DialogClose className="shrink-0 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring">
             <X className="h-4 w-4" />
@@ -185,7 +185,7 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
         <div className="flex min-h-0 flex-col sm:flex-row">
           <nav
             aria-label="Settings sections"
-            className="flex shrink-0 gap-1 overflow-x-auto border-b border-border p-2 sm:w-56 sm:flex-col sm:overflow-y-auto sm:overflow-x-hidden sm:border-b-0 sm:border-r sm:p-3"
+            className="flex shrink-0 gap-1 overflow-x-auto p-2 sm:w-56 sm:flex-col sm:overflow-y-auto sm:overflow-x-hidden sm:p-3"
           >
             <div className="hidden px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 sm:block">
               Workspace
