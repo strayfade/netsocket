@@ -23,6 +23,13 @@ declare global {
   }
 }
 
+// The four graph-tool buttons sit inside the black toolbar pill. Pin their fill and icon
+// colors so the group reads as one control rather than four grey chips: #000 fill on the #000
+// pill, #FFF icons, and no opacity fade when Undo/Redo are disabled (the fade is what greys
+// their icons out). hover:bg-accent keeps hover feedback visible once the fill is black; it is
+// the same #222 the sidebar uses.
+const toolbarButtonClass = 'bg-black text-white hover:bg-accent disabled:opacity-100'
+
 export function AutomatePage() {
   useEffect(() => {
     let cancelled = false
@@ -112,7 +119,15 @@ export function AutomatePage() {
         <ButtonGroup>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button type="button" id="editor-undo" variant="secondary" size="icon" disabled title="Undo (Ctrl+Z)">
+              <Button
+                type="button"
+                id="editor-undo"
+                variant="secondary"
+                size="icon"
+                className={toolbarButtonClass}
+                disabled
+                title="Undo (Ctrl+Z)"
+              >
                 <Undo2 className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -127,6 +142,7 @@ export function AutomatePage() {
                 id="editor-redo"
                 variant="secondary"
                 size="icon"
+                className={toolbarButtonClass}
                 disabled
                 title="Redo (Ctrl+Y or Ctrl+Shift+Z)"
               >
@@ -139,7 +155,14 @@ export function AutomatePage() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button type="button" id="editor-fit-view" variant="secondary" size="icon" title="Fit all nodes to view">
+              <Button
+                type="button"
+                id="editor-fit-view"
+                variant="secondary"
+                size="icon"
+                className={toolbarButtonClass}
+                title="Fit all nodes to view"
+              >
                 <Maximize2 className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -152,6 +175,7 @@ export function AutomatePage() {
                 id="editor-toggle-log"
                 variant="secondary"
                 size="icon"
+                className={toolbarButtonClass}
                 title="Show log"
                 aria-pressed="false"
                 aria-controls="log"
