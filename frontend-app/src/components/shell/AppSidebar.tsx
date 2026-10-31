@@ -33,9 +33,10 @@ const tabs = [
 
 type AppSidebarProps = {
   onOpenBackup: () => void
+  onOpenSettings: () => void
 }
 
-export function AppSidebar({ onOpenBackup }: AppSidebarProps) {
+export function AppSidebar({ onOpenBackup, onOpenSettings }: AppSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar()
   const closeMobile = () => {
     if (isMobile) setOpenMobile(false)
@@ -120,9 +121,11 @@ export function AppSidebar({ onOpenBackup }: AppSidebarProps) {
           <Button
             variant="ghost"
             type="button"
-            id="open-settings"
             className="w-full justify-start gap-3 text-muted-foreground"
-            onClick={closeMobile}
+            onClick={() => {
+              closeMobile()
+              onOpenSettings()
+            }}
             aria-label="Settings"
           >
             <Settings className="h-4 w-4" />

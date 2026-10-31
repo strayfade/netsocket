@@ -26,7 +26,7 @@ Stack: Node.js (CommonJS), Express, WebSockets, native `node:test` runner. Hub U
 | `frontend/public/vendor/gridstack-all.js` + `gridstack.min.css` | Vendored GridStack 13.3.0 (pinned in root + `frontend-app` package.json; do not upgrade casually) |
 | `server/nodes/` | Node modules (`NodeDefinition` + `NodeFunction`) |
 | `server/utils/` | Shared helpers (auth, parsing, triggers, integrations) |
-| `frontend/public/` | Legacy static assets for LiteGraph, widgets, settingsModal, fonts, vendor |
+| `frontend/public/` | Legacy static assets for LiteGraph, widgets, fonts, vendor |
 | `frontend/public/css/shell.css` | Widget/grid/kiosk theme tokens (OLED-black, 8px radius) still used by GridStack surfaces |
 | `frontend/public/js/shell.js` | Legacy UMD shell helpers (still unit-tested); React installs a `ShellLogic` bridge for NTP/toasts |
 | `tests/` | Automated tests |

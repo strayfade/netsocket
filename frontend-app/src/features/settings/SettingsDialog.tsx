@@ -1,40 +1,236 @@
-import { useEffect, useRef } from 'react'
-import { loadScript } from '@/lib/loadScript'
+import * as React from 'react'
+import { useLocation } from 'react-router-dom'
+import { Settings2 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  getPreferences,
+  listDevices,
+  listProviders,
+  listSmartHomeDevices,
+  type PairedDevice,
+  type Preference,
+  type ProviderRow,
+  type SmartHomeDevice,
+} from '@/lib/api'
+import { cn } from '@/lib/utils'
+import { hasEditorRenderControls } from './netRender'
+import { PrefsForm } from './PrefsForm'
+import { BUILTIN_META, MERGED_CATEGORIES, WORKSPACE_CATEGORIES, categoryDescription, categoryIcon } from './settingsCatalog'
+import { DevicesSection } from './sections/DevicesSection'
+import { SmartHomeSection } from './sections/SmartHomeSection'
+import { AiProvidersSection } from './sections/AiProvidersSection'
+import { RenderingSection } from './sections/RenderingSection'
+import { AuthenticatorSection } from './sections/AuthenticatorSection'
 
-/**
- * Host DOM for settingsModal.js (devices, smart home, AI providers, OTP,
- * Aria, preference registry, rendering). Opened via #open-settings.
- */
-export function SettingsHost() {
-  const loaded = useRef(false)
+type Section = {
+  id: string
+  label: string
+  icon: LucideIcon
+  description: string
+  render: () => React.ReactNode
+}
 
-  useEffect(() => {
-    if (loaded.current) return
-    loaded.current = true
-    void loadScript('/js/settingsModal.js')
+function CategorySkeleton() {
+  return (
+    <div className="flex flex-col gap-5 py-2">
+      {[0, 1, 2].map((i) => (
+        <Skeleton key={i} className="h-10 w-full" />
+      ))}
+    </div>
+  )
+}
+
+export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const location = useLocation()
+  const [prefs, setPrefs] = React.useState<Preference[] | null>(null)
+  const [devices, setDevices] = React.useState<PairedDevice[] | null>(null)
+  const [smartHome, setSmartHome] = React.useState<SmartHomeDevice[] | null>(null)
+  const [providers, setProviders] = React.useState<ProviderRow[] | null>(null)
+  const [loading, setLoading] = React.useState(false)
+  const [sectionId, setSectionId] = React.useState('devices')
+
+  const load = React.useCallback(() => {
+    setLoading(true)
+    void Promise.allSettled([
+      getPreferences().then(setPrefs),
+      listDevices().then(setDevices),
+      listSmartHomeDevices().then(setSmartHome),
+      listProviders().then(setProviders),
+    ]).then(() => setLoading(false))
   }, [])
 
+  React.useEffect(() => {
+    if (open) load()
+  }, [open, load])
+
+  // Take over the editor socket's live registry pushes while open, restore the
+  // legacy bridge on close so other UI keeps receiving them.
+  React.useEffect(() => {
+    if (!open) return
+    const prevDevices = window.__netsocketOnDevicesChanged
+    const prevSmartHome = window.__netsocketOnSmartHomeChanged
+    window.__netsocketOnDevicesChanged = (list) => setDevices(list as PairedDevice[])
+    window.__netsocketOnSmartHomeChanged = (list) => setSmartHome(list as SmartHomeDevice[])
+    return () => {
+      window.__netsocketOnDevicesChanged = prevDevices
+      window.__netsocketOnSmartHomeChanged = prevSmartHome
+    }
+  }, [open])
+
+  const renderAvailable = location.pathname === '/automate' && hasEditorRenderControls()
+
+  const prefsFor = React.useCallback(
+    (category: string) => (prefs || []).filter((p) => p.category === category),
+    [prefs],
+  )
+
+  const sections = React.useMemo<Section[]>(() => {
+    const categories = prefs
+      ? [...new Set(prefs.map((p) => p.category))].sort((a, b) => a.localeCompare(b))
+      : []
+    const workspaceCats = categories.filter((c) => WORKSPACE_CATEGORIES.has(c))
+    const integrationCats = categories.filter((c) => !WORKSPACE_CATEGORIES.has(c) && !MERGED_CATEGORIES.has(c))
+
+    const out: Section[] = [
+      {
+        ...BUILTIN_META.devices,
+        id: 'devices',
+        render: () => <DevicesSection devices={devices} loading={loading} refresh={load} />,
+      },
+      {
+        ...BUILTIN_META.smarthome,
+        id: 'smarthome',
+        render: () => (
+          <SmartHomeSection
+            mqttPrefs={prefsFor('Smart Home')}
+            devices={smartHome}
+            loading={loading}
+            refresh={load}
+          />
+        ),
+      },
+      {
+        ...BUILTIN_META.ai,
+        id: 'ai',
+        render: () => (
+          <AiProvidersSection
+            providers={providers}
+            loading={loading}
+            refresh={load}
+            ollamaPrefs={prefsFor('Ollama')}
+          />
+        ),
+      },
+    ]
+
+    if (renderAvailable) {
+      out.push({ ...BUILTIN_META.rendering, id: 'rendering', render: () => <RenderingSection /> })
+    }
+
+    for (const cat of workspaceCats) {
+      out.push({
+        id: `cat:${cat}`,
+        label: cat,
+        icon: categoryIcon(cat),
+        description: categoryDescription(cat),
+        render: () => (prefs ? <PrefsForm prefs={prefsFor(cat)} /> : <CategorySkeleton />),
+      })
+    }
+
+    if (categories.includes('Authenticator')) {
+      out.push({
+        ...BUILTIN_META.authenticator,
+        id: 'cat:Authenticator',
+        render: () => <AuthenticatorSection prefs={prefsFor('Authenticator')} />,
+      })
+    }
+
+    for (const cat of integrationCats) {
+      out.push({
+        id: `cat:${cat}`,
+        label: cat,
+        icon: categoryIcon(cat),
+        description: categoryDescription(cat),
+        render: () => (prefs ? <PrefsForm prefs={prefsFor(cat)} /> : <CategorySkeleton />),
+      })
+    }
+
+    return out
+  }, [prefs, devices, smartHome, providers, loading, renderAvailable, prefsFor, load])
+
+  const active = sections.find((s) => s.id === sectionId) || sections[0]
+
   return (
-    <div id="settings-modal" style={{ display: 'none', position: 'fixed', inset: 0, zIndex: 50 }}>
-      <div id="settings-backdrop" className="settings-backdrop" aria-hidden="true" />
-      <div className="settings-shell" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
-        <div id="settings-sidebar">
-          <div className="settings-sidebar-top">
-            <button type="button" id="close-settings" className="settings-close-btn" aria-label="Close settings">
-              <span className="material-symbols-outlined" aria-hidden="true">
-                close
-              </span>
-            </button>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="grid h-[min(760px,88svh)] w-[min(1080px,calc(100vw-1.5rem))] max-w-none gap-0 overflow-hidden p-0 sm:rounded-xl sm:grid-rows-[auto_minmax(0,1fr)]"
+      >
+        <div className="flex flex-col gap-1 border-b border-border px-6 py-4 pr-12">
+          <DialogHeader className="flex-row items-center gap-2 space-y-0">
+            <Settings2 className="h-4 w-4 text-muted-foreground" aria-hidden />
+            <DialogTitle>Settings</DialogTitle>
+          </DialogHeader>
+          <DialogDescription className="text-xs">{active?.description}</DialogDescription>
+        </div>
+
+        <div className="flex min-h-0 flex-col sm:flex-row">
+          <nav
+            aria-label="Settings sections"
+            className="flex shrink-0 gap-1 overflow-x-auto border-b border-border p-2 sm:w-56 sm:flex-col sm:overflow-y-auto sm:overflow-x-hidden sm:border-b-0 sm:border-r sm:p-3"
+          >
+            <div className="hidden px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 sm:block">
+              Workspace
+            </div>
+            {sections
+              .filter((s) => !s.id.startsWith('cat:') || WORKSPACE_CATEGORIES.has(s.label))
+              .map((s) => (
+                <NavButton key={s.id} section={s} active={active?.id === s.id} onSelect={setSectionId} />
+              ))}
+            <div className="hidden px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 sm:pt-5 sm:block">
+              Integrations
+            </div>
+            {sections
+              .filter((s) => s.id.startsWith('cat:') && !WORKSPACE_CATEGORIES.has(s.label))
+              .map((s) => (
+                <NavButton key={s.id} section={s} active={active?.id === s.id} onSelect={setSectionId} />
+              ))}
+          </nav>
+
+          <div className="min-w-0 flex-1 overflow-y-auto px-6 py-5">
+            {active ? active.render() : null}
           </div>
-          <div id="settings-tabs-container" />
         </div>
-        <div id="settings-content">
-          <span id="settings-modal-title" className="visually-hidden">
-            Application settings
-          </span>
-          <div id="settings-panels-scroll" className="ns-scroll" />
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function NavButton({
+  section,
+  active,
+  onSelect,
+}: {
+  section: Section
+  active: boolean
+  onSelect: (id: string) => void
+}) {
+  const Icon = section.icon
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(section.id)}
+      aria-current={active ? 'true' : undefined}
+      className={cn(
+        'flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors',
+        active
+          ? 'bg-white font-medium text-black hover:bg-white'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+      <span>{section.label}</span>
+    </button>
   )
 }

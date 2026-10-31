@@ -151,13 +151,28 @@ export async function executePanelAutomation(panelId: string, nodeId: string | n
   })
 }
 
-export async function getPreferences() {
-  const json = await apiFetch<{ preferences?: unknown[] } | unknown[]>('/v1/preferences')
+export type Preference = {
+  category: string
+  id: string
+  displayName: string
+  type: string // text | number | boolean | select | readonly
+  defaultVal?: string
+  description?: string
+  value: string
+  options?: { value: string; label: string }[]
+}
+
+function asArrayByKey(json: unknown, key: string): unknown[] {
   if (Array.isArray(json)) return json
-  if (json && Array.isArray((json as { preferences?: unknown[] }).preferences)) {
-    return (json as { preferences: unknown[] }).preferences
+  if (json && Array.isArray((json as Record<string, unknown>)[key])) {
+    return (json as Record<string, unknown[]>)[key]
   }
   return []
+}
+
+export async function getPreferences(): Promise<Preference[]> {
+  const json = await apiFetch<{ preferences?: unknown[] } | unknown[]>('/v1/preferences')
+  return asArrayByKey(json, 'preferences') as Preference[]
 }
 
 export async function savePreference(name: string, value: unknown) {
@@ -178,14 +193,144 @@ export async function importFullState(payload: unknown) {
   })
 }
 
-export async function listDevices() {
-  return apiFetch<{ devices?: unknown[] } | unknown[]>('/v1/devices')
+// MARK: Settings - companion devices
+
+export type PairedDevice = {
+  deviceId: string
+  name?: string
+  platform?: string
+  status: string // pending | approved | denied
+  ipAddress?: string
+  lastSeenAt?: string | number
 }
 
-export async function listSmartHomeDevices() {
-  return apiFetch<{ devices?: unknown[] } | unknown[]>('/v1/smarthome/devices')
+export async function listDevices(): Promise<PairedDevice[]> {
+  return asArrayByKey(await apiFetch('/v1/devices'), 'devices') as PairedDevice[]
 }
 
-export async function listProviders() {
-  return apiFetch<{ providers?: unknown[] } | unknown[]>('/v1/providers')
+export async function setDeviceStatus(deviceId: string, action: 'approve' | 'deny' | 'pending') {
+  return apiFetch(`/v1/devices/${encodeURIComponent(deviceId)}/${action}`, { method: 'POST' })
+}
+
+export async function removeDevice(deviceId: string) {
+  return apiFetch(`/v1/devices/${encodeURIComponent(deviceId)}`, { method: 'DELETE' })
+}
+
+// MARK: Settings - smart-home device registry
+
+export type SmartHomeEntity = {
+  uniqueId: string
+  component?: string
+  objectId?: string
+  capabilities?: string[]
+  lastState?: string
+}
+
+export type SmartHomeDevice = {
+  deviceId: string
+  friendlyName?: string
+  room?: string
+  source?: string
+  manufacturer?: string
+  model?: string
+  availability?: string
+  status: string // pending | approved | denied
+  lastSeenAt?: string | number
+  entities?: SmartHomeEntity[]
+}
+
+export async function listSmartHomeDevices(): Promise<SmartHomeDevice[]> {
+  return asArrayByKey(await apiFetch('/v1/smarthome/devices'), 'devices') as SmartHomeDevice[]
+}
+
+export async function setSmartHomeDeviceStatus(
+  deviceId: string,
+  action: 'approve' | 'deny' | 'pending',
+) {
+  return apiFetch(`/v1/smarthome/devices/${encodeURIComponent(deviceId)}/${action}`, {
+    method: 'POST',
+  })
+}
+
+export async function removeSmartHomeDevice(deviceId: string) {
+  return apiFetch(`/v1/smarthome/devices/${encodeURIComponent(deviceId)}`, { method: 'DELETE' })
+}
+
+export async function renameSmartHomeDevice(deviceId: string, friendlyName: string, room: string) {
+  return apiFetch(`/v1/smarthome/devices/${encodeURIComponent(deviceId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ friendlyName, room }),
+  })
+}
+
+// MARK: Settings - AI providers
+
+export type ProviderRow = {
+  id: string
+  name: string
+  kind: string // ollama | openai-compatible
+  baseUrl: string
+  defaultModel?: string
+  isDefault?: boolean
+  hasApiKey?: boolean
+}
+
+export type ProviderPayload = {
+  name: string
+  kind: string
+  baseUrl: string
+  apiKey?: string
+  defaultModel?: string
+  isDefault?: boolean
+}
+
+export async function listProviders(): Promise<ProviderRow[]> {
+  return asArrayByKey(await apiFetch('/v1/providers'), 'providers') as ProviderRow[]
+}
+
+export async function createProvider(body: ProviderPayload) {
+  return apiFetch('/v1/providers', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export async function updateProvider(id: string, body: Partial<ProviderPayload>) {
+  return apiFetch(`/v1/providers/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+}
+
+export async function deleteProvider(id: string) {
+  return apiFetch(`/v1/providers/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export async function listProviderModels(id: string): Promise<string[]> {
+  const json = await apiFetch<unknown>(`/v1/providers/${encodeURIComponent(id)}/models`)
+  return asArrayByKey(json, 'models').map((m) =>
+    typeof m === 'string' ? m : String((m as { id?: string })?.id ?? ''),
+  )
+}
+
+// MARK: Settings - Aria gateway
+
+export type AriaSettings = {
+  configured?: boolean
+  endpoint?: string
+  preset?: string
+  hasApiKey?: boolean
+}
+
+export async function getAriaSettings(): Promise<AriaSettings> {
+  return apiFetch<AriaSettings>('/v1/aria-settings')
+}
+
+export async function saveAriaSettings(body: {
+  endpoint?: string
+  preset?: string
+  apiKey?: string
+}) {
+  return apiFetch('/v1/aria-settings', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export async function testAriaSettings(): Promise<{ ok?: boolean; providers?: number; error?: string }> {
+  return apiFetch('/v1/aria-settings/test', { method: 'POST' })
 }

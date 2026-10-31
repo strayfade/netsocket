@@ -396,55 +396,10 @@
         return modal;
     }
 
-    function initSettingsModal(doc) {
-        var scope = doc || (typeof document !== 'undefined' ? document : null);
-        if (!scope) return null;
-        var modal = scope.getElementById('settings-modal');
-        if (!modal || modal.getAttribute('data-settings-bound') === 'true') return modal;
-        var backdrop = scope.getElementById('settings-backdrop');
-        var closeBtn = scope.getElementById('close-settings');
-        var openBtns = scope.querySelectorAll('#open-settings');
-        if (!openBtns.length && !backdrop && !closeBtn) return modal;
-        modal.setAttribute('data-settings-bound', 'true');
-        var openModal = function () {
-            modal.style.display = 'block';
-            modal.removeAttribute('hidden');
-            modal.setAttribute('aria-hidden', 'false');
-            var sb = scope.getElementById('shell-sidebar');
-            if (sb && sb.classList.contains('is-open') && isSidebarOverlay()) {
-                sb.classList.remove('is-open');
-                var bd = scope.getElementById('shell-sidebar-backdrop');
-                if (bd) bd.hidden = true;
-                var tg = scope.getElementById('shell-sidebar-toggle');
-                if (tg) tg.setAttribute('aria-expanded', 'false');
-                try { scope.body.style.overflow = ''; } catch (_) {}
-            }
-        };
-        var closeModal = function () {
-            modal.style.display = 'none';
-            modal.setAttribute('aria-hidden', 'true');
-        };
-        for (var i = 0; i < openBtns.length; i++) {
-            (function (btn) {
-                btn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    openModal();
-                });
-            })(openBtns[i]);
-        }
-        if (backdrop) backdrop.addEventListener('click', closeModal);
-        if (closeBtn) closeBtn.addEventListener('click', closeModal);
-        scope.addEventListener('keydown', function (e) {
-            if ((e.key === 'Escape' || e.keyCode === 27) && modal.style.display !== 'none' && modal.getAttribute('aria-hidden') !== 'true') closeModal();
-        });
-        return modal;
-    }
-
     function autoInit() {
         if (typeof document === 'undefined') return;
         try { initSidebar(document); } catch (_) {}
         try { initBackupModal(document); } catch (_) {}
-        try { initSettingsModal(document); } catch (_) {}
     }
     if (typeof document !== 'undefined') {
         if (document.readyState === 'loading') {
@@ -477,6 +432,5 @@
         initSidebar: initSidebar,
         isSidebarOverlay: isSidebarOverlay,
         initBackupModal: initBackupModal,
-        initSettingsModal: initSettingsModal,
     };
 }));
