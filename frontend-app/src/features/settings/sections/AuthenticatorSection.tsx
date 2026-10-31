@@ -182,12 +182,8 @@ export function AuthenticatorSection({ prefs }: { prefs: Preference[] }) {
 
   return (
     <>
-      <SubHeading
-        title="TOTP accounts"
-        actions={
-          <span className="text-xs text-muted-foreground">{otpCountLabel(openCountLabel)}</span>
-        }
-      />
+      <SubHeading title="TOTP accounts" />
+      <div className="mb-1 flex justify-end text-xs text-muted-foreground">{otpCountLabel(openCountLabel)}</div>
       {parsed.invalid.length > 0 && (
         <p className="mb-2 text-xs text-muted-foreground">
           {parsed.invalid.length === 1

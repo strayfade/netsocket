@@ -85,7 +85,7 @@ function AriaCard({ initial }: { initial: AriaSettings | null }) {
 
   return (
     <div>
-      <div className="grid gap-3 border-b border-border/60 py-4 first:pt-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] sm:gap-6">
+      <div className="grid gap-3 border-b border-border/60 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] sm:gap-6">
         <div>
           <label htmlFor="aria-endpoint" className="block text-sm font-medium leading-tight">Aria endpoint</label>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">The Aria instance used by the <span className="font-mono text-[11px]">Language Processing/Aria</span> node.</p>
@@ -261,15 +261,13 @@ export function AiProvidersSection({
       <SubHeading title="Aria gateway" />
       <AriaCard initial={aria} />
 
-      <SubHeading
-        title="Providers"
-        actions={
-          <Button size="sm" onClick={() => { setEditing(null); setEditorOpen(true) }}>
-            <Plus />
-            Add provider
-          </Button>
-        }
-      />
+      <SubHeading title="Providers" />
+      <div className="mb-1 flex justify-end">
+        <Button size="sm" onClick={() => { setEditing(null); setEditorOpen(true) }}>
+          <Plus />
+          Add provider
+        </Button>
+      </div>
       {loading && providers == null ? (
         <div className="flex flex-col gap-4">
           {[0, 1].map((i) => (

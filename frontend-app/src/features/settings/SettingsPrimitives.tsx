@@ -19,7 +19,7 @@ export function SettingsRow({
   actions?: React.ReactNode
 }) {
   return (
-    <div className="grid items-center gap-3 border-b border-border/60 py-4 first:pt-0 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] sm:gap-6">
+    <div className="grid items-center gap-3 border-b border-border/60 py-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] sm:gap-6">
       <div className="min-w-0">
         {htmlFor ? (
           <label htmlFor={htmlFor} className="block text-sm font-medium leading-tight">
@@ -38,14 +38,15 @@ export function SettingsRow({
   )
 }
 
-export function SubHeading({ title, actions }: { title: string; actions?: React.ReactNode }) {
+export function SubHeading({ title }: { title: string }) {
+  // Full-bleed darker band across the content pane with the section name
+  // centered. The -mx-6 cancels the content pane's px-6 so the band spans
+  // edge to edge; equal mt/mb make every content block equidistant from the
+  // header above and the next header below. The pane zeroes only the first
+  // header's top margin (see SettingsDialog's first-child rule).
   return (
-    // Full-bleed darker band across the content pane with the section name
-    // centered; actions (buttons, counters) float at the pane's right padding.
-    // The -mx-6 cancels the content pane's px-6 so the band spans edge to edge.
-    <div className="relative -mx-6 mb-3 mt-8 bg-black/60 py-1.5 first:mt-0">
+    <div className="relative -mx-6 mb-5 mt-5 bg-black/60 py-1.5">
       <h3 className="text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
-      {actions && <div className="absolute inset-y-0 right-6 flex items-center gap-2">{actions}</div>}
     </div>
   )
 }

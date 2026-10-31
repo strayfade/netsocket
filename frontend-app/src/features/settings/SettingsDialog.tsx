@@ -205,7 +205,9 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               ))}
           </nav>
 
-          <div className="min-w-0 flex-1 overflow-y-auto bg-card px-6 py-5">
+          {/* pt-0 + the first-child zeroing rules let the first section band sit
+              flush to the header; every later band keeps its equal mt/mb. */}
+          <div className="min-w-0 flex-1 overflow-y-auto bg-card px-6 pb-5 [&>section:first-child>div:first-child]:mt-0 [&>*:first-child]:mt-0">
             {active ? active.render() : null}
           </div>
         </div>
