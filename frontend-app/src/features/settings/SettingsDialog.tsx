@@ -169,7 +169,7 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
         // The per-section blurb was intentionally removed; silence Radix's
         // missing-description warning.
         aria-describedby={undefined}
-        className="grid h-[min(760px,88svh)] w-[min(1080px,calc(100vw-1.5rem))] max-w-none gap-0 overflow-hidden border-0 bg-background p-0 sm:rounded-xl sm:grid-rows-[auto_minmax(0,1fr)]"
+        className="grid h-[min(760px,88svh)] w-[min(1080px,calc(100vw-1.5rem))] max-w-none gap-0 overflow-hidden border-0 bg-white/[0.03] p-0 sm:rounded-xl sm:grid-rows-[auto_minmax(0,1fr)]"
       >
         <div className="flex items-center justify-between gap-4 px-6 py-4">
           <DialogHeader className="flex-row items-center gap-2 space-y-0">
