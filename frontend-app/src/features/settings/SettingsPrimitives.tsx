@@ -48,8 +48,8 @@ export function SubHeading({ title }: { title: string }) {
   // header above and the next header below. The pane zeroes only the first
   // header's top margin (see SettingsDialog's first-child rule).
   return (
-    <div className="relative -mx-6 mb-5 mt-5 bg-black/60 py-1.5">
-      <h3 className="text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
+    <div className="relative -mx-6 mb-5 mt-5 bg-[linear-gradient(to_right,transparent,rgba(0,0,0,0.6)_60%)] py-1.5">
+      <h3 className="pr-6 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
     </div>
   )
 }

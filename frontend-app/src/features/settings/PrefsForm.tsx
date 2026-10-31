@@ -82,12 +82,11 @@ function PrefRow({ pref }: { pref: Preference }) {
 
   let control: React.ReactNode
   if (isBoolish(pref)) {
-    const checked = boolValue
     control = (
-      <div className="flex items-center gap-3">
+      <div className="flex justify-end">
         <Switch
           id={inputId}
-          checked={checked}
+          checked={boolValue}
           disabled={state === 'saving'}
           onCheckedChange={(next) => {
             setBoolValue(next)
@@ -95,7 +94,6 @@ function PrefRow({ pref }: { pref: Preference }) {
             void save(next ? 'true' : 'false')
           }}
         />
-        <span className="text-xs text-muted-foreground">{checked ? 'Enabled' : 'Disabled'}</span>
       </div>
     )
   } else if (pref.type === 'select') {

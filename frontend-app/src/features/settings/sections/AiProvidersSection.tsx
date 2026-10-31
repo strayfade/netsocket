@@ -262,7 +262,7 @@ export function AiProvidersSection({
       <AriaCard initial={aria} />
 
       <SubHeading title="Providers" />
-      <div className="mb-1 flex justify-end">
+      <div className="mb-4 flex justify-end">
         <Button size="sm" onClick={() => { setEditing(null); setEditorOpen(true) }}>
           <Plus />
           Add provider

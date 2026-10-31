@@ -108,9 +108,8 @@ export function RenderingSection() {
         label="Show framerate"
         description="Overlay the canvas FPS counter."
         control={
-          <div className="flex items-center gap-3 sm:justify-end">
+          <div className="flex justify-end">
             <Switch checked={fps} onCheckedChange={(v) => { setShowFps(v); setFps(v) }} />
-            <span className="text-xs text-muted-foreground">{fps ? 'Enabled' : 'Disabled'}</span>
           </div>
         }
       />
@@ -118,9 +117,8 @@ export function RenderingSection() {
         label="Selection hotkeys bar"
         description="Keep the keyboard-shortcut bar visible under the current selection."
         control={
-          <div className="flex items-center gap-3 sm:justify-end">
+          <div className="flex justify-end">
             <Switch checked={keybinds} onCheckedChange={(v) => { setShowSelectionKeybinds(v); setKeybinds(v) }} />
-            <span className="text-xs text-muted-foreground">{keybinds ? 'Enabled' : 'Disabled'}</span>
           </div>
         }
       />
