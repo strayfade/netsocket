@@ -85,7 +85,7 @@ export function RenderingSection() {
 
   return (
     <>
-      <SubHeading title="Graph quality" description="Performance settings for the open graph canvas. Changes apply immediately and are remembered per browser." />
+      <SubHeading title="Graph quality" />
       <SettingsRow label="Quality preset" htmlFor="render-quality" control={
         <ToggleGroup
           id="render-quality"
@@ -143,7 +143,7 @@ export function RenderingSection() {
           />
         }
       />
-      <SubHeading title="Graph background" description="Contrast and brightness of the grid drawn behind nodes." />
+      <SubHeading title="Graph background" />
       <SettingsRow
         label="Grid contrast"
         control={

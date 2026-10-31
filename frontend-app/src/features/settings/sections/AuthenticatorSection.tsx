@@ -184,7 +184,6 @@ export function AuthenticatorSection({ prefs }: { prefs: Preference[] }) {
     <>
       <SubHeading
         title="TOTP accounts"
-        description="Each account is an issuer, a name, and a Base32 secret, stored as Issuer:Account:Secret entries separated by commas."
         actions={
           <span className="text-xs text-muted-foreground">{otpCountLabel(openCountLabel)}</span>
         }

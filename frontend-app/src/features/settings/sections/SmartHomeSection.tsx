@@ -197,13 +197,10 @@ export function SmartHomeSection({
 
   return (
     <>
-      <SubHeading
-        title="MQTT broker"
-        description="Connection used for Home Assistant-style discovery. Changes apply to the broker client immediately."
-      />
+      <SubHeading title="MQTT broker" />
       {mqttPrefs.length ? <PrefsForm prefs={mqttPrefs} /> : <p className="py-4 text-sm text-muted-foreground">No MQTT settings registered.</p>}
 
-      <SubHeading title="Pairing inbox" description="Devices that publish Home Assistant discovery announcements land here for approval." />
+      <SubHeading title="Pairing inbox" />
       {loading && devices == null ? (
         <div className="flex flex-col gap-4">
           {[0, 1, 2].map((i) => (

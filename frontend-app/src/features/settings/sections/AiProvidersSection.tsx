@@ -263,7 +263,6 @@ export function AiProvidersSection({
 
       <SubHeading
         title="Providers"
-        description="Endpoints used by AI nodes (summarize, extract, transcribe, language processing)."
         actions={
           <Button size="sm" onClick={() => { setEditing(null); setEditorOpen(true) }}>
             <Plus />
@@ -299,7 +298,7 @@ export function AiProvidersSection({
 
       {ollamaPrefs.length > 0 && (
         <>
-          <SubHeading title="Ollama (legacy)" description="Fallback endpoint for older AI nodes that predate providers." />
+          <SubHeading title="Ollama (legacy)" />
           <PrefsForm prefs={ollamaPrefs} />
         </>
       )}
