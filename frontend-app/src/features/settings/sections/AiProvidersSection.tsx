@@ -262,6 +262,10 @@ export function AiProvidersSection({
       <AriaCard initial={aria} />
 
       <SubHeading title="Providers" />
+      {/* Wrapper scopes :last-child so the final provider card drops its
+          bottom margin - the band's equal mt/mb then reads the same on both
+          sides of the section's visible content. */}
+      <div>
       <div className="mb-4 flex justify-end">
         <Button size="sm" onClick={() => { setEditing(null); setEditorOpen(true) }}>
           <Plus />
@@ -293,6 +297,7 @@ export function AiProvidersSection({
           />
         ))
       )}
+      </div>
 
       {ollamaPrefs.length > 0 && (
         <>

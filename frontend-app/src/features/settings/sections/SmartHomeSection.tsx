@@ -214,9 +214,12 @@ export function SmartHomeSection({
             <section key={group.key}>
               <SubHeading title={group.title} />
               {matching.length === 0 ? (
-                <p className="py-3 text-sm text-muted-foreground">{group.empty}</p>
+                <p className="py-4 text-sm text-muted-foreground">{group.empty}</p>
               ) : (
-                matching.map((device) => (
+                // Wrapper scopes :last-child so the final card drops its bottom
+                // margin; the card's own p-4 balances the band gaps either way.
+                <div>
+                  {matching.map((device) => (
                   <SmartHomeCard
                     key={device.deviceId}
                     device={device}
@@ -225,7 +228,8 @@ export function SmartHomeSection({
                     onRemove={() => setConfirmRemove(device)}
                     onRename={(friendlyName, room) => rename(device, friendlyName, room)}
                   />
-                ))
+                  ))}
+                </div>
               )}
             </section>
           )

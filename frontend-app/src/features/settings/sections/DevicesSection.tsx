@@ -116,9 +116,13 @@ export function DevicesSection({
           <section key={group.key}>
             <SubHeading title={group.title} />
             {matching.length === 0 ? (
-              <p className="py-3 text-sm text-muted-foreground">{group.empty}</p>
+              <p className="py-4 text-sm text-muted-foreground">{group.empty}</p>
             ) : (
-              matching.map((device) => (
+              // Wrapper scopes :last-child so the final card drops its bottom
+              // margin; the card's own p-4 then balances the band→card gap
+              // with the card→next-band gap (both 36px).
+              <div>
+                {matching.map((device) => (
                 <div
                   key={device.deviceId}
                   className="mb-2 grid gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-4 last:mb-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
@@ -143,7 +147,8 @@ export function DevicesSection({
                     onRemove={() => setConfirmRemove(device)}
                   />
                 </div>
-              ))
+                ))}
+              </div>
             )}
           </section>
         )
