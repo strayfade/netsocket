@@ -16,6 +16,7 @@ const { config } = require('./config')
 
 const app = express();
 const {
+    authEnabled,
     authSkipped,
     MIN_PASSWORD_LENGTH,
     getSessionCookieOpts,
@@ -1378,6 +1379,9 @@ const { killProcessOnPort } = require('./utils/killProcessOnPort');
         await reloadMcpAgentMemory()
         await settingsManager.reloadSettings()
         await providerManager.loadProviders()
+        if (process.argv.includes('--skip-auth')) {
+            log('--skip-auth is deprecated — login is now disabled by default; pass --enable-auth to require sign-in.', logColors.Warning)
+        }
         if (!authSkipped()) {
             const existingMcpToken = settingsManager.getSetting('mcp.apiToken')
             const mcpToken = await ensureMcpApiToken()
@@ -1412,6 +1416,11 @@ const { killProcessOnPort } = require('./utils/killProcessOnPort');
         log(`Server running on http://127.0.0.1:${PORT}`)
         log(`Dashboard URL: http://127.0.0.1:${PORT}/dashboard`)
         log(`MCP endpoint: http://127.0.0.1:${PORT}/mcp`)
+        if (authEnabled()) {
+            log('Login: enabled.', logColors.Default)
+        } else {
+            log('Login: disabled (default) — pass --enable-auth or set NETSOCKET_ENABLE_AUTH=1 to require sign-in.', logColors.Warning)
+        }
     })
 })()
 

@@ -1,14 +1,18 @@
 'use strict';
 
-const { describe, it, beforeEach, afterEach } = require('node:test');
+const { describe, it, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const cookie = require('cookie');
 const { setUsers } = require('../server/manager/saveUsers');
 const sessionAuth = require('../server/utils/sessionAuth');
+const { enableAuth, enableAuthViaEnv, disableAuth, withLegacySkipAuth } = require('./helpers/authMode');
 
 const {
     MIN_PASSWORD_LENGTH,
     REMEMBER_ME_IDLE_MS,
+    authEnabled,
+    authSkipped,
+    canAccessPrivateApi,
     safeRedirectPath,
     isProtectedPagePath,
     integrationSecretMatches,
@@ -32,8 +36,6 @@ const {
     getSessionIdleMs,
     parseRememberMe,
 } = sessionAuth;
-
-const originalArgv = [...process.argv];
 
 function mockReqRes(overrides = {}) {
     const headers = {};
@@ -69,11 +71,9 @@ describe('sessionAuth', () => {
     beforeEach(() => {
         setUsers([]);
         resetLoginRateLimit();
-        process.argv = originalArgv.filter((arg) => arg !== '--skip-auth');
-    });
-
-    afterEach(() => {
-        process.argv = [...originalArgv];
+        // Route guards in this file expect login to be on; dedicated tests in
+        // 'login opt-in switch' below exercise the disabled modes.
+        enableAuth();
     });
 
     describe('constants', () => {
@@ -276,7 +276,7 @@ describe('sessionAuth', () => {
         });
 
         it('skips rate limiting when auth is disabled', () => {
-            process.argv.push('--skip-auth');
+            disableAuth();
             const { req, res } = mockReqRes();
             for (let i = 0; i < 20; i += 1) {
                 recordFailedLoginAttempt(req);
@@ -300,6 +300,40 @@ describe('sessionAuth', () => {
             let allowed = false;
             loginRateLimit(req, res, () => { allowed = true; });
             assert.equal(allowed, true);
+        });
+    });
+
+    describe('login opt-in switch', () => {
+        it('leaves the server open when no flag or env var is set (fresh install/update default)', () => {
+            disableAuth();
+            assert.equal(authEnabled(), false);
+            assert.equal(authSkipped(), true);
+            const { req, res } = mockReqRes();
+            assert.equal(canAccessPrivateApi(req, res), true);
+            assert.equal(hasUserSession(req, res), false);
+        });
+
+        it('enforces sessions when started with --enable-auth', () => {
+            enableAuth();
+            assert.equal(authEnabled(), true);
+            assert.equal(authSkipped(), false);
+            const { req, res } = mockReqRes();
+            assert.equal(canAccessPrivateApi(req, res), false);
+            const token = createToken({ rememberMe: false });
+            assert.equal(canAccessPrivateApi({ ...req, cookies: { tk: token } }, res), true);
+        });
+
+        it('enforces sessions when NETSOCKET_ENABLE_AUTH=1 (Docker path)', () => {
+            enableAuthViaEnv();
+            assert.equal(authEnabled(), true);
+            assert.equal(canAccessPrivateApi(mockReqRes().req), false);
+        });
+
+        it('stays open when only the deprecated --skip-auth flag is passed', () => {
+            withLegacySkipAuth();
+            assert.equal(authEnabled(), false);
+            assert.equal(authSkipped(), true);
+            assert.equal(canAccessPrivateApi(mockReqRes().req), true);
         });
     });
 

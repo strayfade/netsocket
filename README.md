@@ -37,6 +37,7 @@ services:
       - PORT=4675
       - HOSTNAME=0.0.0.0
       - DATA_DIR=/netsocket/data
+      # - NETSOCKET_ENABLE_AUTH=1  # require an account to use netsocket (login is off by default)
     volumes:
       - netsocket-data:/netsocket/data
     restart: always
@@ -44,6 +45,9 @@ volumes:
   netsocket-data:
 ```
 - Go to [http://localhost:4675](http://localhost:4675).
+
+### Login (authentication)
+netsocket ships with the login system **disabled by default**: anyone who can reach the port gets the full dashboard, and new installs and updates behave the same way. To require an account (create one on first visit, bcrypt-hashed sessions, login rate limiting), start the server with the `--enable-auth` flag, or set `NETSOCKET_ENABLE_AUTH=1` in the environment (the easiest option for Docker — add it to the `environment` list above).
 
 ### Node.js (development only)
 > [!IMPORTANT]
@@ -63,7 +67,7 @@ npm start
 # Guide (post-install)
 ### Basic setup
 1. Navigate to [http://localhost:4675](http://localhost:4675).
-2. Create an account (if this is your first run).
+2. If you enabled login (`--enable-auth` / `NETSOCKET_ENABLE_AUTH=1`), create your account on the first visit. Otherwise the dashboard opens directly — see [Login (authentication)](#login-authentication).
 3. You should be redirected to `/dashboard`. This is the home hub with stats and quick runs; open the **Automate** tab (`/automate`) to create automations.
 ### Create your first automation (in the Automate tab)
   - Right-click the canvas to add a new node

@@ -1,8 +1,9 @@
 'use strict'
 
-const { describe, it, before, beforeEach, afterEach } = require('node:test')
+const { describe, it, before, beforeEach } = require('node:test')
 const assert = require('node:assert/strict')
 const path = require('path')
+const { enableAuth, disableAuth } = require('./helpers/authMode')
 
 describe('executeStandalone', () => {
     before(async () => {
@@ -79,8 +80,6 @@ describe('node metadata', () => {
 })
 
 describe('MCP helpers', () => {
-    const originalArgv = [...process.argv]
-
     before(async () => {
         await require('../server/manager/nodeImporter').setupNodes(
             path.join(__dirname, '../server/nodes')
@@ -88,13 +87,10 @@ describe('MCP helpers', () => {
     })
 
     beforeEach(() => {
-        process.argv = originalArgv.filter((arg) => arg !== '--skip-auth')
+        // Access-control assertions below expect login to be on.
+        enableAuth()
         require('../server/manager/saveUsers').setUsers([])
         require('../server/manager/settingsManager').setSetting('mcp.apiToken', 'test-mcp-token')
-    })
-
-    afterEach(() => {
-        process.argv = [...originalArgv]
     })
 
     it('lists node summaries with optional category filter', () => {
@@ -107,7 +103,7 @@ describe('MCP helpers', () => {
         assert.ok(math.some((node) => node.nodeType === 'Math/Add'))
     })
 
-    it('allows MCP access with bearer token, session, or skip-auth', () => {
+    it('allows MCP access with bearer token, session, or when login is disabled', () => {
         const { canAccessMcp } = require('../server/mcp/mount')
         const { createToken } = require('../server/utils/sessionAuth')
 
@@ -119,7 +115,7 @@ describe('MCP helpers', () => {
         assert.equal(canAccessMcp({ cookies: { tk: sessionToken }, headers: {} }), true)
         assert.equal(canAccessMcp({ socket: { remoteAddress: '203.0.113.10' }, headers: {}, cookies: {} }), false)
 
-        process.argv.push('--skip-auth')
+        disableAuth()
         assert.equal(canAccessMcp({ socket: { remoteAddress: '203.0.113.10' }, headers: {}, cookies: {} }), true)
     })
 

@@ -2,7 +2,14 @@ const crypto = require('crypto')
 const cookie = require('cookie')
 const { getUsers, setUsers, flushUsersSync } = require('../manager/saveUsers.js')
 
-const authSkipped = () => process.argv.includes('--skip-auth')
+/**
+ * Login is opt-in: disabled by default on new installs and updates, so the
+ * server serves the dashboard with no account. Enable sign-in with
+ * `--enable-auth` or `NETSOCKET_ENABLE_AUTH=1`. The old `--skip-auth` flag is
+ * deprecated — skipping is now the default and the flag is not parsed.
+ */
+const authEnabled = () => process.argv.includes('--enable-auth') || process.env.NETSOCKET_ENABLE_AUTH === '1'
+const authSkipped = () => !authEnabled()
 
 /** Sliding inactivity window for standard sign-in (browser session cookie). */
 const SESSION_IDLE_MS = 1000 * 60 * 60 * 8
@@ -110,7 +117,7 @@ const validateToken = (tk) => {
     return sessionIsValidAndTouch(tk)
 }
 
-/** True when a real session cookie is present and valid (never true when --skip-auth). */
+/** True when a real session cookie is present and valid (never true when login is disabled). */
 const hasUserSession = (req, res = null) => {
     if (authSkipped()) return false
     return sessionIsValidAndTouch(req.cookies?.tk, res)
@@ -333,6 +340,7 @@ const securityHeaders = (_req, res, next) => {
 const parseRememberMe = (value) => value === true || value === 'true' || value === '1' || value === 1
 
 module.exports = {
+    authEnabled,
     authSkipped,
     SESSION_IDLE_MS,
     LEGACY_SESSION_IDLE_MS,

@@ -231,7 +231,7 @@ const NodeFunction = async (node, params, behaviors) => {
 ## 6. Debugging and Troubleshooting Approaches
 
 ### Runtime Debugging
-1. **Enable Debug Mode**: Use `npm run dev:noauth` for local development with auth skipped
+1. **Login state**: Login is disabled by default (`npm run dev` starts without it); use `npm run dev:auth` (`--enable-auth`) to exercise the login flow
 2. **Check Logs**: All server activity is logged via `log()` function
 3. **Browser DevTools**: Inspect network traffic in browser for API calls
 4. **WebSocket Debugging**: Monitor WebSocket connections for real-time debugging
@@ -327,7 +327,7 @@ app.post('/v1/postNotification/:secret', async (req, res) => {
 2. **Logging Sensitive Data**: Never log passwords, tokens, or credentials
 3. **Weak Validation**: Always validate input types explicitly
 4. **Open Redirects**: Always use `safeRedirectPath` for redirects
-5. **Missing Auth**: Never skip authentication in production
+5. **Missing Auth**: Login is off by default — enable it with `--enable-auth` or `NETSOCKET_ENABLE_AUTH=1` on any reachable host, and never weaken the auth paths when it is enabled
 
 ### Testing Pitfalls
 1. **Incomplete Coverage**: Always test both success and error paths
