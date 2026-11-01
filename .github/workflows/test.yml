@@ -14,7 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20.x, 22.x]
+        # Node 22 is the runtime (Dockerfile uses node:22) and tests require .ts
+        # modules via Node's type stripping, which Node 20 does not support.
+        node-version: [22.x]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
