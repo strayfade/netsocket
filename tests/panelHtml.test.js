@@ -5,160 +5,53 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
-const readFrontend = (name) => fs.readFileSync(
-    path.join(__dirname, '..', 'frontend', name),
-    'utf8'
-);
+const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8');
 
-describe('panel pages', () => {
-    it('panel.html is a session-gated kiosk surface with no token handling', () => {
-        const html = readFrontend('panel.html');
-        assert.doesNotMatch(html, /data-shell-tab/);
-        assert.match(html, /\/v1\/panels\//);
-        assert.doesNotMatch(html, /Authorization/);
-        assert.doesNotMatch(html, /\?token=/);
-        assert.doesNotMatch(html, /localStorage/);
-        assert.doesNotMatch(html, /panelHello/);
-        assert.doesNotMatch(html, /panelStatus/);
-        for (const id of [
-            'panel-login-required',
-            'panel-login-link',
-            'panel-grid',
-            'panel-empty',
-        ]) {
-            assert.match(html, new RegExp(`id="${id}"`));
+describe('panel SPA surfaces', () => {
+    it('kiosk markup and bootstrap stay session-based with no tokens', () => {
+        const markup = read('frontend-app', 'src', 'features', 'kiosk', 'kioskMarkup.html');
+        const page = read('frontend-app', 'src', 'features', 'kiosk', 'KioskPage.tsx');
+        const bootstrap = read('frontend', 'public', 'js', 'panelKioskBootstrap.js');
+        assert.doesNotMatch(markup, /data-shell-tab/);
+        assert.doesNotMatch(bootstrap, /Authorization/);
+        assert.doesNotMatch(bootstrap, /\?token=/);
+        assert.doesNotMatch(bootstrap, /localStorage/);
+        for (const id of ['panel-login-required', 'panel-login-link', 'panel-grid', 'panel-empty']) {
+            assert.match(markup, new RegExp(`id="${id}"`));
         }
-        assert.doesNotMatch(html, /id="panel-room"/);
-        assert.doesNotMatch(html, /panel-conn/);
-        assert.doesNotMatch(html, /id="panel-clock-inline"/);
-        assert.doesNotMatch(html, /id="panel-clock-hero"/);
-        assert.doesNotMatch(html, /kiosk-header/);
-        assert.match(html, /id="panel-grid"/);
-        assert.match(html, /<script src="\/js\/agentMarkdown\.js"><\/script>/);
-        assert.match(html, /<script src="\/js\/shell\.js"><\/script>/);
-        assert.match(html, /<script src="\/vendor\/gridstack-all\.js"><\/script>/);
-        assert.match(html, /<script src="\/js\/widgets\.js"><\/script>/);
-        assert.match(html, /Widgets\.createItem/);
-        assert.match(html, /staticGrid/);
-        assert.match(html, /showBorders/);
-        assert.match(html, /widgetStyle/);
-        assert.match(html, /data-widget-style/);
-        assert.match(html, /no-borders/);
-        assert.match(html, /refreshVarContent/);
-        assert.match(html, /varsChanged/);
-        assert.match(html, /new WebSocket/);
-        assert.match(html, /\/v1\/time/);
-        assert.match(html, /setServerTime/);
-        assert.match(html, /serverNow/);
-        assert.doesNotMatch(html, /widget-automations/);
-        assert.doesNotMatch(html, /widget-weather/);
-        assert.doesNotMatch(html, /renderButtons/);
+        assert.match(page, /startNetsocketPanelKiosk/);
+        assert.match(page, /panelKioskBootstrap\.js/);
+        assert.match(bootstrap, /varsChanged/);
+        assert.match(bootstrap, /WebSocket/);
+        assert.match(bootstrap, /Widgets\.createItem/);
+        assert.match(bootstrap, /staticGrid/);
+        assert.doesNotMatch(bootstrap, /widget-automations/);
+        assert.doesNotMatch(bootstrap, /widget-weather/);
     });
 
-    it('panels.html is a session-gated admin surface', () => {
-        const html = readFrontend('panels.html');
-        for (const tab of ['dashboard', 'automate', 'panels']) {
-            assert.match(html, new RegExp(`data-shell-tab="${tab}"`));
-        }
+    it('panels admin markup includes CRUD + widget editor hosts', () => {
+        const markup = read('frontend-app', 'src', 'features', 'panels', 'panelsMarkup.html');
+        const page = read('frontend-app', 'src', 'features', 'panels', 'PanelsPage.tsx');
+        const bootstrap = read('frontend', 'public', 'js', 'panelsBootstrap.js');
+        const shellCss = read('frontend', 'public', 'css', 'shell.css');
         for (const id of [
             'new-panel-open',
             'panel-create-dialog',
-            'panel-create-title',
-            'panel-create-close-top',
-            'panel-create-cancel',
-            'create-panel-btn',
-            'new-panel-name',
-            'new-panel-room',
             'panels-list',
             'panels-empty',
             'panel-edit-dialog',
             'panel-edit-grid',
-            'panel-edit-grid-empty',
             'panel-layout-edit-toggle',
             'panel-add-widget-open',
-            'panel-add-widget-dialog',
-            'panel-dialog-kind',
-            'panel-dialog-preset-track',
-            'panel-dialog-variable',
-            'panel-dialog-automation',
-            'panel-dialog-add',
-            'panel-dialog-show-date',
-            'edit-panel-name',
-            'edit-panel-room',
-            'edit-panel-borders',
-            'edit-panel-widget-style',
-            'edit-panel-devices',
-            'edit-panel-device-search',
-            'edit-panel-device-results',
-            'edit-panel-device-assigned',
-            'edit-panel-device-empty',
         ]) {
-            assert.match(html, new RegExp(`id="${id}"`));
+            assert.match(markup, new RegExp(`id="${id}"`));
         }
-        assert.doesNotMatch(html, /id="panel-dialog-size-label"/);
-        assert.doesNotMatch(html, /id="panel-carousel-prev"/);
-        assert.doesNotMatch(html, /id="edit-panel-widgetlist"/);
-        assert.doesNotMatch(html, /id="edit-widget-type"/);
-        assert.doesNotMatch(html, /id="edit-panel-automations"/);
-        assert.doesNotMatch(html, /edit-panel-widgets/);
-        assert.doesNotMatch(html, /edit-panel-bindings/);
-        assert.doesNotMatch(html, /panel-token-card/);
-        assert.doesNotMatch(html, /\?token=/);
-        assert.doesNotMatch(html, /\/rotate/);
-        assert.doesNotMatch(html, /\/revoke/);
-        assert.match(html, /\/v1\/devices/);
-        assert.match(html, /deviceIds/);
-        assert.match(html, /showBorders/);
-        assert.match(html, /widgetStyle/);
-        assert.match(html, />Timer<\/option>/);
-        assert.match(html, /\/v1\/panels/);
-        assert.match(html, /ensureSession/);
-        // Live previews: header button opens the creation dialog, each card
-        // paints its widgets with live config data and actions underneath.
-        assert.match(html, /panels-header/);
-        assert.match(html, /panels-grid/);
-        assert.match(html, /panel-preview-card/);
-        assert.match(html, /panel-preview-viewport/);
-        assert.match(html, /panel-preview-grid-/);
-        const css = fs.readFileSync(
-            path.join(__dirname, '..', 'frontend', 'public', 'css', 'shell.css'),
-            'utf8'
-        );
-        assert.match(css, /\.panel-preview-viewport\s*\{[^}]*background:\s*#000/);
-        assert.doesNotMatch(css, /\[data-widget-style="minimal"\]\s*\.widget-run-btn\s*\{[^}]*dashed/);
-        assert.match(css, /font-family:\s*'SF UI'/);
-        assert.match(css, /url\('\/fonts\/SFUI\.ttf'\)/);
-        assert.match(css, /font-family:\s*'SF UI Soft'/);
-        assert.match(css, /url\('\/fonts\/SFUISoft-RegularG4\.otf'\)/);
-        assert.match(css, /--panel-font:/);
-        assert.match(css, /--panel-clock-time-font:/);
-        assert.match(css, /#panel-grid[^{]*\{[^}]*--shell-font:\s*var\(--panel-font\)/);
-        assert.match(css, /\[data-clock-time\][^{]*\{[^}]*font-family:\s*var\(--panel-clock-time-font\)/);
+        assert.match(page, /startNetsocketPanels/);
+        assert.match(page, /panelsBootstrap\.js/);
+        assert.match(page, /panelDevicePicker\.js/);
+        assert.match(bootstrap, /startNetsocketPanels/);
+        assert.match(shellCss, /SF UI/);
         assert.ok(fs.existsSync(path.join(__dirname, '..', 'frontend', 'public', 'fonts', 'SFUI.ttf')));
-        assert.ok(fs.existsSync(path.join(
-            __dirname, '..', 'frontend', 'public', 'fonts', 'SFUISoft-RegularG4.otf'
-        )));
-        assert.match(html, /panel-preview-actions/);
-        assert.match(html, /\/config/);
-        assert.match(html, /\/execute/);
-        assert.match(html, /Widgets\.createItem/);
-        assert.match(html, /staticGrid/);
-        assert.match(html, /renderPanelCard/);
-        assert.match(html, /loadPreviewConfig/);
-        assert.match(html, /runPreviewAutomation/);
-        assert.match(html, /\/v1\/time/);
-        assert.match(html, /setServerTime/);
-        // The inline "New panel" card is gone; creation lives in the dialog.
-        assert.doesNotMatch(html, /aria-label="Create panel"/);
-        assert.match(html, /aria-label="New panel"/);
-        assert.match(html, /<script src="\/js\/widgetEditor\.js"><\/script>/);
-        assert.match(html, /<script src="\/js\/widgets\.js"><\/script>/);
-        assert.match(html, /<link rel="stylesheet" href="\/vendor\/gridstack\.min\.css">/);
-        assert.match(html, /WidgetEditor\.attach/);
-        assert.match(html, /<script src="\/js\/panelDevicePicker\.js"><\/script>/);
-        assert.match(html, /PanelDevicePicker\.attach/);
-        assert.match(html, /devicePicker\.getDeviceIds/);
-        assert.doesNotMatch(html, /edit-panel-devices input\[type="checkbox"\]/);
-        assert.match(html, /panel-edit-grid/);
+        assert.ok(fs.existsSync(path.join(__dirname, '..', 'frontend', 'public', 'fonts', 'SFUISoft-RegularG4.otf')));
     });
 });

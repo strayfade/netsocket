@@ -6,26 +6,29 @@ This document defines how AI agents should plan, implement, and review changes i
 
 Netsocket is a self-hosted home-automation hub and nodegraph runtime. The server (`server/`) executes graphs, serves the frontend (`frontend/`), and persists user data under `DATA_DIR` (default: `data/`). Nodes are discovered from `server/nodes/` and registered at startup via `server/manager/nodeImporter.js`. The primary UI is the Dashboard (`/dashboard`); the nodegraph editor lives under Automate (`/automate`); per-room touch surfaces live under Panels (`/panels`, `/panel/:id`).
 
-Stack: Node.js (CommonJS), Express, WebSockets, native `node:test` runner. License: GPLv3.
+Stack: Node.js (CommonJS), Express, WebSockets, native `node:test` runner. Hub UI: React 19 + Vite + TypeScript + Tailwind + shadcn/ui (source in `frontend-app/`, build output in `frontend/dist/`). Automate graph canvas remains a LiteGraph island. License: GPLv3.
 
 ## Repository layout
 
 | Path | Purpose |
 |------|---------|
-| `server/index.js` | HTTP/WebSocket entry, auth routes, trigger endpoints, dashboard/panel routes |
+| `server/index.js` | HTTP/WebSocket entry, auth routes, trigger endpoints, dashboard/panel routes; serves SPA from `frontend/dist` |
 | `server/manager/` | Graph execution, persistence, settings, node import, dashboard summary |
 | `server/manager/widgetSchema.js` | Unified grid-widget schema (`button`/`clock`/`markdown`/`html` with fixed size presets), validation, flow layout, legacy migration |
 | `server/manager/panelStore.js` | Room panels (`panels.json`): grid widget layouts, automation allowlists, device grants (`deviceIds`) |
 | `server/manager/panelApi.js` | Panel HTTP handlers (all session-gated) + device grant-discovery WS, injectable deps for tests |
 | `server/manager/dashboardLayout.js` | Dashboard grid widget layout (`dashboard.json`, v2 schema with legacy migration) |
 | `server/utils/vars.js` | Global variables: debounced `vars.json` persistence plus `onVarsChanged` hooks that feed the `varsChanged` socket push |
+| `frontend-app/` | React + Vite + shadcn hub UI source (login, shell, dashboard, panels, kiosk, settings host, automate island) |
+| `frontend/dist/` | Built SPA assets (`npm run build:frontend`); required for `npm start` / Docker |
 | `frontend/public/js/widgets.js` | Shared grid-widget renderer (UMD, unit-tested in `tests/widgets.test.js`) |
-| `frontend/public/vendor/gridstack-all.js` + `gridstack.min.css` | Vendored GridStack 13.3.0 (pinned in `package.json`; approved frontend dependency — do not upgrade casually) |
+| `frontend/public/js/editorBootstrap.js` | LiteGraph editor bootstrap (`startNetsocketEditor`) mounted by the Automate React route |
+| `frontend/public/vendor/gridstack-all.js` + `gridstack.min.css` | Vendored GridStack 13.3.0 (pinned in root + `frontend-app` package.json; do not upgrade casually) |
 | `server/nodes/` | Node modules (`NodeDefinition` + `NodeFunction`) |
 | `server/utils/` | Shared helpers (auth, parsing, triggers, integrations) |
-| `frontend/` | Static UI (`dashboard.html`, `editor.html`, `panels.html`, `index.html`, `public/`) |
-| `frontend/public/css/shell.css` | Shared Dashboard/Panels theme tokens (OLED-black, 8px radius, card/grid/tab primitives) |
-| `frontend/public/js/shell.js` | Shared tab/session/toast logic (UMD, unit-tested in `tests/shell.test.js`) |
+| `frontend/public/` | Legacy static assets for LiteGraph, widgets, fonts, vendor |
+| `frontend/public/css/shell.css` | Widget/grid/kiosk theme tokens (OLED-black, 8px radius) still used by GridStack surfaces |
+| `frontend/public/js/shell.js` | Legacy UMD shell helpers (still unit-tested); React installs a `ShellLogic` bridge for NTP/toasts |
 | `tests/` | Automated tests |
 | `extensions/` | Optional integrations (overlay, etc.) |
 | `NODES.md` | Node authoring reference and known edge cases |
@@ -42,7 +45,7 @@ Every new or changed **server-side behavior** must include automated tests.
 - Node runtime logic when behavior is non-trivial (parsing, branching, external I/O, error paths)
 - Security-sensitive code paths (authorization checks, secret validation, input sanitization)
 
-Pure UI-only changes in `frontend/` should get tests when they introduce testable logic modules (see `frontend/public/js/loginLogic.js`). Trivial markup-only edits may rely on existing structural tests in `tests/indexHtml.test.js` unless behavior changes.
+Pure UI-only changes should get tests when they introduce testable logic modules (see `frontend/public/js/loginLogic.js` and `frontend-app/src/lib/loginLogic.ts`). SPA structural tests live in `tests/indexHtml.test.js`, `tests/dashboardHtml.test.js`, and `tests/panelHtml.test.js`.
 
 ### How tests are written
 
@@ -127,10 +130,11 @@ After adding a node, smoke-test in the editor (linked and unlinked inputs, succe
 ## Code style and change discipline
 
 - **Minimize scope.** Only change what the task requires. Match the style of the file you edit (quote style, semicolons, indentation).
-- **CommonJS only** in server code (`require` / `module.exports`). Frontend logic modules that need tests may use a UMD wrapper like `loginLogic.js` or `shell.js`.
-- **New pages reuse the shell theme.** Dashboard, Panels, and future hub pages must use `frontend/public/css/shell.css` tokens and the `shell-topbar`/`shell-tabs` nav (`Dashboard | Automate | Panels`). Touch/kiosk surfaces need 48px+ tap targets (64px+ for primary actions), no hover-only interactions.
+- **CommonJS only** in server code (`require` / `module.exports`). Hub UI is ESM/TypeScript under `frontend-app/`. Legacy widget/editor helpers under `frontend/public/js/` may remain UMD for tests and islands.
+- **Hub UI lives in `frontend-app/`.** Routes are React Router pages under AppShell (Automate | Dashboard | Panels). Default theme is OLED black via `data-theme` / CSS variables (`frontend-app/src/styles/globals.css`). Widget grids still use `frontend/public/css/shell.css`. Touch/kiosk: 48px+ taps (64px+ primary), no hover-only UX.
+- **Automate is a LiteGraph island.** Load via `editorBootstrap.js` (`startNetsocketEditor`). Keep graph sync WebSocket-only (`getNodes` / `setNodes`). Do not replace LiteGraph casually.
 - **Reuse existing helpers** (`inputParser`, `sessionAuth`, `graphUtils`, `log`) instead of duplicating logic.
-- **Dependencies:** avoid new npm packages unless necessary. If added, update `package.json` and ensure CI still passes with `npm ci`. Exception already approved: `gridstack` (pinned exact, vendored to `frontend/public/vendor/`) powers the dashboard/kiosk widget grids — keep the vendor copy in sync on any version change.
+- **Dependencies:** prefer extending `frontend-app` (React/shadcn/Tailwind) over new root packages. GridStack stays pinned at **13.3.0** (vendored under `frontend/public/vendor/`). Docker builds the SPA; run `npm run build:frontend` before local `npm start` if `frontend/dist` is missing.
 - **Logging:** use `log(message, logColors.Error)` for errors; avoid logging sensitive values.
 - **Comments:** only where behavior is non-obvious. Prefer clear code over heavy documentation.
 - **Do not edit unrelated files** (README marketing copy, unrelated nodes, drive-by refactors).
@@ -144,7 +148,7 @@ After adding a node, smoke-test in the editor (linked and unlinked inputs, succe
 | `HOSTNAME` | Bind address |
 | `COOKIE_SECURE` | Set to `1` when serving over HTTPS |
 
-Local dev: `npm run dev` (auth on) or `npm run dev:noauth` (`--skip-auth`, dev only).
+Local dev: `npm run build:frontend` then `npm run dev` (auth on) or `npm run dev:noauth` (`--skip-auth`, dev only). For HMR, run `npm run dev:frontend` (Vite on :5173, proxies API to :4675) alongside the server.
 
 ## Pre-submit checklist
 

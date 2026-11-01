@@ -1,4 +1,6 @@
 /node_modules
+/frontend-app/node_modules
+/frontend/dist
 /.vscode
 .DS_Store
 

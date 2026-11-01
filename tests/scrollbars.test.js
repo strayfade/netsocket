@@ -20,4 +20,13 @@ describe('hidden scrollbars', () => {
             assert.doesNotMatch(css, /overflow:\s*hidden\s*!important/);
         });
     }
+
+    it('SPA globals include a hidden-scrollbar utility', () => {
+        const css = fs.readFileSync(
+            path.join(__dirname, '..', 'frontend-app', 'src', 'styles', 'globals.css'),
+            'utf8'
+        );
+        assert.match(css, /\.ns-scroll/);
+        assert.match(css, /scrollbar-width:\s*none/);
+    });
 });

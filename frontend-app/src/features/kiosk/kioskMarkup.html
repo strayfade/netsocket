@@ -1,0 +1,21 @@
+
+        <div id="panel-loading" class="shell-card">
+            <p class="shell-stat-sub shell-skeleton" style="margin: 0;">Loading panel</p>
+        </div>
+
+        <div id="panel-not-found" class="shell-card" hidden>
+            <h2 class="shell-card-title">Panel unavailable</h2>
+            <p class="shell-stat-sub" style="margin-top: 8px;">This panel does not exist or was deleted. Ask an admin to re-provision this surface from the Panels page.</p>
+        </div>
+
+        <div id="panel-login-required" class="shell-card" hidden>
+            <h2 class="shell-card-title">Sign in required</h2>
+            <p class="shell-stat-sub" style="margin: 8px 0 12px;">This kiosk signs in with your netsocket account. Sign in once and it stays signed in.</p>
+            <p style="margin: 0;"><a class="shell-btn" id="panel-login-link" href="/login">Sign in</a></p>
+        </div>
+
+        <div id="panel-content" hidden>
+            <div class="grid-stack" id="panel-grid" data-widget-style="classic"></div>
+            <p class="shell-empty" id="panel-empty" hidden>No widgets assigned to this panel yet.</p>
+        </div>
+    
