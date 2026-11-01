@@ -207,7 +207,7 @@ function PrefRow({ pref }: { pref: Preference }) {
 
 export function PrefsForm({ prefs }: { prefs: Preference[] }) {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
       {prefs.map((pref) => (
         <PrefRow key={pref.id} pref={pref} />
       ))}

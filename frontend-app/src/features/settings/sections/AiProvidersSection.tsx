@@ -84,7 +84,7 @@ function AriaCard({ initial }: { initial: AriaSettings | null }) {
   }
 
   return (
-    <div>
+    <div className="[&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
       <div className="grid gap-3 border-b border-border/60 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] sm:gap-6">
         <div>
           <label htmlFor="aria-endpoint" className="block text-sm font-medium leading-tight">Aria endpoint</label>

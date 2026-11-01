@@ -86,6 +86,7 @@ export function RenderingSection() {
   return (
     <>
       <SubHeading title="Graph quality" />
+      <div className="[&>*:first-child]:pt-0 [&>*:last-child]:pb-0 [&>*:last-child]:border-b-0">
       <SettingsRow label="Quality preset" htmlFor="render-quality" control={
         <ToggleGroup
           id="render-quality"
@@ -141,7 +142,9 @@ export function RenderingSection() {
           />
         }
       />
+      </div>
       <SubHeading title="Graph background" />
+      <div className="[&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
       <SettingsRow
         label="Grid contrast"
         control={
@@ -178,6 +181,7 @@ export function RenderingSection() {
           />
         }
       />
+      </div>
     </>
   )
 }
