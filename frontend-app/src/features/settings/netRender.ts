@@ -26,6 +26,8 @@ type NetsocketRenderWindow = Window & {
   setNetsocketGridContrast?: (percent: number) => number
   getNetsocketGridBrightness?: () => number
   setNetsocketGridBrightness?: (percent: number) => number
+  getNetsocketGridSnap?: () => boolean
+  setNetsocketGridSnap?: (enabled: boolean) => boolean
 }
 
 const w = () => window as NetsocketRenderWindow
@@ -164,6 +166,31 @@ export function setGridBrightness(percent: number): number {
   }
   try {
     window.localStorage.setItem('netsocket:gridBrightness', String(applied))
+  } catch {
+    /* private mode */
+  }
+  return applied
+}
+
+// Grid snap (moving nodes/groups snaps to the drawn background grid; hold Ctrl
+// while dragging to move freely). Enabled unless explicitly stored false, so a
+// missing editor island still reports the same default the editor applies.
+export function getGridSnap(): boolean {
+  if (typeof w().getNetsocketGridSnap === 'function') return !!w().getNetsocketGridSnap!()
+  try {
+    const raw = window.localStorage.getItem('netsocket:gridSnap')
+    if (raw != null) return raw !== 'false'
+  } catch {
+    /* private mode */
+  }
+  return true
+}
+
+export function setGridSnap(enabled: boolean): boolean {
+  const applied = !!enabled
+  if (typeof w().setNetsocketGridSnap === 'function') return !!w().setNetsocketGridSnap!(applied)
+  try {
+    window.localStorage.setItem('netsocket:gridSnap', applied ? 'true' : 'false')
   } catch {
     /* private mode */
   }

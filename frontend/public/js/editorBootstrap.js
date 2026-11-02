@@ -169,6 +169,30 @@
             canvas.background_brightness != null ? canvas.background_brightness : readStoredGridBrightness();
         window.setNetsocketGridBrightness(readStoredGridBrightness());
 
+        const GRID_SNAP_STORAGE_KEY = "netsocket:gridSnap";
+        const readStoredGridSnap = () => {
+            try {
+                const raw = localStorage.getItem(GRID_SNAP_STORAGE_KEY);
+                if (raw !== null) return raw !== "false";
+            } catch (e) {
+                return true;
+            }
+            return true; // grid snap is enabled by default
+        };
+        const writeStoredGridSnap = (enabled) => {
+            try {
+                localStorage.setItem(GRID_SNAP_STORAGE_KEY, enabled ? "true" : "false");
+            } catch (e) { /* ignore */ }
+        };
+        window.setNetsocketGridSnap = (enabled) => {
+            canvas.snap_to_grid = !!enabled;
+            writeStoredGridSnap(canvas.snap_to_grid);
+            return canvas.snap_to_grid;
+        };
+        window.getNetsocketGridSnap = () =>
+            canvas.snap_to_grid != null ? !!canvas.snap_to_grid : readStoredGridSnap();
+        window.setNetsocketGridSnap(readStoredGridSnap());
+
         // Persist the viewport pan/zoom (canvas.ds.offset + canvas.ds.scale) per view so
         // reloading the page restores where the user was looking instead of resetting.
         // The active view is keyed: "main" for the top-level graph, "subgraph:<id>" for each
@@ -426,6 +450,7 @@
                     appendKeybindItem(["Double-click"], "Set Inputs");
                     appendKeybindItem(["Alt", "Drag"], "Clone");
                     appendKeybindItem(["Shift"], "Multiselect");
+                    appendKeybindItem(["Ctrl", "Drag"], "Disable snap");
                     appendKeybindItem(["CTRL", "C"], "Copy");
                     appendKeybindItem(["CTRL", "V"], "Paste");
                 }

@@ -10,6 +10,7 @@ import {
   getGridBrightnessBounds,
   getGridContrast,
   getGridContrastBounds,
+  getGridSnap,
   getQualityPresets,
   getRenderQuality,
   getRenderResolution,
@@ -17,6 +18,7 @@ import {
   getShowSelectionKeybinds,
   setGridBrightness,
   setGridContrast,
+  setGridSnap,
   setRenderResolution,
   setShowFps,
   setShowSelectionKeybinds,
@@ -82,6 +84,7 @@ export function RenderingSection() {
   const brightnessBounds = React.useMemo(() => getGridBrightnessBounds(), [])
   const [contrast, setContrast] = React.useState(() => getGridContrast())
   const [brightness, setBrightness] = React.useState(() => getGridBrightness())
+  const [gridSnap, setGridSnapState] = React.useState(() => getGridSnap())
 
   return (
     <>
@@ -145,6 +148,15 @@ export function RenderingSection() {
       </div>
       <SubHeading title="Graph background" />
       <div className="[&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+      <SettingsRow
+        label="Grid snap"
+        description="Dragged nodes and groups snap onto the background grid — hold Ctrl while dragging to move freely."
+        control={
+          <div className="flex justify-end">
+            <Switch checked={gridSnap} onCheckedChange={(v) => { setGridSnap(v); setGridSnapState(v) }} />
+          </div>
+        }
+      />
       <SettingsRow
         label="Grid contrast"
         control={

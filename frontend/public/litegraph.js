@@ -16,6 +16,10 @@
 
         CANVAS_GRID_SIZE: 30,
 
+        // Pitch of the grid drawn by DEFAULT_BACKGROUND_IMAGE: the 120px tile paints light
+        // lines every 15px in graph space (dark major lines every 120), so snap lands on 15.
+        GRID_SNAP_SIZE: 15,
+
         NODE_TITLE_HEIGHT: 26,
         NODE_TITLE_TEXT_Y: 20,
         NODE_SLOT_HEIGHT: 24,
@@ -1713,6 +1717,7 @@
                 }
                 if (canvas.node_dragged == node) {
                     canvas.node_dragged = null;
+                    canvas._snap_drag = null;
                 }
             }
         }
@@ -5540,6 +5545,8 @@ LGraphNode.prototype.executeAction = function(action)
         this.allow_searchbox = true;
         this.allow_reconnect_links = true; //allows to change a connection with having to redo it again
         this.align_to_grid = false; //snap to grid
+        this.snap_to_grid = true; //live-snap node/group drags to the drawn background grid; hold Ctrl while dragging to move freely
+        this._snap_drag = null; //mid-drag bookkeeping for snap_to_grid
 
         this.drag_mode = true;
         this.dragging_rectangle = null;
@@ -5776,6 +5783,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         this.visible_nodes = [];
         this.node_dragged = null;
+        this._snap_drag = null;
         this.node_over = null;
         this.node_capturing_input = null;
         this.connecting_node = null;
@@ -6268,6 +6276,25 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     /**
+     * Rounds a graph coordinate to the nearest background-grid line.
+     * @method _gridSnap
+     **/
+    LGraphCanvas.prototype._gridSnap = function (v) {
+        var g = LiteGraph.GRID_SNAP_SIZE;
+        return g * Math.round(v / g);
+    };
+
+    /**
+     * Whether grid snapping applies to the current drag step: the snap_to_grid
+     * setting is on and Ctrl is not held (holding Ctrl during a drag frees the
+     * item from the grid until it is released).
+     * @method _snapActiveForDrag
+     **/
+    LGraphCanvas.prototype._snapActiveForDrag = function (e) {
+        return this.snap_to_grid && !e.ctrlKey;
+    };
+
+    /**
      * Maps a browser client coordinate into canvas backing-store pixels.
      * Works for any devicePixelRatio and render_resolution.
      * @method clientToCanvas
@@ -6380,6 +6407,7 @@ LGraphNode.prototype.executeAction = function(action)
     LGraphCanvas.prototype._cancelPointerInteractions = function () {
         this.dragging_canvas = false;
         this.node_dragged = null;
+        this._snap_drag = null;
         this.connecting_node = null;
         this.resizing_node = null;
         this.dragging_rectangle = null;
@@ -6504,6 +6532,8 @@ LGraphNode.prototype.executeAction = function(action)
             e.preventDefault();
             return false;
         }
+
+        this._snap_drag = null; //each press starts a fresh snap-drag accumulator
 
         var ref_window = this.getCanvasWindow();
         var document = ref_window.document;
@@ -7082,7 +7112,40 @@ LGraphNode.prototype.executeAction = function(action)
             } else {
                 var deltax = delta[0] / this.ds.scale;
                 var deltay = delta[1] / this.ds.scale;
-                this.selected_group.move(deltax, deltay, e.ctrlKey);
+                if (this.snap_to_grid) {
+                    // Snap-aware move: total offset is derived from the drag-start position
+                    // plus the accumulated mouse offset, so sub-pitch mouse deltas are not
+                    // lost to rounding. The frame lands on grid lines, member nodes follow
+                    // rigidly (Ctrl keeps the upstream frame-only move and suspends the snap).
+                    if (!this._snap_drag || this._snap_drag.mode != "group") {
+                        this._snap_drag = {
+                            mode: "group",
+                            dx: 0,
+                            dy: 0,
+                            ox: 0,
+                            oy: 0,
+                            base: [this.selected_group.pos[0], this.selected_group.pos[1]],
+                        };
+                    }
+                    var gsnap = this._snap_drag;
+                    gsnap.dx += deltax;
+                    gsnap.dy += deltay;
+                    var offx, offy;
+                    if (this._snapActiveForDrag(e)) {
+                        offx = this._gridSnap(gsnap.base[0] + gsnap.dx) - gsnap.base[0];
+                        offy = this._gridSnap(gsnap.base[1] + gsnap.dy) - gsnap.base[1];
+                    } else {
+                        offx = gsnap.dx;
+                        offy = gsnap.dy;
+                    }
+                    var stepx = offx - gsnap.ox;
+                    var stepy = offy - gsnap.oy;
+                    gsnap.ox = offx;
+                    gsnap.oy = offy;
+                    this.selected_group.move(stepx, stepy, e.ctrlKey);
+                } else {
+                    this.selected_group.move(deltax, deltay, e.ctrlKey);
+                }
                 if (this.selected_group._nodes.length) {
                     this.dirty_canvas = true;
                 }
@@ -7236,14 +7299,50 @@ LGraphNode.prototype.executeAction = function(action)
             //node being dragged
             if (this.node_dragged && !this.live_mode) {
                 //console.log("draggin!",this.selected_nodes);
-                for (var i in this.selected_nodes) {
-                    var n = this.selected_nodes[i];
-                    n.pos[0] += delta[0] / this.ds.scale;
-                    n.pos[1] += delta[1] / this.ds.scale;
-                    if (!n.is_selected) this.processNodeSelected(n, e); /*
-                     * Don't call the function if the block is already selected.
-                     * Otherwise, it could cause the block to be unselected while dragging.
-                     */
+                if (this.snap_to_grid) {
+                    // Snap-aware move: recompute each dragged node from where it stood at
+                    // drag start plus the accumulated mouse offset, so sub-pitch mouse
+                    // deltas are not lost to rounding and every node lands on a grid line.
+                    // Holding Ctrl during the move drops the nodes back to free placement.
+                    if (!this._snap_drag || this._snap_drag.mode != "nodes") {
+                        this._snap_drag = { mode: "nodes", dx: 0, dy: 0, base: {} };
+                        for (var bi in this.selected_nodes) {
+                            this._snap_drag.base[bi] = [
+                                this.selected_nodes[bi].pos[0],
+                                this.selected_nodes[bi].pos[1]
+                            ];
+                        }
+                    }
+                    var nsnap = this._snap_drag;
+                    nsnap.dx += delta[0] / this.ds.scale;
+                    nsnap.dy += delta[1] / this.ds.scale;
+                    var do_snap = this._snapActiveForDrag(e);
+                    for (var i in this.selected_nodes) {
+                        var n = this.selected_nodes[i];
+                        var b = nsnap.base[i];
+                        if (!b) {
+                            //joined the selection mid-drag: treat its current spot as the base
+                            b = nsnap.base[i] = [n.pos[0] - nsnap.dx, n.pos[1] - nsnap.dy];
+                        }
+                        var rx = b[0] + nsnap.dx;
+                        var ry = b[1] + nsnap.dy;
+                        n.pos[0] = do_snap ? this._gridSnap(rx) : rx;
+                        n.pos[1] = do_snap ? this._gridSnap(ry) : ry;
+                        if (!n.is_selected) this.processNodeSelected(n, e); /*
+                         * Don't call the function if the block is already selected.
+                         * Otherwise, it could cause the block to be unselected while dragging.
+                         */
+                    }
+                } else {
+                    for (var i in this.selected_nodes) {
+                        var n = this.selected_nodes[i];
+                        n.pos[0] += delta[0] / this.ds.scale;
+                        n.pos[1] += delta[1] / this.ds.scale;
+                        if (!n.is_selected) this.processNodeSelected(n, e); /*
+                         * Don't call the function if the block is already selected.
+                         * Otherwise, it could cause the block to be unselected while dragging.
+                         */
+                    }
                 }
 
                 this.dirty_canvas = true;
@@ -7360,6 +7459,22 @@ LGraphNode.prototype.executeAction = function(action)
                 this.selected_group.pos[1] = Math.round(
                     this.selected_group.pos[1]
                 );
+                if (
+                    this._snapActiveForDrag(e) &&
+                    this._snap_drag &&
+                    this._snap_drag.mode == "group"
+                ) {
+                    // Land the group frame on a grid line after a move-drag, carrying its
+                    // nodes along rigidly (live snapping usually already did it). Guarded on
+                    // an actual move so clicking a still group never shifts it.
+                    var snapdx =
+                        this._gridSnap(this.selected_group.pos[0]) -
+                        this.selected_group.pos[0];
+                    var snapdy =
+                        this._gridSnap(this.selected_group.pos[1]) -
+                        this.selected_group.pos[1];
+                    this.selected_group.move(snapdx, snapdy, e.ctrlKey);
+                }
                 if (this.selected_group._nodes.length) {
                     this.dirty_canvas = true;
                 }
@@ -7530,6 +7645,20 @@ LGraphNode.prototype.executeAction = function(action)
                 this.dirty_bgcanvas = true;
                 this.node_dragged.pos[0] = Math.round(this.node_dragged.pos[0]);
                 this.node_dragged.pos[1] = Math.round(this.node_dragged.pos[1]);
+                if (
+                    this._snapActiveForDrag(e) &&
+                    this._snap_drag &&
+                    this._snap_drag.mode == "nodes"
+                ) {
+                    // Land every node moved by this drag on a grid line (live snapping
+                    // usually already did it; this catches Ctrl released just before release).
+                    // Guarded on an actual drag so clicking a still node never shifts it.
+                    for (var snode_id in this.selected_nodes) {
+                        var snode = this.selected_nodes[snode_id];
+                        snode.pos[0] = this._gridSnap(snode.pos[0]);
+                        snode.pos[1] = this._gridSnap(snode.pos[1]);
+                    }
+                }
                 if (this.graph.config.align_to_grid || this.align_to_grid) {
                     this.node_dragged.alignToGrid();
                 }
@@ -7566,6 +7695,8 @@ LGraphNode.prototype.executeAction = function(action)
                     ]);
                 }
             }
+
+            this._snap_drag = null; //drag over: drop the snap accumulator
         } else if (e.which == 2) {
             //middle button
             //trace("middle");
