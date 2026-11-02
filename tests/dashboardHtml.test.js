@@ -18,11 +18,16 @@ describe('React hub shell + dashboard', () => {
         assert.ok(dashboard < panels, 'Dashboard should precede Panels');
     });
 
-    it('dashboard page uses shadcn Combobox/Switch/Button Group and GridStack widgets', () => {
+    it('dashboard + panel editors share the shadcn AddWidgetDialog', () => {
         const page = read('frontend-app', 'src', 'features', 'dashboard', 'DashboardPage.tsx');
+        const dialog = read('frontend-app', 'src', 'features', 'widgets', 'AddWidgetDialog.tsx');
         const editorJs = read('frontend', 'public', 'js', 'widgetEditor.js');
         assert.match(page, /components\/ui\/combobox/);
-        assert.match(page, /components\/ui\/switch/);
+        assert.match(page, /AddWidgetDialog/);
+        assert.match(dialog, /components\/ui\/combobox/);
+        assert.match(dialog, /components\/ui\/switch/);
+        assert.match(dialog, /components\/ui\/dialog/);
+        assert.match(dialog, /components\/ui\/field/);
         assert.match(page, /components\/ui\/button-group/);
         assert.match(page, /components\/ui\/skeleton/);
         assert.match(page, /components\/ui\/context-menu/);

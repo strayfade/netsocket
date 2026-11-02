@@ -22,9 +22,17 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideClose?: boolean }
->(({ className, children, hideClose, ...props }, ref) => (
-  <DialogPortal>
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    hideClose?: boolean
+    /**
+     * Portal target. Defaults to body. Pass e.g. a transparent open <dialog>
+     * element to render this dialog into the browser's top layer (native
+     * dialogs always paint above body-level portals otherwise).
+     */
+    portalContainer?: HTMLElement | null
+  }
+>(({ className, children, hideClose, portalContainer, ...props }, ref) => (
+  <DialogPortal container={portalContainer}>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}

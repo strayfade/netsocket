@@ -21,6 +21,8 @@ type ComboboxProps = {
   className?: string
   disabled?: boolean
   id?: string
+  /** Portal target for the dropdown; see PopoverContent.container. */
+  popperContainer?: HTMLElement | null
   'aria-label'?: string
 }
 
@@ -34,6 +36,7 @@ export function Combobox({
   className,
   disabled,
   id,
+  popperContainer,
   'aria-label': ariaLabel,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
@@ -55,7 +58,11 @@ export function Combobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        align="start"
+        container={popperContainer}
+      >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>

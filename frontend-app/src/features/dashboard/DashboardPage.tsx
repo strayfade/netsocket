@@ -8,14 +8,12 @@ import { toast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Combobox } from '@/components/ui/combobox'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Field, FieldDescription, FieldLabel, FieldRow } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
+import { Field, FieldLabel } from '@/components/ui/field'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
-import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
+import { AddWidgetDialog, type WidgetDraft } from '@/features/widgets/AddWidgetDialog'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -53,21 +51,7 @@ const STYLE_OPTIONS = [
   { value: 'neon', label: 'Neon' },
 ]
 
-const KIND_OPTIONS = [
-  { value: 'button', label: 'Run Button' },
-  { value: 'clock', label: 'Clock' },
-  { value: 'markdown', label: 'Markdown' },
-  { value: 'html', label: 'HTML' },
-  { value: 'timer', label: 'Timer' },
-  { value: 'weather', label: 'Weather' },
-]
-
-const UNIT_OPTIONS = [
-  { value: 'f', label: '°F (imperial)' },
-  { value: 'c', label: '°C (metric)' },
-]
-
-const DEFAULT_SIZES: Record<string, { w: number; h: number }> = {
+const KIND_DEFAULT_SIZES: Record<string, { w: number; h: number }> = {
   button: { w: 1, h: 1 },
   clock: { w: 4, h: 2 },
   markdown: { w: 4, h: 2 },
@@ -99,14 +83,6 @@ export function DashboardPage() {
   const [widgets, setWidgets] = useState<Widget[]>([])
   const [automations, setAutomations] = useState<Automation[]>([])
   const [addOpen, setAddOpen] = useState(false)
-  const [kind, setKind] = useState('clock')
-  const [variable, setVariable] = useState('')
-  const [automationId, setAutomationId] = useState('')
-  const [showName, setShowName] = useState(false)
-  const [showDate, setShowDate] = useState(true)
-  const [wxLocation, setWxLocation] = useState('')
-  const [wxUnit, setWxUnit] = useState('f')
-  const [wxGradient, setWxGradient] = useState(true)
 
   const automationOptions = useMemo(
     () =>
@@ -394,56 +370,35 @@ export function DashboardPage() {
     void saveLayout(widgetsRef.current)
   }
 
-  const addWidget = () => {
-    const size = DEFAULT_SIZES[kind] || DEFAULT_SIZES.clock
-    const id = `w${Date.now().toString(36)}`
+  // The shared AddWidgetDialog validated the draft (and closed itself);
+  // this side only maps it onto a sized grid widget and persists.
+  const addDraft = (draft: WidgetDraft) => {
+    const size = KIND_DEFAULT_SIZES[draft.kind] || KIND_DEFAULT_SIZES.clock
     const widget: Widget = {
-      id,
-      type: kind,
+      id: `w${Date.now().toString(36)}`,
+      type: draft.kind,
       x: 0,
       y: 0,
       w: size.w,
       h: size.h,
     }
-    if (kind === 'button') {
-      if (!automationId) {
-        toast('Select an automation')
-        return
-      }
-      widget.automationId = automationId
-      if (showName) widget.showName = true
+    if (draft.kind === 'button') {
+      widget.automationId = draft.automationId
+      if (draft.showName) widget.showName = true
     }
-    if (kind === 'markdown' || kind === 'html') {
-      if (!variable.trim()) {
-        toast('Enter a variable name')
-        return
-      }
-      widget.variable = variable.trim()
+    if (draft.kind === 'markdown' || draft.kind === 'html') {
+      widget.variable = draft.variable
     }
-    if (kind === 'clock' && !showDate) widget.showDate = false
-    if (kind === 'weather') {
-      const location = wxLocation.replace(/\s+/g, ' ').trim()
-      if (!location) {
-        toast('Enter a location')
-        return
-      }
-      widget.location = location.slice(0, 100)
-      if (wxUnit === 'c') widget.unit = 'c'
-      if (!wxGradient) widget.gradient = false
+    if (draft.kind === 'clock' && !draft.showDate) widget.showDate = false
+    if (draft.kind === 'weather') {
+      widget.location = draft.location
+      if (draft.unit === 'c') widget.unit = 'c'
+      if (!draft.gradient) widget.gradient = false
     }
 
     const next = [...widgetsRef.current, widget]
     widgetsRef.current = next
     setWidgets(next)
-    setAddOpen(false)
-    setKind('clock')
-    setVariable('')
-    setAutomationId('')
-    setShowName(false)
-    setShowDate(true)
-    setWxLocation('')
-    setWxUnit('f')
-    setWxGradient(true)
     rebuildGrid()
     void saveLayout(next)
   }
@@ -530,117 +485,12 @@ export function DashboardPage() {
         </ContextMenuContent>
       </ContextMenu>
 
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add widget</DialogTitle>
-            <DialogDescription>
-              Placed at a default size — drag corners in Edit layout to resize.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <Field>
-              <FieldLabel>Type</FieldLabel>
-              <Combobox
-                options={KIND_OPTIONS}
-                value={kind}
-                onValueChange={setKind}
-                placeholder="Widget type"
-                searchPlaceholder="Filter types…"
-              />
-            </Field>
-
-            {(kind === 'markdown' || kind === 'html') && (
-              <Field>
-                <FieldLabel htmlFor="dialog-variable">Variable name</FieldLabel>
-                <Input
-                  id="dialog-variable"
-                  className="font-mono"
-                  value={variable}
-                  onChange={(e) => setVariable(e.target.value)}
-                  placeholder="morning_briefing"
-                  maxLength={128}
-                />
-              </Field>
-            )}
-
-            {kind === 'button' && (
-              <>
-                <Field>
-                  <FieldLabel>Automation</FieldLabel>
-                  <Combobox
-                    options={automationOptions}
-                    value={automationId}
-                    onValueChange={setAutomationId}
-                    placeholder={automationOptions.length ? 'Select automation' : 'No runnable automations'}
-                    searchPlaceholder="Search automations…"
-                    emptyText="Create a Triggers/Button in Automate first."
-                    disabled={!automationOptions.length}
-                  />
-                  <FieldDescription>
-                    Automations are Triggers/Button nodes. Set their Name property to label them here.
-                  </FieldDescription>
-                </Field>
-                <FieldRow>
-                  <FieldLabel htmlFor="dialog-show-name">Show name</FieldLabel>
-                  <Switch id="dialog-show-name" checked={showName} onCheckedChange={setShowName} />
-                </FieldRow>
-              </>
-            )}
-
-            {kind === 'clock' && (
-              <FieldRow>
-                <FieldLabel htmlFor="dialog-show-date">Show date</FieldLabel>
-                <Switch id="dialog-show-date" checked={showDate} onCheckedChange={setShowDate} />
-              </FieldRow>
-            )}
-
-            {kind === 'weather' && (
-              <>
-                <Field>
-                  <FieldLabel htmlFor="dialog-wx-location">Location</FieldLabel>
-                  <Input
-                    id="dialog-wx-location"
-                    value={wxLocation}
-                    onChange={(e) => setWxLocation(e.target.value)}
-                    placeholder={'"Manhattan, US" or "47.61,-122.33"'}
-                    maxLength={100}
-                  />
-                  <FieldDescription>
-                    City name (optionally with country) or a lat,lon pair. Updates hourly from OpenWeatherMap.
-                  </FieldDescription>
-                </Field>
-                <Field>
-                  <FieldLabel>Temperature units</FieldLabel>
-                  <Combobox
-                    options={UNIT_OPTIONS}
-                    value={wxUnit}
-                    onValueChange={setWxUnit}
-                    placeholder="°F (imperial)"
-                    aria-label="Temperature units"
-                  />
-                </Field>
-                <FieldRow>
-                  <FieldLabel htmlFor="dialog-wx-gradient">Gradient background</FieldLabel>
-                  <Switch
-                    id="dialog-wx-gradient"
-                    checked={wxGradient}
-                    onCheckedChange={setWxGradient}
-                  />
-                </FieldRow>
-              </>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setAddOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={addWidget}>Add widget</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddWidgetDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        automationOptions={automationOptions}
+        onAdd={addDraft}
+      />
     </div>
   )
 }

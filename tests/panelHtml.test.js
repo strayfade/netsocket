@@ -43,12 +43,26 @@ describe('panel SPA surfaces', () => {
             'panel-edit-grid',
             'panel-layout-edit-toggle',
             'panel-add-widget-open',
+            'panel-dialog-kind',
+            'panel-dialog-variable',
+            'panel-dialog-automation',
+            'panel-dialog-show-name',
+            'panel-dialog-show-date',
             'panel-dialog-location',
             'panel-dialog-unit',
             'panel-dialog-gradient',
+            'panel-dialog-add',
         ]) {
             assert.match(markup, new RegExp(`id="${id}"`));
         }
+        // The visible add dialog on /panels is the shared React one; the legacy
+        // island dialog above is kept only as its value bridge (open event ->
+        // close immediately, replay draft through the panel-dialog-* controls).
+        assert.match(page, /AddWidgetDialog/);
+        assert.match(page, /panel-add-widget-dialog/);
+        assert.match(page, /bridgeObserver\.observe\(/);
+        assert.match(page, /panel-react-dialog-anchor/);
+        assert.match(page, /panel-dialog-add/);
         assert.match(page, /startNetsocketPanels/);
         assert.match(page, /panelsBootstrap\.js/);
         assert.match(page, /panelDevicePicker\.js/);

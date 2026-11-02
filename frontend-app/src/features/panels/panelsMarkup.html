@@ -96,6 +96,11 @@
         </div>
     </dialog>
 
+    <!-- Add-widget dialog: this markup is the layout editor island's control
+         surface (WidgetEditor attaches by the panel-dialog-* ids). The visible
+         dialog on /panels is the shared React AddWidgetDialog, which closes
+         this one the instant it opens and replays its values through these
+         controls before clicking #panel-dialog-add. Keep all ids stable. -->
     <dialog id="panel-add-widget-dialog" class="shell-card" aria-label="Add widget" aria-labelledby="panel-add-widget-title">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px;">
             <h2 id="panel-add-widget-title" class="shell-card-title" style="margin: 0;">Add widget</h2>
