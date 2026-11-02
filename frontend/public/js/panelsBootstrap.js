@@ -656,7 +656,9 @@
             await loadPanels();
             syncServerTime();
             if (typeof ShellLogic.startNtpResync === 'function') {
-                ShellLogic.startNtpResync(api);
+                // No fetcher argument: the SPA bridge takes (intervalMs) only,
+                // and a function here once became setInterval's NaN -> 4ms flood.
+                ShellLogic.startNtpResync();
             }
         })();
 

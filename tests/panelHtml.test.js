@@ -57,4 +57,18 @@ describe('panel SPA surfaces', () => {
         assert.ok(fs.existsSync(path.join(__dirname, '..', 'frontend', 'public', 'fonts', 'SFUI.ttf')));
         assert.ok(fs.existsSync(path.join(__dirname, '..', 'frontend', 'public', 'fonts', 'SFUISoft-RegularG4.otf')));
     });
+
+    it('panel bootstraps never pass a fetcher as the NTP resync interval', () => {
+        const panels = read('frontend', 'public', 'js', 'panelsBootstrap.js');
+        const kiosk = read('frontend', 'public', 'js', 'panelKioskBootstrap.js');
+        const ntpBridge = read('frontend-app', 'src', 'lib', 'ntp.ts');
+        // The SPA bridge contract is startNtpResync(intervalMs). panelsBootstrap
+        // once passed its fetch wrapper (legacy shell.js contract) -> setInterval
+        // got NaN -> clamped to ~4ms -> /v1/time fired hundreds of times/second.
+        // The bridge also refuses to install a non-finite interval.
+        assert.doesNotMatch(panels, /startNtpResync\(\s*api\s*\)/);
+        assert.match(panels, /startNtpResync\(\)/);
+        assert.match(kiosk, /startNtpResync\(\)/);
+        assert.match(ntpBridge, /isFinite/);
+    });
 });

@@ -64,12 +64,21 @@ export async function syncNtpTime() {
   }
 }
 
-export function startNtpResync(intervalMs = NTP_RESYNC_MS) {
+export function startNtpResync(fetcherOrIntervalMs?: unknown, intervalMs?: unknown) {
+  // Legacy shell.js contract was startNtpResync(fetcher, intervalMs); this
+  // bridge's contract is (intervalMs). Accept both call shapes — and NEVER
+  // hand setInterval a non-finite delay: setInterval(fn, NaN) fires at the
+  // ~4ms clamp, which once hammered /v1/time hundreds of times per second.
+  let interval = NTP_RESYNC_MS
+  const first = typeof fetcherOrIntervalMs === 'number' && isFinite(fetcherOrIntervalMs) ? fetcherOrIntervalMs : null
+  const second = typeof intervalMs === 'number' && isFinite(intervalMs) ? intervalMs : null
+  if (second != null && second > 0) interval = second
+  else if (first != null && first > 0) interval = first
   stopNtpResync()
   void syncNtpTime()
   resyncTimer = setInterval(() => {
     void syncNtpTime()
-  }, intervalMs)
+  }, interval)
 }
 
 export function stopNtpResync() {
