@@ -5527,6 +5527,8 @@ LGraphNode.prototype.executeAction = function(action)
         this.render_quality = "medium";
         this.render_resolution = 100; // percent of CSS size × devicePixelRatio for the backing store
         this.background_opacity = 100; // percent alpha of the grid image layer drawn over the background fill
+        this.node_bg_opacity = 100; // percent alpha multiplier on node body fills (titles/text stay opaque)
+        this.node_bgcolor = null; // overrides the theme node body fill when set to a hex color
         this.editor_alpha = 1; //used for transition
         this.pause_rendering = false;
         this.clear_background = true;
@@ -5631,6 +5633,28 @@ LGraphNode.prototype.executeAction = function(action)
             LGraphCanvas.BACKGROUND_OPACITY_MIN,
             Math.min(LGraphCanvas.BACKGROUND_OPACITY_MAX, p)
         );
+    };
+
+    /** Settings slider range for node body fill opacity. 100 renders the fills as authored. */
+    LGraphCanvas.NODE_BG_OPACITY_MIN = 0;
+    LGraphCanvas.NODE_BG_OPACITY_MAX = 100;
+    LGraphCanvas.NODE_BG_OPACITY_DEFAULT = 100;
+
+    LGraphCanvas.clampNodeBackgroundOpacity = function (percent) {
+        var p = Math.round(Number(percent));
+        if (!isFinite(p)) return LGraphCanvas.NODE_BG_OPACITY_DEFAULT;
+        return Math.max(
+            LGraphCanvas.NODE_BG_OPACITY_MIN,
+            Math.min(LGraphCanvas.NODE_BG_OPACITY_MAX, p)
+        );
+    };
+
+    /**
+     * Shared validator for the color text inputs: #rgb, #rrggbb or #rrggbbaa.
+     * Canvas fill styles accept all three.
+     */
+    LGraphCanvas.isValidColorHex = function (color) {
+        return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(String(color || "").trim());
     };
 
     LGraphCanvas.link_type_colors = {
@@ -6164,6 +6188,53 @@ LGraphNode.prototype.executeAction = function(action)
         this.background_opacity = p;
         this.setDirty(true, true);
         return p;
+    };
+
+    /**
+     * Sets the flat background fill color ("Grid background" setting). Accepts
+     * #rgb, #rrggbb or #rrggbbaa; returns the applied color, or null if invalid.
+     * @method setClearColor
+     */
+    LGraphCanvas.prototype.setClearColor = function (color) {
+        var c = String(color == null ? "" : color).trim();
+        if (!LGraphCanvas.isValidColorHex(c)) return null;
+        this.clear_background_color = c;
+        this.setDirty(true, true);
+        return c;
+    };
+
+    /**
+     * Sets the opacity of node body fills (0–100), multiplied with the fills'
+     * own alpha. Titles, text, slots and selection outlines stay opaque.
+     * @method setNodeBackgroundOpacity
+     */
+    LGraphCanvas.prototype.setNodeBackgroundOpacity = function (percent) {
+        var p = LGraphCanvas.clampNodeBackgroundOpacity(percent);
+        if (this.node_bg_opacity === p) return p;
+        this.node_bg_opacity = p;
+        this.setDirty(true, true);
+        return p;
+    };
+
+    /**
+     * Overrides the node body fill color globally (the theme's semi-transparent
+     * black default). Accepts #rgb/#rrggbb/#rrggbbaa; null or "" restores the
+     * default; "red" still replaces the fill of nodes with errors.
+     * @method setNodeBackgroundColor
+     */
+    LGraphCanvas.prototype.setNodeBackgroundColor = function (color) {
+        var c = String(color == null ? "" : color).trim();
+        if (c === "" || c == null) {
+            if (this.node_bgcolor == null) return null;
+            this.node_bgcolor = null;
+            this.setDirty(true, true);
+            return null;
+        }
+        if (!LGraphCanvas.isValidColorHex(c)) return null;
+        if (this.node_bgcolor === c) return c;
+        this.node_bgcolor = c;
+        this.setDirty(true, true);
+        return c;
     };
 
     /**
@@ -9150,8 +9221,10 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.save();
             this.ds.toCanvasContext(ctx);
 
-            //render BG — one flat fill rect, with the grid image layered over it
-            if (this.ds.scale < 1.5 && !bg_already_painted && this.clear_background_color) {
+            //render BG — one flat fill rect, with the grid image layered over it.
+            //No zoom guard: the fill must cover every scale, otherwise the canvas
+            //goes transparent above scale 1.5 and the CSS fallback shows through.
+            if (!bg_already_painted && this.clear_background_color) {
                 ctx.fillStyle = this.clear_background_color;
                 ctx.fillRect(
                     this.visible_area[0],
@@ -9967,7 +10040,15 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.shadowColor = "transparent";
         }
         ctx.strokeStyle = fgcolor;
-        ctx.fillStyle = "#00000080";
+        //node body fill: the theme default is translucent black at both fill sites
+        //below; "Node background color" overrides the color and "Node opacity"
+        //scales the fill's own alpha (titles, text, slots stay opaque)
+        var custom_body = this.node_bgcolor;
+        var node_bg_alpha =
+            (this.node_bg_opacity != null
+                ? LGraphCanvas.clampNodeBackgroundOpacity(this.node_bg_opacity)
+                : LGraphCanvas.NODE_BG_OPACITY_DEFAULT) / 100;
+        ctx.fillStyle = custom_body || "#00000080";
 
         var title_height = LiteGraph.NODE_TITLE_HEIGHT;
         var low_quality = this.force_simple_shapes || this.ds.scale < 0.5;
@@ -9996,6 +10077,9 @@ LGraphNode.prototype.executeAction = function(action)
         //full node shape (skipped for chrome-less nodes like Reroute; selection outline still draws)
         //if(node.flags.collapsed)
         if (!hide_chrome) {
+            if (node_bg_alpha < 1) {
+                ctx.globalAlpha = old_alpha * node_bg_alpha;
+            }
             ctx.beginPath();
             if (shape == LiteGraph.BOX_SHAPE || low_quality) {
                 ctx.fillRect(area[0], area[1], area[2], area[3]);
@@ -10015,7 +10099,7 @@ LGraphNode.prototype.executeAction = function(action)
                 // ---------- 1. BASE SHAPE ----------
                 ctx.beginPath();
                 ctx.roundRect(x, y, w, h, radius);
-                ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+                ctx.fillStyle = custom_body || "rgba(0, 0, 0, 0.2)";
                 ctx.fill();
 
                 if (this.render_body_glass) {
@@ -10095,6 +10179,7 @@ LGraphNode.prototype.executeAction = function(action)
                 ctx.fillRect(0, -1, area[2], 2);
             }
         }
+        ctx.globalAlpha = old_alpha;
         ctx.shadowColor = "transparent";
 
         if (node.onDrawBackground) {

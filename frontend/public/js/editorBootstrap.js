@@ -147,6 +147,67 @@
             canvas.background_opacity != null ? canvas.background_opacity : readStoredGridOpacity();
         window.setNetsocketGridOpacity(readStoredGridOpacity());
 
+        // Canvas background fill color (the flat rect under the grid image).
+        // Applied only when stored; otherwise the shipped #000000 default stands.
+        const CANVAS_BG_STORAGE_KEY = "netsocket:canvasBg";
+        window.setNetsocketCanvasBg = (color) => {
+            const applied = canvas.setClearColor(color);
+            try {
+                if (applied != null) localStorage.setItem(CANVAS_BG_STORAGE_KEY, applied);
+            } catch (e) { /* ignore */ }
+            return applied;
+        };
+        window.getNetsocketCanvasBg = () => canvas.clear_background_color;
+        {
+            let storedBg = null;
+            try {
+                storedBg = localStorage.getItem(CANVAS_BG_STORAGE_KEY);
+            } catch (e) { /* ignore */ }
+            if (storedBg) canvas.setClearColor(storedBg);
+        }
+
+        // Node body fill opacity (0-100) and color. Titles/text stay opaque;
+        // an empty color restores the theme's translucent black default.
+        const NODE_BG_OPACITY_STORAGE_KEY = "netsocket:nodeBgOpacity";
+        const NODE_BGCOLOR_STORAGE_KEY = "netsocket:nodeBgColor";
+        const readStoredNodeBgOpacity = () => {
+            try {
+                const raw = localStorage.getItem(NODE_BG_OPACITY_STORAGE_KEY);
+                if (raw != null) return LGraphCanvas.clampNodeBackgroundOpacity(raw);
+            } catch (e) { /* ignore */ }
+            return LGraphCanvas.NODE_BG_OPACITY_DEFAULT;
+        };
+        window.setNetsocketNodeBgOpacity = (percent) => {
+            const applied = canvas.setNodeBackgroundOpacity(percent);
+            try {
+                localStorage.setItem(NODE_BG_OPACITY_STORAGE_KEY, String(applied));
+            } catch (e) { /* ignore */ }
+            return applied;
+        };
+        window.getNetsocketNodeBgOpacity = () =>
+            canvas.node_bg_opacity != null ? canvas.node_bg_opacity : readStoredNodeBgOpacity();
+        window.setNetsocketNodeBgOpacity(readStoredNodeBgOpacity());
+
+        window.setNetsocketNodeBgColor = (color) => {
+            const applied = canvas.setNodeBackgroundColor(color);
+            try {
+                if (color == null || String(color).trim() === "") {
+                    localStorage.removeItem(NODE_BGCOLOR_STORAGE_KEY);
+                } else if (applied != null) {
+                    localStorage.setItem(NODE_BGCOLOR_STORAGE_KEY, applied);
+                }
+            } catch (e) { /* ignore */ }
+            return applied;
+        };
+        window.getNetsocketNodeBgColor = () => canvas.node_bgcolor != null ? canvas.node_bgcolor : "";
+        {
+            let storedNodeBg = null;
+            try {
+                storedNodeBg = localStorage.getItem(NODE_BGCOLOR_STORAGE_KEY);
+            } catch (e) { /* ignore */ }
+            if (storedNodeBg) canvas.setNodeBackgroundColor(storedNodeBg);
+        }
+
         const GRID_SNAP_STORAGE_KEY = "netsocket:gridSnap";
         const readStoredGridSnap = () => {
             try {
