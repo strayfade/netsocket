@@ -3,7 +3,6 @@ import { Plus } from 'lucide-react'
 import panelsMarkup from './panelsMarkup.html?raw'
 import { installShellLogicBridge, startNtpResync, stopNtpResync } from '@/lib/ntp'
 import { loadScriptsSequential } from '@/lib/loadScript'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -55,13 +54,7 @@ export function PanelsPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold tracking-tight">Room panels</h1>
-            <Badge variant="secondary">Live</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Live previews with real data. Actions sit underneath each preview.
-          </p>
+          <h1 className="text-lg font-semibold tracking-tight">Room panels</h1>
         </div>
         <Button
           onClick={() => document.getElementById('new-panel-open')?.click()}
