@@ -186,6 +186,12 @@ class Prefs(context: Context) {
             return "$scheme://$normalizedHost$portPart/v1/postNotification$secretPart"
         }
 
+        /** Path devices handshake on. Keep in sync with the launcher gateway's
+         *  `^/v1/ws$` public-path rule for the netsocket app; the netsocket WS
+         *  server itself accepts any upgrade path, but the gateway only proxies
+         *  unauthenticated upgrades on whitelisted paths. */
+        const val WS_PATH = "/v1/ws"
+
         fun buildWebSocketUrl(
             host: String,
             port: String,
@@ -194,7 +200,7 @@ class Prefs(context: Context) {
             val scheme = if (useHttps) "wss" else "ws"
             val normalizedHost = normalizeHost(host)
             val portPart = resolvePort(port, useHttps)?.let { ":$it" }.orEmpty()
-            return "$scheme://$normalizedHost$portPart/"
+            return "$scheme://$normalizedHost$portPart$WS_PATH"
         }
 
         fun buildSiteUrl(
