@@ -675,6 +675,12 @@
 
     function applyWeatherLayout(card, w, h) {
         card.setAttribute('data-wx-layout', wxLayoutFor(w, h));
+        // Taller than 3 rows: "Feels like" wording and its own details line
+        // (CSS keys off data-wx-tall).
+        if (h > 3) card.setAttribute('data-wx-tall', '');
+        else card.removeAttribute('data-wx-tall');
+        // A resize can flip the feels wording — repaint the current entry.
+        if (card.__wxEntry) applyWeatherState(card, card.__wxEntry);
     }
 
     /**
@@ -683,6 +689,7 @@
      * so gradients follow the clock.
      */
     function applyWeatherState(card, entry) {
+        card.__wxEntry = entry;
         var unitChar = (card.getAttribute('data-wx-unit') || 'f') === 'c' ? 'C' : 'F';
         var icon = card.querySelector('[data-wx-icon]');
         var temp = card.querySelector('[data-wx-temp]');
@@ -740,7 +747,8 @@
         var deg = '°' + unitChar;
         if (high) high.textContent = entry.high == null ? '' : 'High ' + entry.high + deg;
         if (low) low.textContent = entry.low == null ? '' : 'Low ' + entry.low + deg;
-        if (feels) feels.textContent = entry.feels == null ? '' : 'Feels ' + entry.feels + deg;
+        if (feels) feels.textContent = entry.feels == null ? ''
+            : (card.hasAttribute('data-wx-tall') ? 'Feels like ' : 'Feels ') + entry.feels + deg;
         return card;
     }
 
@@ -782,7 +790,7 @@
         var detailSpecs = [
             ['widget-weather-detail', 'data-wx-high', ''],
             ['widget-weather-detail', 'data-wx-low', ''],
-            ['widget-weather-detail', 'data-wx-feels', ''],
+            ['widget-weather-detail widget-weather-detail--feels', 'data-wx-feels', ''],
         ];
         for (var d = 0; d < detailSpecs.length; d++) {
             var spec = detailSpecs[d];

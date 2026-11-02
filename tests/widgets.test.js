@@ -308,6 +308,7 @@ describe('widgets render module', () => {
         assert.match(card.querySelector('[data-wx-high]').textContent, /High 78°F/);
         assert.match(card.querySelector('[data-wx-low]').textContent, /Low 60°F/);
         assert.match(card.querySelector('[data-wx-feels]').textContent, /Feels 74°F/);
+        assert.ok(!card.hasAttribute('data-wx-tall'), 'h=3 is not tall');
         assert.equal(card.querySelector('[data-wx-wind]'), null, 'no wind detail');
         assert.equal(card.querySelector('[data-wx-humidity]'), null, 'no humidity detail');
         assert.ok(
@@ -383,6 +384,25 @@ describe('widgets render module', () => {
         item.setAttribute('gs-h', '2');
         Widgets.syncItemSize(item);
         assert.equal(root.getAttribute('data-wx-layout'), 'wide');
+    });
+
+    it('spells out Feels like on cards taller than 3 rows and follows resizes', () => {
+        const item = Widgets.createItem(
+            { id: 'wx7', type: 'weather', x: 0, y: 0, w: 2, h: 4, location: 'Oslo' },
+            { weatherMap: { 'Oslo|f': wxEntry() } },
+            doc
+        );
+        const root = item.querySelector('[data-widget-kind="weather"]');
+        assert.equal(root.getAttribute('data-wx-layout'), 'stack');
+        assert.equal(root.getAttribute('data-wx-tall'), '');
+        const feels = root.querySelector('[data-wx-feels]');
+        assert.match(feels.textContent, /Feels like 74°F/);
+        assert.ok(feels.className.includes('widget-weather-detail--feels'));
+        // Shrinking below the tall threshold repaints the wording in place.
+        item.setAttribute('gs-h', '3');
+        Widgets.syncItemSize(item);
+        assert.ok(!root.hasAttribute('data-wx-tall'));
+        assert.equal(feels.textContent, 'Feels 74°F');
     });
 
     it('looks up automations by stringified id', () => {
