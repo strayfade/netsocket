@@ -91,6 +91,11 @@ class PanelActivity : AppCompatActivity() {
         setContentView(binding.root)
         applyFullscreenLayout()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Window-level floor for the status bar: on OEMs that rewrite the
+        // decorView system-ui flags after we set them (ASUS ZenUI 9), the
+        // deprecated window flag still keeps the bar hidden. No-op on API 30+.
+        @Suppress("DEPRECATION")
+        window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         hideSystemBars()
 
         val webView = binding.webView
@@ -119,6 +124,9 @@ class PanelActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
+                // Re-assert immersive: ZenUI-style SystemUI re-shows the bars
+                // once a page (and its WebView surface) is attached.
+                hideSystemBars()
                 if (!needsPanelReload) return
                 val path = Uri.parse(url).path.orEmpty()
                 if (path == "/dashboard" || path == "/") {
@@ -151,10 +159,26 @@ class PanelActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
-        WindowInsetsControllerCompat(window, window.decorView).apply {
-            hide(WindowInsetsCompat.Type.systemBars())
-            systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            // Legacy immersive-sticky. Some OEM ROMs (ASUS ZenUI on Android 9)
+            // clobber the decorView flags WindowInsetsControllerCompat writes
+            // shortly after onCreate; direct flags plus the window-level
+            // FLAG_FULLSCREEN floor set in onCreate survive that rewrite.
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                )
+        } else {
+            WindowInsetsControllerCompat(window, window.decorView).apply {
+                hide(WindowInsetsCompat.Type.systemBars())
+                systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
         }
     }
 
