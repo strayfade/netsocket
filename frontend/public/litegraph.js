@@ -16,8 +16,9 @@
 
         CANVAS_GRID_SIZE: 30,
 
-        // Pitch of the grid drawn by DEFAULT_BACKGROUND_IMAGE: the 120px tile paints light
-        // lines every 15px in graph space (dark major lines every 120), so snap lands on 15.
+        // Pitch of the grid drawn by DEFAULT_BACKGROUND_IMAGE: the 120px transparent tile
+        // paints light lines every 15px in graph space (fainter major lines every 120),
+        // so snap lands on 15.
         GRID_SNAP_SIZE: 15,
 
         NODE_TITLE_HEIGHT: 26,
@@ -5525,12 +5526,11 @@ LGraphNode.prototype.executeAction = function(action)
         this.force_simple_shapes = false; // treat all nodes as low-quality shapes
         this.render_quality = "medium";
         this.render_resolution = 100; // percent of CSS size × devicePixelRatio for the backing store
-        this.background_contrast = 100; // 100 = shipped grid; 0 hides it, higher makes the grid stronger
-        this.background_brightness = 100; // 100 = shipped grid; 0 darkens it, higher brightens it
+        this.background_opacity = 100; // percent alpha of the grid image layer drawn over the background fill
         this.editor_alpha = 1; //used for transition
         this.pause_rendering = false;
         this.clear_background = true;
-        this.clear_background_color = "#2a2a2a";
+        this.clear_background_color = "#000000";
 
         this.read_only = false; //if set to true users cannot modify the graph
         this.render_only_selected = true;
@@ -5619,59 +5619,18 @@ LGraphNode.prototype.executeAction = function(action)
 
     LGraphCanvas.DEFAULT_BACKGROUND_IMAGE = "/graph-background.png";
 
-    /** Settings slider range for the nodegraph grid. 100 matches the source tile. */
-    LGraphCanvas.BACKGROUND_CONTRAST_MIN = 0;
-    LGraphCanvas.BACKGROUND_CONTRAST_MAX = 200;
-    LGraphCanvas.BACKGROUND_CONTRAST_DEFAULT = 100;
+    /** Settings slider range for the nodegraph grid-layer opacity. 100 shows the tile image as authored. */
+    LGraphCanvas.BACKGROUND_OPACITY_MIN = 0;
+    LGraphCanvas.BACKGROUND_OPACITY_MAX = 100;
+    LGraphCanvas.BACKGROUND_OPACITY_DEFAULT = 100;
 
-    LGraphCanvas.clampBackgroundContrast = function (percent) {
+    LGraphCanvas.clampBackgroundOpacity = function (percent) {
         var p = Math.round(Number(percent));
-        if (!isFinite(p)) return LGraphCanvas.BACKGROUND_CONTRAST_DEFAULT;
+        if (!isFinite(p)) return LGraphCanvas.BACKGROUND_OPACITY_DEFAULT;
         return Math.max(
-            LGraphCanvas.BACKGROUND_CONTRAST_MIN,
-            Math.min(LGraphCanvas.BACKGROUND_CONTRAST_MAX, p)
+            LGraphCanvas.BACKGROUND_OPACITY_MIN,
+            Math.min(LGraphCanvas.BACKGROUND_OPACITY_MAX, p)
         );
-    };
-
-    /** Settings slider range for the nodegraph grid brightness. 100 matches the source tile. */
-    LGraphCanvas.BACKGROUND_BRIGHTNESS_MIN = 0;
-    LGraphCanvas.BACKGROUND_BRIGHTNESS_MAX = 200;
-    LGraphCanvas.BACKGROUND_BRIGHTNESS_DEFAULT = 100;
-
-    LGraphCanvas.clampBackgroundBrightness = function (percent) {
-        var p = Math.round(Number(percent));
-        if (!isFinite(p)) return LGraphCanvas.BACKGROUND_BRIGHTNESS_DEFAULT;
-        return Math.max(
-            LGraphCanvas.BACKGROUND_BRIGHTNESS_MIN,
-            Math.min(LGraphCanvas.BACKGROUND_BRIGHTNESS_MAX, p)
-        );
-    };
-
-    /**
-     * Maps the settings percent onto a scale for each pixel's distance from the
-     * canvas background color. The source grid is only a few levels off that
-     * color, so values above 100 grow faster than linear or the increase is
-     * too faint to see. 0 flattens the grid, 100 leaves the tile unchanged.
-     */
-    LGraphCanvas.backgroundContrastFactor = function (percent) {
-        var t = LGraphCanvas.clampBackgroundContrast(percent) / 100;
-        if (t <= 1) return t;
-        return t * t * t;
-    };
-
-    /**
-     * Maps the settings percent onto an additive per-channel offset.
-     * 100 adds nothing; 0 subtracts 100 levels, 200 adds 100 levels.
-     */
-    LGraphCanvas.backgroundBrightnessOffset = function (percent) {
-        return LGraphCanvas.clampBackgroundBrightness(percent) - 100;
-    };
-
-    LGraphCanvas.parseHexColor = function (hex) {
-        var m = /^#([0-9a-f]{6})$/i.exec(String(hex || "").trim());
-        if (!m) return null;
-        var n = parseInt(m[1], 16);
-        return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
     };
 
     LGraphCanvas.link_type_colors = {
@@ -6194,85 +6153,17 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     /**
-     * Sets grid-background contrast (0–200). 100 is the source tile.
-     * Rebuilds the repeated background pattern on the next draw.
-     * @method setBackgroundContrast
+     * Sets the grid-layer opacity (0–100). The background image is a transparent
+     * grid painted over the flat clear_background_color fill; 0 hides the grid,
+     * 100 shows the tile image unblended.
+     * @method setBackgroundOpacity
      */
-    LGraphCanvas.prototype.setBackgroundContrast = function (percent) {
-        var p = LGraphCanvas.clampBackgroundContrast(percent);
-        if (this.background_contrast === p) return p;
-        this.background_contrast = p;
-        this._pattern = null;
-        this._pattern_source = null;
+    LGraphCanvas.prototype.setBackgroundOpacity = function (percent) {
+        var p = LGraphCanvas.clampBackgroundOpacity(percent);
+        if (this.background_opacity === p) return p;
+        this.background_opacity = p;
         this.setDirty(true, true);
         return p;
-    };
-
-    /**
-     * Sets grid-background brightness (0–200). 100 is the source tile.
-     * Rebuilds the repeated background pattern on the next draw.
-     * @method setBackgroundBrightness
-     */
-    LGraphCanvas.prototype.setBackgroundBrightness = function (percent) {
-        var p = LGraphCanvas.clampBackgroundBrightness(percent);
-        if (this.background_brightness === p) return p;
-        this.background_brightness = p;
-        this._pattern = null;
-        this._pattern_source = null;
-        this.setDirty(true, true);
-        return p;
-    };
-
-    /**
-     * Source for the repeated grid tile. At 100% contrast and 100% brightness
-     * this is the image itself so the default pixels stay exact. Otherwise a
-     * canvas with the grid marks pushed toward or away from the flat
-     * background color (contrast) and shifted lighter or darker (brightness).
-     * @method _buildBackgroundPatternSource
-     */
-    LGraphCanvas.prototype._buildBackgroundPatternSource = function (img, percent, brightnessPercent) {
-        if (brightnessPercent == null) {
-            brightnessPercent = this.background_brightness != null
-                ? this.background_brightness
-                : LGraphCanvas.BACKGROUND_BRIGHTNESS_DEFAULT;
-        }
-        if (LGraphCanvas.backgroundContrastFactor(percent) === 1 &&
-            LGraphCanvas.backgroundBrightnessOffset(brightnessPercent) === 0) return img;
-        var w = img.naturalWidth || img.width;
-        var h = img.naturalHeight || img.height;
-        if (!w || !h) return img;
-        var canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        var c = canvas.getContext("2d", { willReadFrequently: true });
-        if (!c) return img;
-        c.drawImage(img, 0, 0);
-        var factor = LGraphCanvas.backgroundContrastFactor(percent);
-        var base = LGraphCanvas.parseHexColor(this.clear_background_color) || [42, 42, 42];
-        var imageData;
-        try {
-            imageData = c.getImageData(0, 0, w, h);
-        } catch (err) {
-            return img;
-        }
-        var data = imageData.data;
-        var br = base[0];
-        var bg = base[1];
-        var bb = base[2];
-        var clampByte = function (v) {
-            v = Math.round(v);
-            if (v < 0) return 0;
-            if (v > 255) return 255;
-            return v;
-        };
-        var brightnessOffset = LGraphCanvas.backgroundBrightnessOffset(brightnessPercent);
-        for (var i = 0; i < data.length; i += 4) {
-            data[i] = clampByte(br + (data[i] - br) * factor + brightnessOffset);
-            data[i + 1] = clampByte(bg + (data[i + 1] - bg) * factor + brightnessOffset);
-            data[i + 2] = clampByte(bb + (data[i + 2] - bb) * factor + brightnessOffset);
-        }
-        c.putImageData(imageData, 0, 0);
-        return canvas;
     };
 
     /**
@@ -9259,7 +9150,7 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.save();
             this.ds.toCanvasContext(ctx);
 
-            //render BG
+            //render BG — one flat fill rect, with the grid image layered over it
             if (this.ds.scale < 1.5 && !bg_already_painted && this.clear_background_color) {
                 ctx.fillStyle = this.clear_background_color;
                 ctx.fillRect(
@@ -9270,18 +9161,23 @@ LGraphNode.prototype.executeAction = function(action)
                 );
             }
 
+            var grid_opacity =
+                this.background_opacity != null
+                    ? this.background_opacity
+                    : LGraphCanvas.BACKGROUND_OPACITY_DEFAULT;
             if (
                 this.background_image &&
+                grid_opacity > 0 &&
                 this.ds.scale > 0.5 &&
                 !bg_already_painted
             ) {
                 if (this.zoom_modify_alpha) {
                     ctx.globalAlpha =
-                        (1.0 - 0.5 / this.ds.scale) * this.editor_alpha;
+                        (1.0 - 0.5 / this.ds.scale) * this.editor_alpha * (grid_opacity / 100);
                 } else {
-                    ctx.globalAlpha = this.editor_alpha;
+                    ctx.globalAlpha = this.editor_alpha * (grid_opacity / 100);
                 }
-                ctx.imageSmoothingEnabled = ctx.imageSmoothingEnabled = false; // ctx.mozImageSmoothingEnabled = 
+                ctx.imageSmoothingEnabled = false; // ctx.mozImageSmoothingEnabled = 
                 if (
                     !this._bg_img ||
                     this._bg_img.name != this.background_image
@@ -9296,21 +9192,13 @@ LGraphNode.prototype.executeAction = function(action)
                 }
 
                 var pattern = null;
-                var contrast = this.background_contrast != null ? this.background_contrast : 100;
-                var brightness = this.background_brightness != null ? this.background_brightness : 100;
                 if (
                     this._bg_img.width > 0 &&
                     (this._pattern == null ||
-                        this._pattern_img !== this._bg_img ||
-                        this._pattern_contrast !== contrast ||
-                        this._pattern_brightness !== brightness)
+                        this._pattern_img !== this._bg_img)
                 ) {
-                    var patternSource = this._buildBackgroundPatternSource(this._bg_img, contrast, brightness);
-                    pattern = ctx.createPattern(patternSource, "repeat");
+                    pattern = ctx.createPattern(this._bg_img, "repeat");
                     this._pattern_img = this._bg_img;
-                    this._pattern_contrast = contrast;
-                    this._pattern_brightness = brightness;
-                    this._pattern_source = patternSource;
                     this._pattern = pattern;
                 } else {
                     pattern = this._pattern;

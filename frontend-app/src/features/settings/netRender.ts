@@ -5,14 +5,10 @@
 type NetsocketRenderWindow = Window & {
   LGraphCanvas?: {
     RENDER_QUALITY_PRESETS?: Record<string, { label?: string }>
-    BACKGROUND_CONTRAST_MIN?: number
-    BACKGROUND_CONTRAST_MAX?: number
-    BACKGROUND_CONTRAST_DEFAULT?: number
-    clampBackgroundContrast?: (n: number) => number
-    BACKGROUND_BRIGHTNESS_MIN?: number
-    BACKGROUND_BRIGHTNESS_MAX?: number
-    BACKGROUND_BRIGHTNESS_DEFAULT?: number
-    clampBackgroundBrightness?: (n: number) => number
+    BACKGROUND_OPACITY_MIN?: number
+    BACKGROUND_OPACITY_MAX?: number
+    BACKGROUND_OPACITY_DEFAULT?: number
+    clampBackgroundOpacity?: (n: number) => number
   }
   getNetsocketRenderQuality?: () => string
   applyNetsocketRenderQuality?: (quality: string) => string
@@ -22,10 +18,8 @@ type NetsocketRenderWindow = Window & {
   setNetsocketShowSelectionKeybinds?: (enabled: boolean) => void
   getNetsocketRenderResolution?: () => number
   setNetsocketRenderResolution?: (percent: number) => number
-  getNetsocketGridContrast?: () => number
-  setNetsocketGridContrast?: (percent: number) => number
-  getNetsocketGridBrightness?: () => number
-  setNetsocketGridBrightness?: (percent: number) => number
+  getNetsocketGridOpacity?: () => number
+  setNetsocketGridOpacity?: (percent: number) => number
   getNetsocketGridSnap?: () => boolean
   setNetsocketGridSnap?: (enabled: boolean) => boolean
 }
@@ -86,21 +80,12 @@ export function setRenderResolution(percent: number): number {
 
 export type BackgroundBounds = { min: number; max: number; fallback: number }
 
-export function getGridContrastBounds(): BackgroundBounds {
+export function getGridOpacityBounds(): BackgroundBounds {
   const c = w().LGraphCanvas
   return {
-    min: c?.BACKGROUND_CONTRAST_MIN != null ? Number(c.BACKGROUND_CONTRAST_MIN) : 0,
-    max: c?.BACKGROUND_CONTRAST_MAX != null ? Number(c.BACKGROUND_CONTRAST_MAX) : 200,
-    fallback: c?.BACKGROUND_CONTRAST_DEFAULT != null ? Number(c.BACKGROUND_CONTRAST_DEFAULT) : 100,
-  }
-}
-
-export function getGridBrightnessBounds(): BackgroundBounds {
-  const c = w().LGraphCanvas
-  return {
-    min: c?.BACKGROUND_BRIGHTNESS_MIN != null ? Number(c.BACKGROUND_BRIGHTNESS_MIN) : 0,
-    max: c?.BACKGROUND_BRIGHTNESS_MAX != null ? Number(c.BACKGROUND_BRIGHTNESS_MAX) : 200,
-    fallback: c?.BACKGROUND_BRIGHTNESS_DEFAULT != null ? Number(c.BACKGROUND_BRIGHTNESS_DEFAULT) : 100,
+    min: c?.BACKGROUND_OPACITY_MIN != null ? Number(c.BACKGROUND_OPACITY_MIN) : 0,
+    max: c?.BACKGROUND_OPACITY_MAX != null ? Number(c.BACKGROUND_OPACITY_MAX) : 100,
+    fallback: c?.BACKGROUND_OPACITY_DEFAULT != null ? Number(c.BACKGROUND_OPACITY_DEFAULT) : 100,
   }
 }
 
@@ -110,23 +95,17 @@ function clampLocal(value: number, bounds: BackgroundBounds): number {
   return Math.max(bounds.min, Math.min(bounds.max, n))
 }
 
-export function clampGridContrast(value: number): number {
+export function clampGridOpacity(value: number): number {
   const c = w().LGraphCanvas
-  if (typeof c?.clampBackgroundContrast === 'function') return Number(c.clampBackgroundContrast(value))
-  return clampLocal(value, getGridContrastBounds())
+  if (typeof c?.clampBackgroundOpacity === 'function') return Number(c.clampBackgroundOpacity(value))
+  return clampLocal(value, getGridOpacityBounds())
 }
 
-export function clampGridBrightness(value: number): number {
-  const c = w().LGraphCanvas
-  if (typeof c?.clampBackgroundBrightness === 'function') return Number(c.clampBackgroundBrightness(value))
-  return clampLocal(value, getGridBrightnessBounds())
-}
-
-export function getGridContrast(): number {
-  const bounds = getGridContrastBounds()
-  if (typeof w().getNetsocketGridContrast === 'function') return clampLocal(w().getNetsocketGridContrast!(), bounds)
+export function getGridOpacity(): number {
+  const bounds = getGridOpacityBounds()
+  if (typeof w().getNetsocketGridOpacity === 'function') return clampLocal(w().getNetsocketGridOpacity!(), bounds)
   try {
-    const raw = window.localStorage.getItem('netsocket:gridContrast')
+    const raw = window.localStorage.getItem('netsocket:gridOpacity')
     if (raw != null && raw !== '') return clampLocal(Number(raw), bounds)
   } catch {
     /* private mode */
@@ -134,38 +113,13 @@ export function getGridContrast(): number {
   return bounds.fallback
 }
 
-export function setGridContrast(percent: number): number {
-  const applied = clampGridContrast(percent)
-  if (typeof w().setNetsocketGridContrast === 'function') {
-    return Number(w().setNetsocketGridContrast!(applied)) || applied
+export function setGridOpacity(percent: number): number {
+  const applied = clampGridOpacity(percent)
+  if (typeof w().setNetsocketGridOpacity === 'function') {
+    return Number(w().setNetsocketGridOpacity!(applied)) || applied
   }
   try {
-    window.localStorage.setItem('netsocket:gridContrast', String(applied))
-  } catch {
-    /* private mode */
-  }
-  return applied
-}
-
-export function getGridBrightness(): number {
-  const bounds = getGridBrightnessBounds()
-  if (typeof w().getNetsocketGridBrightness === 'function') return clampLocal(w().getNetsocketGridBrightness!(), bounds)
-  try {
-    const raw = window.localStorage.getItem('netsocket:gridBrightness')
-    if (raw != null && raw !== '') return clampLocal(Number(raw), bounds)
-  } catch {
-    /* private mode */
-  }
-  return bounds.fallback
-}
-
-export function setGridBrightness(percent: number): number {
-  const applied = clampGridBrightness(percent)
-  if (typeof w().setNetsocketGridBrightness === 'function') {
-    return Number(w().setNetsocketGridBrightness!(applied)) || applied
-  }
-  try {
-    window.localStorage.setItem('netsocket:gridBrightness', String(applied))
+    window.localStorage.setItem('netsocket:gridOpacity', String(applied))
   } catch {
     /* private mode */
   }

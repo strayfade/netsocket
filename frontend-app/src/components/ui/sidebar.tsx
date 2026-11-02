@@ -90,7 +90,7 @@ export function Sidebar({
       <Sheet open={openMobile} onOpenChange={setOpenMobile}>
         <SheetContent
           side="left"
-          className="w-[var(--sidebar-width-mobile)] bg-background p-0 text-foreground [&>button]:hidden"
+          className="w-[var(--sidebar-width-mobile)] bg-sidebar p-0 text-foreground [&>button]:hidden"
           id="shell-sidebar"
         >
           <div className="flex h-full w-full flex-col">{children}</div>
@@ -103,7 +103,7 @@ export function Sidebar({
     <div
       id="shell-sidebar"
       className={cn(
-        'fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-width)] flex-col border-r border-border bg-background md:flex',
+        'fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-width)] flex-col border-r border-border bg-sidebar md:flex',
         className,
       )}
       {...props}

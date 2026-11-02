@@ -125,49 +125,27 @@
             }
         }
 
-        const GRID_CONTRAST_STORAGE_KEY = "netsocket:gridContrast";
-        const readStoredGridContrast = () => {
+        const GRID_OPACITY_STORAGE_KEY = "netsocket:gridOpacity";
+        const readStoredGridOpacity = () => {
             try {
-                const raw = localStorage.getItem(GRID_CONTRAST_STORAGE_KEY);
-                if (raw != null) return LGraphCanvas.clampBackgroundContrast(raw);
+                const raw = localStorage.getItem(GRID_OPACITY_STORAGE_KEY);
+                if (raw != null) return LGraphCanvas.clampBackgroundOpacity(raw);
             } catch (e) { /* ignore */ }
-            return LGraphCanvas.BACKGROUND_CONTRAST_DEFAULT;
+            return LGraphCanvas.BACKGROUND_OPACITY_DEFAULT;
         };
-        const writeStoredGridContrast = (percent) => {
+        const writeStoredGridOpacity = (percent) => {
             try {
-                localStorage.setItem(GRID_CONTRAST_STORAGE_KEY, String(percent));
+                localStorage.setItem(GRID_OPACITY_STORAGE_KEY, String(percent));
             } catch (e) { /* ignore */ }
         };
-        window.setNetsocketGridContrast = (percent) => {
-            const applied = canvas.setBackgroundContrast(percent);
-            writeStoredGridContrast(applied);
+        window.setNetsocketGridOpacity = (percent) => {
+            const applied = canvas.setBackgroundOpacity(percent);
+            writeStoredGridOpacity(applied);
             return applied;
         };
-        window.getNetsocketGridContrast = () =>
-            canvas.background_contrast != null ? canvas.background_contrast : readStoredGridContrast();
-        window.setNetsocketGridContrast(readStoredGridContrast());
-
-        const GRID_BRIGHTNESS_STORAGE_KEY = "netsocket:gridBrightness";
-        const readStoredGridBrightness = () => {
-            try {
-                const raw = localStorage.getItem(GRID_BRIGHTNESS_STORAGE_KEY);
-                if (raw != null) return LGraphCanvas.clampBackgroundBrightness(raw);
-            } catch (e) { /* ignore */ }
-            return LGraphCanvas.BACKGROUND_BRIGHTNESS_DEFAULT;
-        };
-        const writeStoredGridBrightness = (percent) => {
-            try {
-                localStorage.setItem(GRID_BRIGHTNESS_STORAGE_KEY, String(percent));
-            } catch (e) { /* ignore */ }
-        };
-        window.setNetsocketGridBrightness = (percent) => {
-            const applied = canvas.setBackgroundBrightness(percent);
-            writeStoredGridBrightness(applied);
-            return applied;
-        };
-        window.getNetsocketGridBrightness = () =>
-            canvas.background_brightness != null ? canvas.background_brightness : readStoredGridBrightness();
-        window.setNetsocketGridBrightness(readStoredGridBrightness());
+        window.getNetsocketGridOpacity = () =>
+            canvas.background_opacity != null ? canvas.background_opacity : readStoredGridOpacity();
+        window.setNetsocketGridOpacity(readStoredGridOpacity());
 
         const GRID_SNAP_STORAGE_KEY = "netsocket:gridSnap";
         const readStoredGridSnap = () => {

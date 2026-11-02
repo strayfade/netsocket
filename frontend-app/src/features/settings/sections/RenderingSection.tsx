@@ -6,18 +6,15 @@ import { Slider } from '@/components/ui/slider'
 import { SettingsRow, SubHeading } from '../SettingsPrimitives'
 import {
   applyRenderQuality,
-  getGridBrightness,
-  getGridBrightnessBounds,
-  getGridContrast,
-  getGridContrastBounds,
+  getGridOpacity,
+  getGridOpacityBounds,
   getGridSnap,
   getQualityPresets,
   getRenderQuality,
   getRenderResolution,
   getShowFps,
   getShowSelectionKeybinds,
-  setGridBrightness,
-  setGridContrast,
+  setGridOpacity,
   setGridSnap,
   setRenderResolution,
   setShowFps,
@@ -80,10 +77,8 @@ export function RenderingSection() {
   const [fps, setFps] = React.useState(() => getShowFps())
   const [keybinds, setKeybinds] = React.useState(() => getShowSelectionKeybinds())
   const [resolution, setResolution] = React.useState(() => getRenderResolution())
-  const contrastBounds = React.useMemo(() => getGridContrastBounds(), [])
-  const brightnessBounds = React.useMemo(() => getGridBrightnessBounds(), [])
-  const [contrast, setContrast] = React.useState(() => getGridContrast())
-  const [brightness, setBrightness] = React.useState(() => getGridBrightness())
+  const opacityBounds = React.useMemo(() => getGridOpacityBounds(), [])
+  const [opacity, setOpacity] = React.useState(() => getGridOpacity())
   const [gridSnap, setGridSnapState] = React.useState(() => getGridSnap())
 
   return (
@@ -158,36 +153,19 @@ export function RenderingSection() {
         }
       />
       <SettingsRow
-        label="Grid contrast"
+        label="Grid opacity"
+        description="Alpha of the background grid image over the black canvas."
         control={
           <SliderControl
-            value={contrast}
-            min={contrastBounds.min}
-            max={contrastBounds.max}
+            value={opacity}
+            min={opacityBounds.min}
+            max={opacityBounds.max}
             step={5}
-            presets={[50, 100, 200]}
-            ariaLabel="Grid contrast"
+            presets={[25, 50, 100]}
+            ariaLabel="Grid opacity"
             onCommit={(v) => {
-              const applied = setGridContrast(v)
-              setContrast(applied)
-              return applied
-            }}
-          />
-        }
-      />
-      <SettingsRow
-        label="Grid brightness"
-        control={
-          <SliderControl
-            value={brightness}
-            min={brightnessBounds.min}
-            max={brightnessBounds.max}
-            step={5}
-            presets={[50, 100, 200]}
-            ariaLabel="Grid brightness"
-            onCommit={(v) => {
-              const applied = setGridBrightness(v)
-              setBrightness(applied)
+              const applied = setGridOpacity(v)
+              setOpacity(applied)
               return applied
             }}
           />
