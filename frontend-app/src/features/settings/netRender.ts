@@ -96,7 +96,7 @@ export function getGridOpacityBounds(): BackgroundBounds {
   return {
     min: c?.BACKGROUND_OPACITY_MIN != null ? Number(c.BACKGROUND_OPACITY_MIN) : 0,
     max: c?.BACKGROUND_OPACITY_MAX != null ? Number(c.BACKGROUND_OPACITY_MAX) : 100,
-    fallback: c?.BACKGROUND_OPACITY_DEFAULT != null ? Number(c.BACKGROUND_OPACITY_DEFAULT) : 100,
+    fallback: c?.BACKGROUND_OPACITY_DEFAULT != null ? Number(c.BACKGROUND_OPACITY_DEFAULT) : 25,
   }
 }
 

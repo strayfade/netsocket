@@ -36,7 +36,7 @@
         NODE_TEXT_COLOR: "#FFF",
         NODE_SUBTEXT_SIZE: 12,
         NODE_DEFAULT_COLOR: "#333",
-        NODE_DEFAULT_BGCOLOR: "#00000080",
+        NODE_DEFAULT_BGCOLOR: "#0e0e0e80",
         NODE_DEFAULT_BOXCOLOR: "#FFF",
         NODE_DEFAULT_SHAPE: "box",
         DEFAULT_SHADOW_COLOR: "rgba(0,0,0,0.2)",
@@ -5526,7 +5526,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.force_simple_shapes = false; // treat all nodes as low-quality shapes
         this.render_quality = "medium";
         this.render_resolution = 100; // percent of CSS size × devicePixelRatio for the backing store
-        this.background_opacity = 100; // percent alpha of the grid image layer drawn over the background fill
+        this.background_opacity = 25; // percent alpha of the grid image layer drawn over the background fill
         this.node_bg_opacity = 100; // percent alpha multiplier on node body fills (titles/text stay opaque)
         this.node_bgcolor = null; // overrides the theme node body fill when set to a hex color
         this.editor_alpha = 1; //used for transition
@@ -5624,7 +5624,7 @@ LGraphNode.prototype.executeAction = function(action)
     /** Settings slider range for the nodegraph grid-layer opacity. 100 shows the tile image as authored. */
     LGraphCanvas.BACKGROUND_OPACITY_MIN = 0;
     LGraphCanvas.BACKGROUND_OPACITY_MAX = 100;
-    LGraphCanvas.BACKGROUND_OPACITY_DEFAULT = 100;
+    LGraphCanvas.BACKGROUND_OPACITY_DEFAULT = 25;
 
     LGraphCanvas.clampBackgroundOpacity = function (percent) {
         var p = Math.round(Number(percent));
@@ -6217,9 +6217,9 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     /**
-     * Overrides the node body fill color globally (the theme's semi-transparent
-     * black default). Accepts #rgb/#rrggbb/#rrggbbaa; null or "" restores the
-     * default; "red" still replaces the fill of nodes with errors.
+     * Overrides the node body fill color globally (the theme default is
+     * #0e0e0e at 50% alpha). Accepts #rgb/#rrggbb/#rrggbbaa; null or "" restores
+     * the default; "red" still replaces the fill of nodes with errors.
      * @method setNodeBackgroundColor
      */
     LGraphCanvas.prototype.setNodeBackgroundColor = function (color) {
@@ -10040,15 +10040,15 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.shadowColor = "transparent";
         }
         ctx.strokeStyle = fgcolor;
-        //node body fill: the theme default is translucent black at both fill sites
-        //below; "Node background color" overrides the color and "Node opacity"
-        //scales the fill's own alpha (titles, text, slots stay opaque)
+        //node body fill: default is #0e0e0e at 50% alpha (LiteGraph.NODE_DEFAULT_BGCOLOR)
+        //at both fill sites below; "Node background color" overrides the color and
+        //"Node opacity" scales the fill's own alpha (titles, text, slots stay opaque)
         var custom_body = this.node_bgcolor;
         var node_bg_alpha =
             (this.node_bg_opacity != null
                 ? LGraphCanvas.clampNodeBackgroundOpacity(this.node_bg_opacity)
                 : LGraphCanvas.NODE_BG_OPACITY_DEFAULT) / 100;
-        ctx.fillStyle = custom_body || "#00000080";
+        ctx.fillStyle = custom_body || LiteGraph.NODE_DEFAULT_BGCOLOR;
 
         var title_height = LiteGraph.NODE_TITLE_HEIGHT;
         var low_quality = this.force_simple_shapes || this.ds.scale < 0.5;
@@ -10099,7 +10099,7 @@ LGraphNode.prototype.executeAction = function(action)
                 // ---------- 1. BASE SHAPE ----------
                 ctx.beginPath();
                 ctx.roundRect(x, y, w, h, radius);
-                ctx.fillStyle = custom_body || "rgba(0, 0, 0, 0.2)";
+                ctx.fillStyle = custom_body || LiteGraph.NODE_DEFAULT_BGCOLOR;
                 ctx.fill();
 
                 if (this.render_body_glass) {
@@ -10161,6 +10161,10 @@ LGraphNode.prototype.executeAction = function(action)
                 ctx.stroke();
 
                 ctx.restore();
+
+                //round/card already filled their body above: clear the path so the
+                //shared trailing ctx.fill() below cannot re-fill (and double-composite) it
+                ctx.beginPath();
             } else if (shape == LiteGraph.CIRCLE_SHAPE) {
                 ctx.arc(
                     size[0] * 0.5,

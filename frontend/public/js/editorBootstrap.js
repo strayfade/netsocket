@@ -167,7 +167,7 @@
         }
 
         // Node body fill opacity (0-100) and color. Titles/text stay opaque;
-        // an empty color restores the theme's translucent black default.
+        // an empty color restores the theme default (#0e0e0e at 50% alpha).
         const NODE_BG_OPACITY_STORAGE_KEY = "netsocket:nodeBgOpacity";
         const NODE_BGCOLOR_STORAGE_KEY = "netsocket:nodeBgColor";
         const readStoredNodeBgOpacity = () => {

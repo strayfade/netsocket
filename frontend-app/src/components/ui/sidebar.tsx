@@ -103,7 +103,7 @@ export function Sidebar({
     <div
       id="shell-sidebar"
       className={cn(
-        'fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-width)] flex-col border-r border-border bg-sidebar md:flex',
+        'fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-width)] flex-col bg-sidebar md:flex',
         className,
       )}
       {...props}

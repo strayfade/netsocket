@@ -257,7 +257,7 @@ export function RenderingSection() {
       <div className="[&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
       <SettingsRow
         label="Node background"
-        description="Body fill for every node — a hex value like #141414; empty restores the default translucent black."
+        description="Body fill for every node — a hex value like #141414; empty restores the default #0e0e0e at 50%."
         control={
           <ColorInputControl
             value={nodeBg}

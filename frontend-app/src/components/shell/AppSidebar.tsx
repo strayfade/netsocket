@@ -53,7 +53,7 @@ export function AppSidebar({ onOpenBackup, onOpenSettings }: AppSidebarProps) {
             aria-label="netsocket home"
             onClick={closeMobile}
           >
-            <img src="/hero.webp" alt="" className="h-6 w-auto" />
+            <img src="/hero.png" alt="" className="h-6 w-auto" />
           </NavLink>
         </SidebarHeader>
 
