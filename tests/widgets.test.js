@@ -233,9 +233,6 @@ describe('widgets render module', () => {
         feels: 74,
         high: 78,
         low: 60,
-        humidity: 50,
-        windSpeed: 5,
-        windDeg: 90,
         sunrise: wxNowSec() - 3600,
         sunset: wxNowSec() + 3600,
     }, over);
@@ -308,8 +305,11 @@ describe('widgets render module', () => {
         assert.equal(card.querySelector('[data-wx-icon]').textContent, 'clear_day');
         assert.match(card.querySelector('[data-wx-name]').textContent, /Manhattan/);
         assert.match(card.querySelector('[data-wx-label]').textContent, /Clear sky/);
-        assert.match(card.querySelector('[data-wx-high]').textContent, /H 78°F/);
-        assert.match(card.querySelector('[data-wx-wind]').textContent, /Wind 5 mph E/);
+        assert.match(card.querySelector('[data-wx-high]').textContent, /High 78°F/);
+        assert.match(card.querySelector('[data-wx-low]').textContent, /Low 60°F/);
+        assert.match(card.querySelector('[data-wx-feels]').textContent, /Feels 74°F/);
+        assert.equal(card.querySelector('[data-wx-wind]'), null, 'no wind detail');
+        assert.equal(card.querySelector('[data-wx-humidity]'), null, 'no humidity detail');
         assert.ok(
             !card.querySelector('[data-wx-name]').className.includes('shell-skeleton'),
             'populated name carries no skeleton shimmer'
@@ -320,14 +320,14 @@ describe('widgets render module', () => {
     it('honors metric + gradient-off weather widgets and shows error labels', () => {
         const metric = Widgets.renderContent(
             { id: 'wx2', type: 'weather', x: 0, y: 0, w: 12, h: 3, location: 'Oslo', unit: 'c', gradient: false },
-            { weatherMap: { 'Oslo|c': wxEntry({ temp: 22, windSpeed: 18 }) } },
+            { weatherMap: { 'Oslo|c': wxEntry({ temp: 22 }) } },
             doc
         );
         assert.equal(metric.getAttribute('data-wx-layout'), 'wide');
         assert.equal(metric.getAttribute('data-wx-unit'), 'c');
         assert.ok(!metric.className.includes('widget-weather--gradient'));
         assert.equal(metric.querySelector('[data-wx-unit-char]').textContent, '°C');
-        assert.match(metric.querySelector('[data-wx-wind]').textContent, /Wind 18 km\/h/);
+        assert.match(metric.querySelector('[data-wx-high]').textContent, /High 78°C/);
 
         const missing = Widgets.renderContent(
             { id: 'wx3', type: 'weather', x: 0, y: 0, w: 2, h: 1, location: 'Nowhere' },

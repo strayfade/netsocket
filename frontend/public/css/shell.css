@@ -2690,7 +2690,9 @@ dialog#panel-edit-dialog[open] {
 
 /* ── Weather widget ─────────────────────────────────────────────────── */
 /* Layout variants (JS picks from grid box via data-wx-layout):
-   micro = icon + temp, bar = one row, wide = 3 columns, stack = vertical.
+   micro = temp only, bar = temp + condition row, wide = hero + details,
+   stack = vertical. The condition icon is a card-filling watermark BEHIND
+   the text (not a grid member), so it never consumes layout space.
    All old-safe: hex + linear-gradient + flex/grid, no modern color funcs. */
 
 .widget-weather {
@@ -2710,7 +2712,6 @@ dialog#panel-edit-dialog[open] {
 }
 
 .widget-weather-head { grid-area: wx-name; }
-.widget-weather-icon { grid-area: wx-icon; }
 .widget-weather-temp { grid-area: wx-temp; }
 .widget-weather-label { grid-area: wx-label; }
 .widget-weather-details { grid-area: wx-details; }
@@ -2721,27 +2722,37 @@ dialog#panel-edit-dialog[open] {
     font-size: 0.8rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0;
     color: var(--shell-muted);
     white-space: nowrap;
 }
 
+/* Watermark icon: absolute-centered in the card, JS sizes its font from
+   the live card box (sizeWxIcon in widgets.js). */
 .widget-weather-icon {
-    font-size: 3.25rem;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 0;
     line-height: 1;
+    font-size: 3.25rem; /* pre-measurement floor; ResizeObserver overrides */
+    opacity: 0.14;
+    pointer-events: none;
 }
 
+/* Unit glyph hangs from the TOP of the number (flex-start, not baseline). */
 .widget-weather-temp {
     display: flex;
-    align-items: baseline;
-    gap: 2px;
+    align-items: flex-start;
+    gap: 3px;
     line-height: 1;
 }
 
 .widget-weather-num {
     font-size: 3.6rem;
     font-weight: 600;
-    letter-spacing: -0.04em;
+    letter-spacing: 0;
     font-variant-numeric: tabular-nums;
 }
 
@@ -2778,18 +2789,15 @@ dialog#panel-edit-dialog[open] {
 .widget-weather[data-wx-layout="stack"] .widget-weather-body {
     grid-template-areas:
         "wx-name"
-        "wx-icon"
         "wx-temp"
         "wx-label"
         "wx-details";
 }
 
-/* micro — w≤1 or 2×2: icon over temperature only */
+/* micro — w≤1 or 2×2: temperature only, watermark icon behind */
 .widget-weather[data-wx-layout="micro"] .widget-weather-body {
     gap: 4px;
-    grid-template-areas:
-        "wx-icon"
-        "wx-temp";
+    grid-template-areas: "wx-temp";
 }
 .widget-weather[data-wx-layout="micro"] .widget-weather-head,
 .widget-weather[data-wx-layout="micro"] .widget-weather-label,
@@ -2797,9 +2805,9 @@ dialog#panel-edit-dialog[open] {
     display: none;
 }
 
-/* bar — h≤1: single row icon | temp | condition */
+/* bar — h≤1: single row temp | condition */
 .widget-weather[data-wx-layout="bar"] .widget-weather-body {
-    grid-template-areas: "wx-icon wx-temp wx-label";
+    grid-template-areas: "wx-temp wx-label";
     align-items: center;
 }
 .widget-weather[data-wx-layout="bar"] .widget-weather-head,
@@ -2807,13 +2815,13 @@ dialog#panel-edit-dialog[open] {
     display: none;
 }
 
-/* wide — w≥6: name across top, icon | hero (temp over label) | details */
+/* wide — w≥6: name across top, hero (temp over label) | details */
 .widget-weather[data-wx-layout="wide"] .widget-weather-body {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-        "wx-name  wx-name  wx-name"
-        "wx-icon  wx-temp  wx-details"
-        "wx-icon  wx-label wx-details";
+        "wx-name   wx-name"
+        "wx-temp   wx-details"
+        "wx-label  wx-details";
     gap: 10px 28px;
 }
 .widget-weather[data-wx-layout="wide"] .widget-weather-details {
@@ -2825,7 +2833,7 @@ dialog#panel-edit-dialog[open] {
 }
 
 /* Loading / failure states */
-.widget-weather[data-wx-state="loading"] .widget-weather-icon { opacity: 0.4; }
+.widget-weather[data-wx-state="loading"] .widget-weather-icon { opacity: 0.28; }
 .widget-weather[data-wx-state="error"] .widget-weather-temp { opacity: 0.45; }
 .widget-weather[data-wx-state="error"] .widget-weather-label {
     color: var(--shell-muted);
@@ -2861,7 +2869,7 @@ dialog#panel-edit-dialog[open] {
     text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
 }
 .widget-weather--gradient .widget-weather-icon {
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+    opacity: 0.2;
 }
 
 /* clear */

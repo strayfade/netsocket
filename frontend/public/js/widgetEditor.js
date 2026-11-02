@@ -339,9 +339,6 @@
                 feels: fahrenheit ? 74 : 23,
                 high: fahrenheit ? 78 : 26,
                 low: fahrenheit ? 61 : 16,
-                humidity: 55,
-                windSpeed: fahrenheit ? 8 : 13,
-                windDeg: 270,
                 sunrise: null,
                 sunset: null,
             };

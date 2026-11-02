@@ -102,9 +102,6 @@ export type WeatherEntry = {
   feels?: number | null
   high?: number
   low?: number
-  humidity?: number | null
-  windSpeed?: number | null
-  windDeg?: number | null
   sunrise?: number | null
   sunset?: number | null
   error?: string

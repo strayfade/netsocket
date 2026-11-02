@@ -69,16 +69,8 @@ const roundedOr = (v) => {
     return n == null ? null : Math.round(n)
 }
 
-// OWM wind speed units depend on `units=`: imperial -> mph, metric -> m/s.
-// Normalize metric to km/h so the client never does unit math.
-const windSpeedIn = (speedValue, unit) => {
-    const n = numOr(speedValue)
-    if (n == null) return null
-    return Math.round(unit === 'c' ? n * 3.6 : n)
-}
-
 /** OWM current-weather JSON -> compact client payload; null when unusable. */
-const normalizeOwmJson = (json, fetchedAt, unit) => {
+const normalizeOwmJson = (json, fetchedAt) => {
     const main = json && typeof json.main === 'object' ? json.main : null
     if (!main) return null
     const temp = roundedOr(main.temp)
@@ -100,11 +92,6 @@ const normalizeOwmJson = (json, fetchedAt, unit) => {
         feels: roundedOr(main.feels_like),
         high: high == null ? temp : high,
         low: low == null ? temp : low,
-        humidity: numOr(main.humidity) != null
-            ? Math.max(0, Math.min(100, Math.round(main.humidity)))
-            : null,
-        windSpeed: windSpeedIn(json.wind && json.wind.speed, unit),
-        windDeg: numOr(json.wind && json.wind.deg),
         sunrise: numOr(sys.sunrise),
         sunset: numOr(sys.sunset),
     }
@@ -156,7 +143,7 @@ const fetchWeatherFor = async (rawLocation, rawUnit, deps = {}) => {
             const result = await fetchOwm(url)
             const at0 = (deps.clock || Date).now()
             const weather = result && result.json
-                ? normalizeOwmJson(result.json, at0, unit)
+                ? normalizeOwmJson(result.json, at0)
                 : null
             const entry = weather || (result && result.status === 404
                 ? { error: 'not_found' }

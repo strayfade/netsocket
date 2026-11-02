@@ -78,40 +78,37 @@ describe('weatherService', () => {
         assert.equal(entry.feels, 73);
         assert.equal(entry.high, 78);
         assert.equal(entry.low, 66);
-        assert.equal(entry.humidity, 55);
-        assert.equal(entry.windSpeed, 8); // imperial: mph passthrough
-        assert.equal(entry.windDeg, 270);
         assert.equal(entry.sunrise, 1730461200);
         assert.equal(entry.sunset, 1730500800);
         assert.equal(entry.fetchedAt, fakeNow);
+        // Wind/humidity stay in OWM's JSON but never reach the client.
+        assert.equal(entry.windSpeed, undefined);
+        assert.equal(entry.windDeg, undefined);
+        assert.equal(entry.humidity, undefined);
         // URL shape: encoded q, key, imperial units.
         assert.match(fetchCalls[0], /q=Manhattan%2C%20US/);
         assert.match(fetchCalls[0], /appid=test-key/);
         assert.match(fetchCalls[0], /units=imperial/);
     });
 
-    it('uses metric units and converts wind m/s to km/h for celsius', async () => {
+    it('uses metric units for celsius', async () => {
         const metricJson = JSON.parse(JSON.stringify(OWM_JSON));
         metricJson.main.temp = 22.4;
-        metricJson.wind.speed = 5; // m/s
         deps = baseDeps({
             fetchOwm: stubFetch(async () => okResponse(metricJson)).fetchOwm,
         });
         const entry = await weatherService.fetchWeatherFor('Oslo', 'c', deps);
         assert.match(fetchCalls[0], /units=metric/);
         assert.equal(entry.temp, 22);
-        assert.equal(entry.windSpeed, 18); // 5 m/s * 3.6
     });
 
-    it('treats night icons as night and clamps weird humidity', () => {
+    it('treats night icons as night and rejects unusable payloads', () => {
         const json = JSON.parse(JSON.stringify(OWM_JSON));
         json.weather[0].icon = '01n';
-        json.main.humidity = 140;
-        const entry = weatherService.normalizeOwmJson(json, 1, 'f');
+        const entry = weatherService.normalizeOwmJson(json, 1);
         assert.equal(entry.isDay, false);
-        assert.equal(entry.humidity, 100);
-        assert.equal(weatherService.normalizeOwmJson({}, 1, 'f'), null);
-        assert.equal(weatherService.normalizeOwmJson({ main: {} }, 1, 'f'), null);
+        assert.equal(weatherService.normalizeOwmJson({}, 1), null);
+        assert.equal(weatherService.normalizeOwmJson({ main: {} }, 1), null);
     });
 
     it('caches successful snapshots for an hour', async () => {

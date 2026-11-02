@@ -669,12 +669,6 @@
         return String(location == null ? '' : location) + '|' + (unit === 'c' ? 'c' : 'f');
     }
 
-    function wxCompass(deg) {
-        if (typeof deg !== 'number' || !isFinite(deg)) return '';
-        var points = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-        return points[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
-    }
-
     function capitalize(s) {
         return typeof s === 'string' && s.length ? s.charAt(0).toUpperCase() + s.slice(1) : '';
     }
@@ -698,8 +692,6 @@
         var high = card.querySelector('[data-wx-high]');
         var low = card.querySelector('[data-wx-low]');
         var feels = card.querySelector('[data-wx-feels]');
-        var wind = card.querySelector('[data-wx-wind]');
-        var humidity = card.querySelector('[data-wx-humidity]');
         if (unitEl) unitEl.textContent = '°' + unitChar;
 
         if (!entry || entry.error) {
@@ -730,8 +722,6 @@
             if (high) high.textContent = '';
             if (low) low.textContent = '';
             if (feels) feels.textContent = '';
-            if (wind) wind.textContent = '';
-            if (humidity) humidity.textContent = '';
             return card;
         }
 
@@ -748,18 +738,9 @@
         }
         if (label) label.textContent = capitalize(entry.label || '');
         var deg = '°' + unitChar;
-        if (high) high.textContent = entry.high == null ? '' : 'H ' + entry.high + deg;
-        if (low) low.textContent = entry.low == null ? '' : 'L ' + entry.low + deg;
+        if (high) high.textContent = entry.high == null ? '' : 'High ' + entry.high + deg;
+        if (low) low.textContent = entry.low == null ? '' : 'Low ' + entry.low + deg;
         if (feels) feels.textContent = entry.feels == null ? '' : 'Feels ' + entry.feels + deg;
-        if (wind) {
-            if (entry.windSpeed == null) wind.textContent = '';
-            else {
-                var dir = wxCompass(entry.windDeg);
-                wind.textContent = 'Wind ' + entry.windSpeed + (unitChar === 'C' ? ' km/h' : ' mph')
-                    + (dir ? ' ' + dir : '');
-            }
-        }
-        if (humidity) humidity.textContent = entry.humidity == null ? '' : 'Humidity ' + entry.humidity + '%';
         return card;
     }
 
@@ -779,14 +760,15 @@
         }
         applyWeatherLayout(card, widget.w, widget.h);
 
+        var icon = el(doc, 'span', 'material-symbols-outlined widget-weather-icon', 'cloud_queue');
+        icon.setAttribute('aria-hidden', 'true');
+        icon.setAttribute('data-wx-icon', '');
+
         var body = el(doc, 'div', 'widget-weather-body widget-content-block');
         var head = el(doc, 'div', 'widget-weather-head');
         var name = el(doc, 'p', 'widget-weather-name shell-skeleton');
         name.setAttribute('data-wx-name', '');
         head.appendChild(name);
-        var icon = el(doc, 'span', 'material-symbols-outlined widget-weather-icon', 'cloud_queue');
-        icon.setAttribute('aria-hidden', 'true');
-        icon.setAttribute('data-wx-icon', '');
         var tempWrap = el(doc, 'div', 'widget-weather-temp');
         var temp = el(doc, 'span', 'widget-weather-num shell-skeleton', '--');
         temp.setAttribute('data-wx-temp', '');
@@ -798,11 +780,9 @@
         label.setAttribute('data-wx-label', '');
         var details = el(doc, 'div', 'widget-weather-details');
         var detailSpecs = [
-            ['widget-weather-detail widget-weather-detail--hl', 'data-wx-high', ''],
-            ['widget-weather-detail widget-weather-detail--ll', 'data-wx-low', ''],
-            ['widget-weather-detail widget-weather-detail--feels', 'data-wx-feels', ''],
-            ['widget-weather-detail widget-weather-detail--wind', 'data-wx-wind', ''],
-            ['widget-weather-detail widget-weather-detail--humidity', 'data-wx-humidity', ''],
+            ['widget-weather-detail', 'data-wx-high', ''],
+            ['widget-weather-detail', 'data-wx-low', ''],
+            ['widget-weather-detail', 'data-wx-feels', ''],
         ];
         for (var d = 0; d < detailSpecs.length; d++) {
             var spec = detailSpecs[d];
@@ -811,10 +791,30 @@
             details.appendChild(item);
         }
         body.appendChild(head);
-        body.appendChild(icon);
         body.appendChild(tempWrap);
         body.appendChild(label);
         body.appendChild(details);
+        // Icon sits BEHIND the text as a card-filling watermark (child of the
+        // card, not the scaled body), so it consumes no layout space. JS sizes
+        // it from the live card box — same ResizeObserver pattern as fitScale.
+        var sizeWxIcon = function () {
+            var cw = card.clientWidth || 0;
+            var ch = card.clientHeight || 0;
+            if (!cw || !ch) return;
+            var s = Math.min(ch * 0.62, cw * 0.66);
+            icon.style.fontSize = Math.max(30, Math.round(s)) + 'px';
+        };
+        if (typeof ResizeObserver !== 'undefined') {
+            var wxIconRo = new ResizeObserver(function () { sizeWxIcon(); });
+            wxIconRo.observe(card);
+        }
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(function () {
+                sizeWxIcon();
+                requestAnimationFrame(sizeWxIcon);
+            });
+        }
+        card.appendChild(icon);
         card.appendChild(body);
         bindFitScale(card, body);
 
