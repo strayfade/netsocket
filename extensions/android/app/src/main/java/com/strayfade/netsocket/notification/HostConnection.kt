@@ -426,10 +426,11 @@ object HostConnection {
                 }
             }
             "overlay" -> {
-                val (text, conversationId, deviceId) = parseOverlayPayload(message.opt("broadcastData"))
-                val allow = conversationId != null || alertTargetsDevice(deviceId)
-                if (text.isNotBlank() && allow) {
-                    notifyOverlay(text, conversationId)
+                val payload = parseOverlayPayload(message.opt("broadcastData"))
+                val allow = payload.conversationId != null
+                    || alertTargetsDevice(payload.deviceId, payload.excludeDevice)
+                if (payload.text.isNotBlank() && allow) {
+                    notifyOverlay(payload.text, payload.conversationId)
                 }
             }
             "ack" -> {
@@ -567,24 +568,38 @@ object HostConnection {
         return null
     }
 
-    private fun alertTargetsDevice(alertDeviceId: String?): Boolean {
+    private data class OverlayPayload(
+        val text: String,
+        val conversationId: String?,
+        val deviceId: String?,
+        val excludeDevice: Boolean,
+    )
+
+    private fun alertTargetsDevice(alertDeviceId: String?, excludeDevice: Boolean = false): Boolean {
         if (alertDeviceId.isNullOrBlank()) return true
         val local = localDeviceId()
-        return local.isNotBlank() && local == alertDeviceId
+        return if (excludeDevice) {
+            // Alert node "Exclude Device": visible to everyone except the
+            // listed device; a blank local id can never be the excluded one.
+            local.isBlank() || local != alertDeviceId
+        } else {
+            local.isNotBlank() && local == alertDeviceId
+        }
     }
 
-    private fun parseOverlayPayload(broadcastData: Any?): Triple<String, String?, String?> {
+    private fun parseOverlayPayload(broadcastData: Any?): OverlayPayload {
         return when (broadcastData) {
-            is String -> Triple(broadcastData, null, null)
+            is String -> OverlayPayload(broadcastData, null, null, false)
             is JSONObject -> {
                 // optString() turns JSON null into the literal "null", which made
                 // Alert payloads look like a conversation id and get dropped.
                 val text = jsonId(broadcastData, "text", "message").orEmpty()
                 val conversationId = jsonId(broadcastData, "conversationId", "conversation_id")
                 val deviceId = jsonId(broadcastData, "deviceId", "device_id")
-                Triple(text, conversationId, deviceId)
+                val excludeDevice = broadcastData.optBoolean("excludeDevice", false)
+                OverlayPayload(text, conversationId, deviceId, excludeDevice)
             }
-            else -> Triple("", null, null)
+            else -> OverlayPayload("", null, null, false)
         }
     }
 
