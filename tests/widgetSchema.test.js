@@ -47,7 +47,8 @@ describe('widgetSchema', () => {
     it('rejects bad types, bindings, and positions', () => {
         assert.throws(() => schema.validateWidget(null, 0), /invalid_widget/);
         assert.throws(() => schema.validateWidget({ type: 'stats', x: 0, y: 0, w: 1, h: 1 }, 0), /invalid_type/);
-        assert.throws(() => schema.validateWidget({ type: 'weather', x: 0, y: 0, w: 1, h: 1 }, 0), /invalid_type/);
+        assert.throws(() => schema.validateWidget({ type: 'weather', x: 0, y: 0, w: 1, h: 1 }, 0), /location_required/);
+        assert.throws(() => schema.validateWidget({ type: 'weather', x: 0, y: 0, w: 1, h: 1, location: '<script src=x>' }, 0), /location_required/);
         assert.throws(() => schema.validateWidget({ type: 'button', x: 0, y: 0, w: 1, h: 1 }, 0), /automation_required/);
         assert.throws(() => schema.validateWidget({ type: 'markdown', x: 0, y: 0, w: 1, h: 1 }, 0), /variable_required/);
         assert.throws(() => schema.validateWidget({ type: 'clock', x: -1, y: 0, w: 1, h: 1 }, 0), /invalid_widget/);
@@ -72,6 +73,48 @@ describe('widgetSchema', () => {
         assert.equal(schema.TYPE_PRESETS.timer.length, 1);
         assert.deepEqual(schema.TYPE_PRESETS.clock[0], { w: 4, h: 2 });
         assert.ok(schema.WIDGET_TYPES.includes('timer'));
+    });
+
+    it('validates weather widgets (location required; sparse unit/gradient)', () => {
+        const wx = schema.validateWidget(
+            { type: 'weather', x: 0, y: 0, w: 4, h: 3, location: '  Manhattan,    US ' },
+            0
+        );
+        assert.deepEqual(wx, {
+            id: 'w1', type: 'weather', x: 0, y: 0, w: 4, h: 3, location: 'Manhattan, US',
+        });
+        const metric = schema.validateWidget(
+            { type: 'Weather', x: 0, y: 0, w: 4, h: 3, location: '47.61,-122.33', unit: 'C', gradient: false },
+            1
+        );
+        assert.equal(metric.type, 'weather');
+        assert.equal(metric.location, '47.61,-122.33');
+        assert.equal(metric.unit, 'c');
+        assert.equal(metric.gradient, false);
+        const noGradientTrue = schema.validateWidget(
+            { type: 'weather', x: 0, y: 0, w: 4, h: 3, location: 'Oslo', unit: 'celsius', gradient: true },
+            2
+        );
+        assert.equal(noGradientTrue.unit, 'c');
+        assert.equal(noGradientTrue.gradient, undefined);
+        const bogusUnit = schema.validateWidget(
+            { type: 'weather', x: 0, y: 0, w: 4, h: 3, location: 'Oslo', unit: 'kelvin' },
+            3
+        );
+        assert.equal(bogusUnit.unit, undefined); // default f, not persisted
+    });
+
+    it('normalizes weather locations', () => {
+        assert.equal(schema.normalizeLocation('  Tokyo   ,  JP '), 'Tokyo , JP');
+        assert.equal(schema.normalizeLocation('Sāo Paulo'), 'Sāo Paulo');
+        assert.equal(schema.normalizeLocation(''), null);
+        assert.equal(schema.normalizeLocation('x'.repeat(200)).length, 100);
+        assert.equal(schema.normalizeLocation('a"b'), null);
+        assert.equal(schema.normalizeLocation('http://evil'), null);
+        assert.equal(schema.normalizeLocation('a\nb'), 'a b');
+        assert.equal(schema.normalizeWeatherUnit('c'), 'c');
+        assert.equal(schema.normalizeWeatherUnit(''), 'f');
+        assert.equal(schema.normalizeWeatherUnit(undefined), 'f');
     });
 
     it('normalizes widget styles', () => {

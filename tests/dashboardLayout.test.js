@@ -47,10 +47,12 @@ describe('dashboardLayout', () => {
             { type: 'markdown', x: 0, y: 0, w: 4, h: 2, variable: ' morning_briefing ' },
             { type: 'button', x: 4, y: 0, w: 1, h: 1, automationId: '3' },
             { type: 'clock', x: 5, y: 0, w: 4, h: 2 },
+            { type: 'weather', x: 8, y: 0, w: 4, h: 3, location: ' Oslo ' },
         ], { widgetStyle: 'soft' });
         assert.equal(result.widgets[0].variable, 'morning_briefing');
         assert.equal(result.widgets[0].id, 'w1');
         assert.equal(result.widgets[1].automationId, '3');
+        assert.equal(result.widgets[3].location, 'Oslo');
         assert.equal(result.widgetStyle, 'soft');
         assert.deepEqual(layout.boundVariableNames(), ['morning_briefing']);
     });
@@ -58,7 +60,7 @@ describe('dashboardLayout', () => {
     it('rejects invalid layouts without changing state', () => {
         assert.throws(() => layout.replaceLayout('nope'), /invalid_layout/);
         assert.throws(() => layout.replaceLayout([{ type: 'stats', x: 0, y: 0, w: 1, h: 1 }]), /invalid_type/);
-        assert.throws(() => layout.replaceLayout([{ type: 'weather', x: 0, y: 0, w: 1, h: 1 }]), /invalid_type/);
+        assert.throws(() => layout.replaceLayout([{ type: 'weather', x: 0, y: 0, w: 1, h: 1 }]), /location_required/);
         assert.throws(() => layout.replaceLayout([{ type: 'markdown', x: 0, y: 0, w: 1, h: 1 }]), /variable_required/);
         assert.throws(() => layout.replaceLayout([{ type: 'button', x: 0, y: 0, w: 1, h: 1 }]), /automation_required/);
         assert.throws(

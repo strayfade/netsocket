@@ -13,6 +13,7 @@
         markdown: { w: 4, h: 2 },
         html: { w: 4, h: 2 },
         timer: { w: 4, h: 4 },
+        weather: { w: 4, h: 3 },
     };
 
     // Back-compat alias: one "preset" per type (the default size).
@@ -22,6 +23,7 @@
         markdown: [DEFAULT_SIZES.markdown],
         html: [DEFAULT_SIZES.html],
         timer: [DEFAULT_SIZES.timer],
+        weather: [DEFAULT_SIZES.weather],
     };
 
     function defaultSizeFor(type) {
@@ -82,6 +84,9 @@
         if (prior.variable != null) obj.variable = prior.variable;
         if (prior.showName === true) obj.showName = true;
         if (prior.showDate === false) obj.showDate = false;
+        if (prior.location != null) obj.location = prior.location;
+        if (prior.unit === 'c') obj.unit = 'c';
+        if (prior.gradient === false) obj.gradient = false;
         return obj;
     }
 
@@ -101,6 +106,12 @@
         var showNameFieldId = opts.showNameFieldId;
         var showDateId = opts.showDateId;
         var showDateFieldId = opts.showDateFieldId;
+        var locationId = opts.locationId;
+        var locationFieldId = opts.locationFieldId;
+        var unitId = opts.unitId;
+        var unitFieldId = opts.unitFieldId;
+        var gradientId = opts.gradientId;
+        var gradientFieldId = opts.gradientFieldId;
         var cancelId = opts.cancelId;
         var cancelTopId = opts.cancelTopId;
         var addBtnId = opts.addBtnId;
@@ -177,6 +188,7 @@
             return {
                 automations: ctx.automations || [],
                 variables: ctx.variables || {},
+                weatherMap: ctx.weather || {},
                 onRun: ctx.onRun || opts.onRun || function () {},
                 onRemove: removeWidget,
                 renderMarkdown: window.renderAgentMarkdown ? window.renderAgentMarkdown.bind(window) : null,
@@ -234,7 +246,7 @@
                     float: true,
                     draggable: { handle: '.widget-drag-handle' },
                     disableResize: false,
-                    resizable: { handles: 'e,se,s,sw,w' },
+                    resizable: { handles: 'n,e,s,w,se,sw,ne,nw' },
                     columnOpts: { breakpoints: [{ w: 640, c: 4 }] },
                 }, container);
                 if (editing) container.classList.add('editing');
@@ -296,10 +308,43 @@
             var autoField = automationFieldId ? document.getElementById(automationFieldId) : null;
             var showNameField = showNameFieldId ? document.getElementById(showNameFieldId) : null;
             var showDateField = showDateFieldId ? document.getElementById(showDateFieldId) : null;
+            var locationField = locationFieldId ? document.getElementById(locationFieldId) : null;
+            var unitField = unitFieldId ? document.getElementById(unitFieldId) : null;
+            var gradientField = gradientFieldId ? document.getElementById(gradientFieldId) : null;
             if (varField) varField.hidden = !(type === 'markdown' || type === 'html');
             if (autoField) autoField.hidden = type !== 'button';
             if (showNameField) showNameField.hidden = type !== 'button';
             if (showDateField) showDateField.hidden = type !== 'clock';
+            if (locationField) locationField.hidden = type !== 'weather';
+            if (unitField) unitField.hidden = type !== 'weather';
+            if (gradientField) gradientField.hidden = type !== 'weather';
+        }
+
+        /**
+         * Sample weather for the add-dialog preview so the picker always
+         * shows a live card (gradient + icon) even with no key configured.
+         * sunrise/sunset null => time-of-day follows the wall clock.
+         */
+        function sampleWeatherEntry(unit) {
+            var fahrenheit = unit !== 'c';
+            return {
+                fetchedAt: Date.now(),
+                name: 'Anytown',
+                country: 'US',
+                code: 802,
+                icon: '04d',
+                isDay: true,
+                label: 'broken clouds',
+                temp: fahrenheit ? 72 : 22,
+                feels: fahrenheit ? 74 : 23,
+                high: fahrenheit ? 78 : 26,
+                low: fahrenheit ? 61 : 16,
+                humidity: 55,
+                windSpeed: fahrenheit ? 8 : 13,
+                windDeg: 270,
+                sunrise: null,
+                sunset: null,
+            };
         }
 
         function renderTypePreview() {
@@ -330,6 +375,7 @@
             var previewCtx = {
                 variables: ctx.variables || {},
                 automations: ctx.automations || [],
+                weatherMap: ctx.weather || {},
                 onRun: function () {},
                 renderMarkdown: window.renderAgentMarkdown ? window.renderAgentMarkdown.bind(window) : null
             };
@@ -360,6 +406,22 @@
                     } else {
                         previewCtx.variables[varName] = '<div style="padding:12px;font-family:system-ui">HTML preview for <b>' + varName + '</b></div>';
                     }
+                }
+            } else if (type === 'weather') {
+                var locInput = locationId ? document.getElementById(locationId) : null;
+                var unitSel = unitId ? document.getElementById(unitId) : null;
+                var gradientBox = gradientId ? document.getElementById(gradientId) : null;
+                var loc = locInput && locInput.value.trim() ? locInput.value.trim() : 'Anytown, US';
+                var wxUnit = unitSel && unitSel.value === 'c' ? 'c' : 'f';
+                previewWidget.location = loc;
+                if (wxUnit === 'c') previewWidget.unit = 'c';
+                if (gradientBox && !gradientBox.checked) previewWidget.gradient = false;
+                var mapKey = window.Widgets && window.Widgets.weatherEntryKey
+                    ? window.Widgets.weatherEntryKey(loc, wxUnit)
+                    : (loc + '|' + wxUnit);
+                if (!previewCtx.weatherMap[mapKey]) {
+                    previewCtx.weatherMap = Object.assign({}, previewCtx.weatherMap);
+                    previewCtx.weatherMap[mapKey] = sampleWeatherEntry(wxUnit);
                 }
             }
 
@@ -406,6 +468,12 @@
             if (showNameInit) showNameInit.checked = false;
             var showDateInit = showDateId ? document.getElementById(showDateId) : null;
             if (showDateInit) showDateInit.checked = true;
+            var locationInit = locationId ? document.getElementById(locationId) : null;
+            if (locationInit) locationInit.value = '';
+            var unitInit = unitId ? document.getElementById(unitId) : null;
+            if (unitInit) unitInit.value = 'f';
+            var gradientInit = gradientId ? document.getElementById(gradientId) : null;
+            if (gradientInit) gradientInit.checked = true;
             renderTypePreview();
             renderDialogFields();
             if (typeof dialog.showModal === 'function') {
@@ -458,6 +526,20 @@
                 var showDateEl = showDateId ? document.getElementById(showDateId) : null;
                 if (showDateEl && !showDateEl.checked) widget.showDate = false;
             }
+            if (type === 'weather') {
+                var locInput = locationId ? document.getElementById(locationId) : null;
+                var locName = locInput ? locInput.value.replace(/\s+/g, ' ').trim() : '';
+                if (!locName) {
+                    if (window.ShellLogic) ShellLogic.showToast('Enter a location');
+                    if (locInput) try { locInput.focus(); } catch (_) {}
+                    return;
+                }
+                widget.location = locName.slice(0, 100);
+                var unitSel = unitId ? document.getElementById(unitId) : null;
+                if (unitSel && unitSel.value === 'c') widget.unit = 'c';
+                var gradientEl = gradientId ? document.getElementById(gradientId) : null;
+                if (gradientEl && !gradientEl.checked) widget.gradient = false;
+            }
             var current = getWidgets();
             var maxId = 0;
             current.forEach(function (w) {
@@ -474,6 +556,12 @@
             if (showNameEl2) showNameEl2.checked = false;
             var showDateEl2 = showDateId ? document.getElementById(showDateId) : null;
             if (showDateEl2) showDateEl2.checked = true;
+            var locInput2 = locationId ? document.getElementById(locationId) : null;
+            if (locInput2) locInput2.value = '';
+            var unitSel2 = unitId ? document.getElementById(unitId) : null;
+            if (unitSel2) unitSel2.value = 'f';
+            var gradientEl2 = gradientId ? document.getElementById(gradientId) : null;
+            if (gradientEl2) gradientEl2.checked = true;
             closeAddDialog();
             rebuild();
             onSave(next);
@@ -509,6 +597,19 @@
             var showDateBind = showDateId ? document.getElementById(showDateId) : null;
             if (showDateBind) {
                 showDateBind.addEventListener('change', function () { renderTypePreview(); });
+            }
+            var locationBind = locationId ? document.getElementById(locationId) : null;
+            if (locationBind) {
+                locationBind.addEventListener('input', function () { renderTypePreview(); });
+                locationBind.addEventListener('change', function () { renderTypePreview(); });
+            }
+            var unitBind = unitId ? document.getElementById(unitId) : null;
+            if (unitBind) {
+                unitBind.addEventListener('change', function () { renderTypePreview(); });
+            }
+            var gradientBind = gradientId ? document.getElementById(gradientId) : null;
+            if (gradientBind) {
+                gradientBind.addEventListener('change', function () { renderTypePreview(); });
             }
             if (openBtn) openBtn.addEventListener('click', openAddDialog);
             if (cancelBtn) cancelBtn.addEventListener('click', closeAddDialog);

@@ -32,10 +32,11 @@
     --panel-clock-time-font: 'SF UI Soft', 'SF UI', system-ui, sans-serif;
 }
 
-/* Panel surfaces only — leave dashboard / automate / shell chrome on Geist. */
+/* Panel + dashboard widget surfaces only — shell chrome and page copy stay on Geist. */
 .kiosk-wrap,
 #panel-grid,
 #panel-edit-grid,
+#dashboard-widgets,
 .panel-preview-grid {
     --shell-font: var(--panel-font);
     font-family: var(--panel-font);
@@ -47,8 +48,15 @@
 #panel-grid [data-clock-time],
 #panel-edit-grid .shell-clock-value,
 #panel-edit-grid [data-clock-time],
+#dashboard-widgets .shell-clock-value,
+#dashboard-widgets [data-clock-time],
 .panel-preview-grid .shell-clock-value,
-.panel-preview-grid [data-clock-time] {
+.panel-preview-grid [data-clock-time],
+.kiosk-wrap .widget-weather-num,
+#panel-grid .widget-weather-num,
+#panel-edit-grid .widget-weather-num,
+#dashboard-widgets .widget-weather-num,
+.panel-preview-grid .widget-weather-num {
     font-family: var(--panel-clock-time-font);
 }
 
@@ -1175,6 +1183,10 @@ select.admin-input {
     font-size: 18px;
 }
 
+/* Modern handle system (editing only): one grip language — soft white pills,
+   8px thick, fully rounded, on a shared 0 1px 3px shadow. Edge pills for
+   resize, dots for corners, center drag-icon disc for moving. Invisible
+   ::before padding keeps the slim visuals easy to grab on touch. */
 .grid-stack.editing .widget-drag-handle {
     display: flex;
     align-items: center;
@@ -1183,16 +1195,30 @@ select.admin-input {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 2;
-    width: 44px;
-    height: 44px;
+    z-index: 5;
+    width: 38px;
+    height: 38px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    font-size: 22px;
     color: #000000;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
     cursor: grab;
     touch-action: none;
     user-select: none;
+}
+
+.grid-stack.editing .widget-drag-handle::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+}
+
+.grid-stack.editing .widget-drag-handle:hover {
+    background: #ffffff;
 }
 
 .grid-stack.editing .widget-drag-handle:active {
@@ -1204,15 +1230,15 @@ select.admin-input {
     align-items: center;
     justify-content: center;
     position: absolute;
-    top: 6px;
-    right: 6px;
-    z-index: 3;
+    top: 8px;
+    right: 8px;
+    z-index: 5;
     width: 32px;
     height: 32px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
     color: #000000;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
     cursor: pointer;
     touch-action: manipulation;
     user-select: none;
@@ -1224,9 +1250,9 @@ select.admin-input {
     border-color: #ff3b30;
 }
 
+/* Selection ring follows the card radius on every engine (outline ignores it). */
 .grid-stack.editing .grid-stack-item-content {
-    outline: 1px dashed var(--shell-border);
-    outline-offset: -1px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
 }
 
 .grid-stack.editing .grid-stack-item-content .shell-card,
@@ -1246,27 +1272,108 @@ select.admin-input {
     min-height: 160px;
 }
 
-/* Drag-resize snaps to grid cells; handles only visible while editing */
+/* Drag-resize snaps to grid cells; handles only visible while editing.
+   GridStack creates a div per direction (n/e/s/w/ne/nw/se/sw) on the item. */
 .grid-stack.editing > .grid-stack-item > .ui-resizable-handle {
     display: block !important;
     z-index: 4;
+    width: 8px;
+    height: 8px;
     background: rgba(255, 255, 255, 0.9);
-    border: 1px solid #000;
-    border-radius: 2px;
-    opacity: 0.95;
+    background-image: none;
+    border: 0;
+    border-radius: 999px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    opacity: 1;
+    transform: none;
 }
-.grid-stack.editing > .grid-stack-item > .ui-resizable-se,
-.grid-stack.editing > .grid-stack-item > .ui-resizable-sw {
-    width: 12px;
-    height: 12px;
+
+.grid-stack.editing > .grid-stack-item > .ui-resizable-handle::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
 }
+
+.grid-stack.editing > .grid-stack-item > .ui-resizable-handle:hover {
+    background: #ffffff;
+}
+
+.grid-stack.editing > .grid-stack-item > .ui-resizable-n,
+.grid-stack.editing > .grid-stack-item > .ui-resizable-s {
+    width: 40px;
+    height: 8px;
+    left: 50%;
+    right: auto;
+    margin-left: -20px;
+    cursor: ns-resize;
+}
+.grid-stack.editing > .grid-stack-item > .ui-resizable-n {
+    top: -4px;
+    bottom: auto;
+}
+.grid-stack.editing > .grid-stack-item > .ui-resizable-s {
+    bottom: -4px;
+    top: auto;
+}
+
 .grid-stack.editing > .grid-stack-item > .ui-resizable-e,
 .grid-stack.editing > .grid-stack-item > .ui-resizable-w {
     width: 8px;
+    height: 40px;
+    top: 50%;
+    bottom: auto;
+    margin-top: -20px;
+    cursor: ew-resize;
 }
-.grid-stack.editing > .grid-stack-item > .ui-resizable-s {
-    height: 8px;
+.grid-stack.editing > .grid-stack-item > .ui-resizable-e {
+    right: -4px;
+    left: auto;
 }
+.grid-stack.editing > .grid-stack-item > .ui-resizable-w {
+    left: -4px;
+    right: auto;
+}
+
+.grid-stack.editing > .grid-stack-item > .ui-resizable-nw,
+.grid-stack.editing > .grid-stack-item > .ui-resizable-ne,
+.grid-stack.editing > .grid-stack-item > .ui-resizable-sw,
+.grid-stack.editing > .grid-stack-item > .ui-resizable-se {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+.grid-stack.editing > .grid-stack-item > .ui-resizable-nw {
+    top: -6px;
+    left: -6px;
+    right: auto;
+    bottom: auto;
+    cursor: nwse-resize;
+}
+.grid-stack.editing > .grid-stack-item > .ui-resizable-ne {
+    top: -6px;
+    right: -6px;
+    left: auto;
+    bottom: auto;
+    cursor: nesw-resize;
+}
+.grid-stack.editing > .grid-stack-item > .ui-resizable-sw {
+    bottom: -6px;
+    left: -6px;
+    right: auto;
+    top: auto;
+    cursor: nesw-resize;
+}
+.grid-stack.editing > .grid-stack-item > .ui-resizable-se {
+    bottom: -6px;
+    right: -6px;
+    left: auto;
+    top: auto;
+    cursor: nwse-resize;
+}
+
 .grid-stack:not(.editing) > .grid-stack-item > .ui-resizable-handle {
     display: none !important;
 }
@@ -1330,6 +1437,11 @@ dialog#panel-edit-dialog[open] {
     gap: 12px;
 }
 
+/* Panel containers carry no outer border; only the preview viewport keeps one. */
+.panels-grid > .shell-card {
+    border: none;
+}
+
 .panel-preview-card {
     display: flex;
     flex-direction: column;
@@ -1350,6 +1462,9 @@ dialog#panel-edit-dialog[open] {
     border-radius: var(--shell-radius);
     background: #000000;
     position: relative;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .panel-preview-scale {
@@ -2571,6 +2686,286 @@ dialog#panel-edit-dialog[open] {
 [data-widget-style="neon"] .widget-timer-display {
     color: #ffedd5;
     text-shadow: 0 0 18px rgba(251, 146, 60, 0.55);
+}
+
+/* ── Weather widget ─────────────────────────────────────────────────── */
+/* Layout variants (JS picks from grid box via data-wx-layout):
+   micro = icon + temp, bar = one row, wide = 3 columns, stack = vertical.
+   All old-safe: hex + linear-gradient + flex/grid, no modern color funcs. */
+
+.widget-weather {
+    position: relative;
+    overflow: hidden;
+}
+
+.widget-weather-body {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+    align-content: center;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.widget-weather-head { grid-area: wx-name; }
+.widget-weather-icon { grid-area: wx-icon; }
+.widget-weather-temp { grid-area: wx-temp; }
+.widget-weather-label { grid-area: wx-label; }
+.widget-weather-details { grid-area: wx-details; }
+
+.widget-weather-name {
+    margin: 0;
+    min-height: 1em;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--shell-muted);
+    white-space: nowrap;
+}
+
+.widget-weather-icon {
+    font-size: 3.25rem;
+    line-height: 1;
+}
+
+.widget-weather-temp {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+    line-height: 1;
+}
+
+.widget-weather-num {
+    font-size: 3.6rem;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.widget-weather-unitchar {
+    font-size: 1.5rem;
+    letter-spacing: 0;
+    color: var(--shell-muted);
+}
+
+.widget-weather-label {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--shell-text);
+    white-space: nowrap;
+}
+
+.widget-weather-details {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 16px;
+}
+
+.widget-weather-detail {
+    font-size: 0.95rem;
+    color: var(--shell-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.widget-weather-detail:empty { display: none; }
+
+/* stack — default for squarish cells */
+.widget-weather[data-wx-layout="stack"] .widget-weather-body {
+    grid-template-areas:
+        "wx-name"
+        "wx-icon"
+        "wx-temp"
+        "wx-label"
+        "wx-details";
+}
+
+/* micro — w≤1 or 2×2: icon over temperature only */
+.widget-weather[data-wx-layout="micro"] .widget-weather-body {
+    gap: 4px;
+    grid-template-areas:
+        "wx-icon"
+        "wx-temp";
+}
+.widget-weather[data-wx-layout="micro"] .widget-weather-head,
+.widget-weather[data-wx-layout="micro"] .widget-weather-label,
+.widget-weather[data-wx-layout="micro"] .widget-weather-details {
+    display: none;
+}
+
+/* bar — h≤1: single row icon | temp | condition */
+.widget-weather[data-wx-layout="bar"] .widget-weather-body {
+    grid-template-areas: "wx-icon wx-temp wx-label";
+    align-items: center;
+}
+.widget-weather[data-wx-layout="bar"] .widget-weather-head,
+.widget-weather[data-wx-layout="bar"] .widget-weather-details {
+    display: none;
+}
+
+/* wide — w≥6: name across top, icon | hero (temp over label) | details */
+.widget-weather[data-wx-layout="wide"] .widget-weather-body {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+        "wx-name  wx-name  wx-name"
+        "wx-icon  wx-temp  wx-details"
+        "wx-icon  wx-label wx-details";
+    gap: 10px 28px;
+}
+.widget-weather[data-wx-layout="wide"] .widget-weather-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 4px;
+}
+
+/* Loading / failure states */
+.widget-weather[data-wx-state="loading"] .widget-weather-icon { opacity: 0.4; }
+.widget-weather[data-wx-state="error"] .widget-weather-temp { opacity: 0.45; }
+.widget-weather[data-wx-state="error"] .widget-weather-label {
+    color: var(--shell-muted);
+    font-size: 0.95rem;
+    white-space: normal;
+}
+
+/* Gradient background — palette from condition (data-wx-condition)
+   crossed with time of day (data-wx-tod: dawn/day/dusk/night, from
+   sunrise/sunset with an Eastern-clock fallback). */
+.widget-weather--gradient {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    background: linear-gradient(158deg, var(--wx-ga, #10141c), var(--wx-gb, #2a3444)) !important;
+    color: #ffffff;
+}
+
+.widget-weather--gradient::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(120% 90% at 18% 10%, var(--wx-glow, rgba(255, 255, 255, 0.10)), transparent 55%);
+}
+
+.widget-weather--gradient .widget-weather-name,
+.widget-weather--gradient .widget-weather-detail {
+    color: rgba(255, 255, 255, 0.78);
+}
+.widget-weather--gradient .widget-weather-label { color: #ffffff; }
+.widget-weather--gradient .widget-weather-unitchar { color: rgba(255, 255, 255, 0.78); }
+.widget-weather--gradient .widget-weather-num,
+.widget-weather--gradient .widget-weather-label {
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+.widget-weather--gradient .widget-weather-icon {
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+}
+
+/* clear */
+.widget-weather--gradient[data-wx-condition="clear"] {
+    --wx-ga: #1d4ed8; --wx-gb: #38bdf8; --wx-glow: rgba(255, 221, 138, 0.22);
+}
+.widget-weather--gradient[data-wx-condition="clear"][data-wx-tod="dawn"] {
+    --wx-ga: #c2410c; --wx-gb: #1e40af; --wx-glow: rgba(253, 186, 116, 0.25);
+}
+.widget-weather--gradient[data-wx-condition="clear"][data-wx-tod="dusk"] {
+    --wx-ga: #be185d; --wx-gb: #1e3a8a; --wx-glow: rgba(249, 168, 212, 0.20);
+}
+.widget-weather--gradient[data-wx-condition="clear"][data-wx-tod="night"] {
+    --wx-ga: #05070f; --wx-gb: #1b2a55; --wx-glow: rgba(147, 197, 253, 0.12);
+}
+.widget-weather--gradient[data-wx-condition="clear"][data-wx-tod="day"] .widget-weather-icon {
+    color: #ffe08a;
+}
+.widget-weather--gradient[data-wx-condition="clear"][data-wx-tod="night"] .widget-weather-icon {
+    color: #dbe7ff;
+}
+
+/* few clouds */
+.widget-weather--gradient[data-wx-condition="few-clouds"] {
+    --wx-ga: #24519e; --wx-gb: #7fa9cf; --wx-glow: rgba(255, 255, 255, 0.16);
+}
+.widget-weather--gradient[data-wx-condition="few-clouds"][data-wx-tod="dawn"],
+.widget-weather--gradient[data-wx-condition="few-clouds"][data-wx-tod="dusk"] {
+    --wx-ga: #9a4b2f; --wx-gb: #3f5f9e; --wx-glow: rgba(234, 179, 138, 0.20);
+}
+.widget-weather--gradient[data-wx-condition="few-clouds"][data-wx-tod="night"] {
+    --wx-ga: #0b1020; --wx-gb: #263252; --wx-glow: rgba(168, 190, 230, 0.10);
+}
+
+/* overcast */
+.widget-weather--gradient[data-wx-condition="clouds"] {
+    --wx-ga: #3d4557; --wx-gb: #78829a; --wx-glow: rgba(255, 255, 255, 0.12);
+}
+.widget-weather--gradient[data-wx-condition="clouds"][data-wx-tod="dawn"],
+.widget-weather--gradient[data-wx-condition="clouds"][data-wx-tod="dusk"] {
+    --wx-ga: #585065; --wx-gb: #38415c; --wx-glow: rgba(206, 178, 214, 0.12);
+}
+.widget-weather--gradient[data-wx-condition="clouds"][data-wx-tod="night"] {
+    --wx-ga: #14181f; --wx-gb: #2c3547; --wx-glow: rgba(190, 205, 225, 0.08);
+}
+
+/* rain + drizzle */
+.widget-weather--gradient[data-wx-condition="rain"] {
+    --wx-ga: #22405c; --wx-gb: #4f83a5; --wx-glow: rgba(148, 210, 255, 0.14);
+}
+.widget-weather--gradient[data-wx-condition="rain"][data-wx-tod="dawn"],
+.widget-weather--gradient[data-wx-condition="rain"][data-wx-tod="dusk"] {
+    --wx-ga: #3d4a6b; --wx-gb: #6b5d84; --wx-glow: rgba(186, 168, 214, 0.14);
+}
+.widget-weather--gradient[data-wx-condition="rain"][data-wx-tod="night"] {
+    --wx-ga: #0d1a26; --wx-gb: #2b4a60; --wx-glow: rgba(125, 195, 255, 0.10);
+}
+
+/* thunder */
+.widget-weather--gradient[data-wx-condition="storm"] {
+    --wx-ga: #232733; --wx-gb: #5b3f8f; --wx-glow: rgba(250, 204, 21, 0.12);
+}
+.widget-weather--gradient[data-wx-condition="storm"][data-wx-tod="dawn"],
+.widget-weather--gradient[data-wx-condition="storm"][data-wx-tod="dusk"] {
+    --wx-ga: #31263f; --wx-gb: #4c2f66; --wx-glow: rgba(250, 204, 21, 0.10);
+}
+.widget-weather--gradient[data-wx-condition="storm"][data-wx-tod="night"] {
+    --wx-ga: #0a0812; --wx-gb: #312358; --wx-glow: rgba(251, 191, 36, 0.10);
+}
+
+/* snow + sleet */
+.widget-weather--gradient[data-wx-condition="snow"] {
+    --wx-ga: #3f6b96; --wx-gb: #87aecb; --wx-glow: rgba(226, 242, 255, 0.22);
+}
+.widget-weather--gradient[data-wx-condition="snow"][data-wx-tod="dawn"],
+.widget-weather--gradient[data-wx-condition="snow"][data-wx-tod="dusk"] {
+    --wx-ga: #58677f; --wx-gb: #7d8fb0; --wx-glow: rgba(214, 222, 240, 0.16);
+}
+.widget-weather--gradient[data-wx-condition="snow"][data-wx-tod="night"] {
+    --wx-ga: #16222e; --wx-gb: #33546b; --wx-glow: rgba(210, 231, 255, 0.12);
+}
+
+/* fog / haze / dust */
+.widget-weather--gradient[data-wx-condition="mist"] {
+    --wx-ga: #465162; --wx-gb: #7a8699; --wx-glow: rgba(255, 255, 255, 0.12);
+}
+.widget-weather--gradient[data-wx-condition="mist"][data-wx-tod="dawn"],
+.widget-weather--gradient[data-wx-condition="mist"][data-wx-tod="dusk"] {
+    --wx-ga: #5d5f70; --wx-gb: #495066; --wx-glow: rgba(224, 214, 224, 0.12);
+}
+.widget-weather--gradient[data-wx-condition="mist"][data-wx-tod="night"] {
+    --wx-ga: #181c23; --wx-gb: #313a49; --wx-glow: rgba(200, 210, 224, 0.08);
+}
+
+/* loading / no data */
+.widget-weather--gradient[data-wx-condition="none"] {
+    --wx-ga: #10141c; --wx-gb: #242c38; --wx-glow: rgba(255, 255, 255, 0.06);
+}
+
+/* Style interplay: the weather gradient outranks every global widget style
+   (higher specificity than [data-widget-style=…] .shell-card + !important);
+   non-gradient weather cards follow the global styles like other cards. */
+[data-widget-style] .grid-stack-item-content .shell-card.widget-weather--gradient {
+    background: linear-gradient(158deg, var(--wx-ga, #10141c), var(--wx-gb, #2a3444)) !important;
 }
 
 /* Panel page background must stay pure black regardless of style */

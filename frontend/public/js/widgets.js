@@ -12,8 +12,10 @@
     // fill the `.grid-stack-item-content` element. Live variable refresh
     // keeps working through [data-var-content] / [data-var-frame] hooks.
     //
-    // widget: { id, type, x, y, w, h, automationId?, variable?, showName?, showDate? }
+    // widget: { id, type, x, y, w, h, automationId?, variable?, showName?, showDate?,
+    //           location?, unit?, gradient? }
     // ctx: { automations: [{id,title,type,runnable}], variables: {name:value},
+    //        weatherMap: {"<location>|<unit>": weatherEntry},
     //        onRun(item, button), renderMarkdown(text)->html }
 
     var WHEEL_ITEM_H = 56;
@@ -562,6 +564,283 @@
         return card;
     }
 
+    // --- Weather widget -----------------------------------------------------
+
+    /**
+     * Map a widget box to one of four layouts: micro (icon + temp), bar
+     * (single row), wide (icon / hero / details columns), stack (vertical).
+     */
+    function wxLayoutFor(w, h) {
+        var width = w == null ? 4 : Number(w);
+        var height = h == null ? 3 : Number(h);
+        if (width <= 1) return 'micro';
+        if (height <= 1) return 'bar';
+        if (width <= 2 && height <= 2) return 'micro';
+        if (width >= 6) return 'wide';
+        return 'stack';
+    }
+
+    /** OWM condition id -> palette class. */
+    function wxConditionFor(code) {
+        var c = Number(code);
+        if (!isFinite(c) || c < 0) return 'none';
+        if (c >= 200 && c < 300) return 'storm';
+        if (c >= 300 && c < 600) return 'rain';
+        if (c >= 600 && c < 700) return 'snow';
+        if (c >= 700 && c < 800) return 'mist';
+        if (c === 800) return 'clear';
+        if (c === 801 || c === 802) return 'few-clouds';
+        if (c >= 803 && c <= 804) return 'clouds';
+        return 'none';
+    }
+
+    /** OWM condition id + day flag -> Material Symbols Outlined ligature. */
+    function wxIconFor(code, isDay) {
+        var c = Number(code);
+        if (!isFinite(c) || c < 0) return 'cloud_queue';
+        if (c >= 200 && c < 300) return 'thunderstorm';
+        if (c >= 300 && c < 500) return 'rainy';
+        if (c === 511) return 'hail';
+        if (c >= 500 && c < 600) return 'rainy';
+        if (c >= 600 && c < 617) return 'cloudy_snowing';
+        if (c >= 617 && c < 700) return 'weather_snowy';
+        if (c === 781) return 'tornado';
+        if (c === 751 || c === 761 || c === 762) return 'dust_storm';
+        if (c >= 700 && c < 800) return 'foggy';
+        if (c === 800) return isDay === false ? 'clear_night' : 'clear_day';
+        if (c === 801 || c === 802) return isDay === false ? 'partly_cloudy_night' : 'partly_cloudy_day';
+        if (c >= 803 && c <= 804) return 'cloud';
+        return 'cloud_queue';
+    }
+
+    function weatherNowMs() {
+        try {
+            if (typeof window !== 'undefined' && window.ShellLogic) {
+                if (typeof window.ShellLogic.ntpNow === 'function') return window.ShellLogic.ntpNow();
+                if (typeof window.ShellLogic.serverNow === 'function') return window.ShellLogic.serverNow();
+            }
+        } catch (_) { /* fall through */ }
+        return Date.now();
+    }
+
+    function easternHourNow(nowMs) {
+        try {
+            if (typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+                var parts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'America/New_York', hour: '2-digit', hour12: false,
+                }).formatToParts(new Date(nowMs));
+                for (var i = 0; i < parts.length; i++) {
+                    if (parts[i].type === 'hour') {
+                        var h = parseInt(parts[i].value, 10);
+                        if (isFinite(h)) return h % 24;
+                    }
+                }
+            }
+        } catch (_) { /* fall through */ }
+        var d = new Date(nowMs);
+        return d.getHours();
+    }
+
+    /**
+     * Dawn/day/dusk/night bucket for gradient selection. sunrise/sunset are
+     * absolute unix seconds from OWM, so this stays correct for any location;
+     * without them it falls back to hour-of-day in America/New_York (the same
+     * clock the Clock widget paints).
+     */
+    function wxTimeOfDay(entry, nowMs) {
+        var now = nowMs == null ? weatherNowMs() : nowMs;
+        var sunrise = entry && typeof entry.sunrise === 'number' ? entry.sunrise : null;
+        var sunset = entry && typeof entry.sunset === 'number' ? entry.sunset : null;
+        if (sunrise != null && sunset != null && sunset > sunrise) {
+            var nowSec = now / 1000;
+            var window45 = 45 * 60;
+            if (nowSec >= sunrise - window45 && nowSec <= sunrise + window45) return 'dawn';
+            if (nowSec >= sunset - window45 && nowSec <= sunset + window45) return 'dusk';
+            return (nowSec > sunrise && nowSec < sunset) ? 'day' : 'night';
+        }
+        var hour = easternHourNow(now);
+        if (hour >= 5 && hour < 8) return 'dawn';
+        if (hour >= 17 && hour < 20) return 'dusk';
+        if (hour >= 8 && hour < 17) return 'day';
+        return 'night';
+    }
+
+    function weatherEntryKey(location, unit) {
+        return String(location == null ? '' : location) + '|' + (unit === 'c' ? 'c' : 'f');
+    }
+
+    function wxCompass(deg) {
+        if (typeof deg !== 'number' || !isFinite(deg)) return '';
+        var points = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        return points[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
+    }
+
+    function capitalize(s) {
+        return typeof s === 'string' && s.length ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+    }
+
+    function applyWeatherLayout(card, w, h) {
+        card.setAttribute('data-wx-layout', wxLayoutFor(w, h));
+    }
+
+    /**
+     * Paint one weather card from a snapshot entry (weather object,
+     * {error}, or undefined for still-loading). Updates the tod bucket too,
+     * so gradients follow the clock.
+     */
+    function applyWeatherState(card, entry) {
+        var unitChar = (card.getAttribute('data-wx-unit') || 'f') === 'c' ? 'C' : 'F';
+        var icon = card.querySelector('[data-wx-icon]');
+        var temp = card.querySelector('[data-wx-temp]');
+        var unitEl = card.querySelector('[data-wx-unit-char]');
+        var label = card.querySelector('[data-wx-label]');
+        var name = card.querySelector('[data-wx-name]');
+        var high = card.querySelector('[data-wx-high]');
+        var low = card.querySelector('[data-wx-low]');
+        var feels = card.querySelector('[data-wx-feels]');
+        var wind = card.querySelector('[data-wx-wind]');
+        var humidity = card.querySelector('[data-wx-humidity]');
+        if (unitEl) unitEl.textContent = '°' + unitChar;
+
+        if (!entry || entry.error) {
+            var loading = !entry;
+            card.classList.remove('shell-skeleton');
+            card.setAttribute('data-wx-state', entry ? 'error' : 'loading');
+            card.setAttribute('data-wx-condition', 'none');
+            card.setAttribute('data-wx-tod', 'night');
+            if (icon) {
+                icon.textContent = 'cloud_queue';
+                icon.classList.remove('shell-skeleton');
+            }
+            if (temp) {
+                temp.textContent = '--';
+                temp.classList.toggle('shell-skeleton', loading);
+            }
+            if (name) {
+                name.textContent = '';
+                name.classList.toggle('shell-skeleton', loading);
+            }
+            if (label) {
+                var msg = 'Loading weather';
+                if (entry && entry.error === 'no_key') msg = 'Add API key in Preferences';
+                else if (entry && entry.error === 'not_found') msg = 'Location not found';
+                else if (entry && entry.error) msg = 'Weather unavailable';
+                label.textContent = msg;
+            }
+            if (high) high.textContent = '';
+            if (low) low.textContent = '';
+            if (feels) feels.textContent = '';
+            if (wind) wind.textContent = '';
+            if (humidity) humidity.textContent = '';
+            return card;
+        }
+
+        card.classList.remove('shell-skeleton');
+        card.setAttribute('data-wx-state', 'ok');
+        card.setAttribute('data-wx-condition', wxConditionFor(entry.code));
+        card.setAttribute('data-wx-tod', wxTimeOfDay(entry));
+        if (temp) temp.classList.remove('shell-skeleton');
+        if (icon) icon.textContent = wxIconFor(entry.code, entry.isDay);
+        if (temp) temp.textContent = entry.temp == null ? '--' : String(entry.temp);
+        if (name) {
+            name.classList.remove('shell-skeleton');
+            name.textContent = entry.country ? entry.name + ' · ' + entry.country : entry.name;
+        }
+        if (label) label.textContent = capitalize(entry.label || '');
+        var deg = '°' + unitChar;
+        if (high) high.textContent = entry.high == null ? '' : 'H ' + entry.high + deg;
+        if (low) low.textContent = entry.low == null ? '' : 'L ' + entry.low + deg;
+        if (feels) feels.textContent = entry.feels == null ? '' : 'Feels ' + entry.feels + deg;
+        if (wind) {
+            if (entry.windSpeed == null) wind.textContent = '';
+            else {
+                var dir = wxCompass(entry.windDeg);
+                wind.textContent = 'Wind ' + entry.windSpeed + (unitChar === 'C' ? ' km/h' : ' mph')
+                    + (dir ? ' ' + dir : '');
+            }
+        }
+        if (humidity) humidity.textContent = entry.humidity == null ? '' : 'Humidity ' + entry.humidity + '%';
+        return card;
+    }
+
+    function renderWeather(widget, ctx, doc) {
+        var card = el(doc, 'section', 'shell-card widget-weather');
+        if (widget.gradient !== false) card.classList.add('widget-weather--gradient');
+        card.setAttribute('aria-label', 'Weather');
+        card.setAttribute('data-widget-kind', 'weather');
+        var unit = widget.unit === 'c' ? 'c' : 'f';
+        card.setAttribute('data-wx-unit', unit);
+        card.setAttribute('data-wx-state', 'loading');
+        card.setAttribute('data-wx-condition', 'none');
+        card.setAttribute('data-wx-tod', 'night');
+        sizeAttrs(card, widget);
+        if (widget.location) {
+            card.setAttribute('data-weather-key', weatherEntryKey(widget.location, unit));
+        }
+        applyWeatherLayout(card, widget.w, widget.h);
+
+        var body = el(doc, 'div', 'widget-weather-body widget-content-block');
+        var head = el(doc, 'div', 'widget-weather-head');
+        var name = el(doc, 'p', 'widget-weather-name shell-skeleton');
+        name.setAttribute('data-wx-name', '');
+        head.appendChild(name);
+        var icon = el(doc, 'span', 'material-symbols-outlined widget-weather-icon', 'cloud_queue');
+        icon.setAttribute('aria-hidden', 'true');
+        icon.setAttribute('data-wx-icon', '');
+        var tempWrap = el(doc, 'div', 'widget-weather-temp');
+        var temp = el(doc, 'span', 'widget-weather-num shell-skeleton', '--');
+        temp.setAttribute('data-wx-temp', '');
+        tempWrap.appendChild(temp);
+        var deg = el(doc, 'span', 'widget-weather-unitchar', '°' + (unit === 'c' ? 'C' : 'F'));
+        deg.setAttribute('data-wx-unit-char', '');
+        tempWrap.appendChild(deg);
+        var label = el(doc, 'p', 'widget-weather-label', 'Loading weather');
+        label.setAttribute('data-wx-label', '');
+        var details = el(doc, 'div', 'widget-weather-details');
+        var detailSpecs = [
+            ['widget-weather-detail widget-weather-detail--hl', 'data-wx-high', ''],
+            ['widget-weather-detail widget-weather-detail--ll', 'data-wx-low', ''],
+            ['widget-weather-detail widget-weather-detail--feels', 'data-wx-feels', ''],
+            ['widget-weather-detail widget-weather-detail--wind', 'data-wx-wind', ''],
+            ['widget-weather-detail widget-weather-detail--humidity', 'data-wx-humidity', ''],
+        ];
+        for (var d = 0; d < detailSpecs.length; d++) {
+            var spec = detailSpecs[d];
+            var item = el(doc, 'span', spec[0]);
+            item.setAttribute(spec[1], '');
+            details.appendChild(item);
+        }
+        body.appendChild(head);
+        body.appendChild(icon);
+        body.appendChild(tempWrap);
+        body.appendChild(label);
+        body.appendChild(details);
+        card.appendChild(body);
+        bindFitScale(card, body);
+
+        var map = (ctx && ctx.weatherMap) || {};
+        var entry = card.hasAttribute('data-weather-key')
+            ? map[card.getAttribute('data-weather-key')]
+            : undefined;
+        applyWeatherState(card, entry);
+        return card;
+    }
+
+    /**
+     * Repatch every weather card under root (document by default) from a
+     * fresh snapshot map, without rebuilding the grid. Mirrors the
+     * [data-var-content] refresh path used for markdown widgets.
+     */
+    function refreshWeatherCards(root, weatherMap) {
+        var scope = root && root.querySelectorAll ? root : (typeof document !== 'undefined' ? document : null);
+        if (!scope) return;
+        var map = weatherMap || {};
+        Array.prototype.forEach.call(scope.querySelectorAll('[data-weather-key]'), function (card) {
+            var entry = map[card.getAttribute('data-weather-key')];
+            applyWeatherState(card, entry);
+        });
+    }
+
     function renderContent(widget, ctx, explicitDoc) {
         var doc = getDoc(explicitDoc);
         if (!doc || !widget) return null;
@@ -572,6 +851,7 @@
             case 'markdown': return renderMarkdown(widget, context, doc);
             case 'html': return renderHtml(widget, context, doc);
             case 'timer': return renderTimer(widget, doc);
+            case 'weather': return renderWeather(widget, context, doc);
             default: return null;
         }
     }
@@ -592,6 +872,9 @@
         root.setAttribute('data-widget-h', String(h));
         if (root.getAttribute('data-widget-kind') === 'timer') {
             applyTimerCols(root, w);
+        }
+        if (root.getAttribute('data-widget-kind') === 'weather') {
+            applyWeatherLayout(root, w, h);
         }
         var compact = w <= 2 && h <= 1;
         if (root.getAttribute('data-widget-kind') === 'clock') {
@@ -667,5 +950,12 @@
         syncGridSizes: syncGridSizes,
         playTimerDoneSound: playTimerDoneSound,
         stopTimerDoneSound: stopTimerDoneSound,
+        weatherEntryKey: weatherEntryKey,
+        wxLayoutFor: wxLayoutFor,
+        wxConditionFor: wxConditionFor,
+        wxIconFor: wxIconFor,
+        wxTimeOfDay: wxTimeOfDay,
+        applyWeatherState: applyWeatherState,
+        refreshWeatherCards: refreshWeatherCards,
     };
 }));

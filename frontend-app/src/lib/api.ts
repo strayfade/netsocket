@@ -62,6 +62,7 @@ export type DashboardSummary = {
   automations?: Automation[]
   counts?: Record<string, number>
   now?: number
+  weather?: Record<string, WeatherEntry>
   droppedWidgets?: Array<{ type?: string; id?: string }>
   [key: string]: unknown
 }
@@ -75,7 +76,7 @@ export type Automation = {
 
 export type Widget = {
   id: string
-  type: 'button' | 'clock' | 'markdown' | 'html' | 'timer' | string
+  type: 'button' | 'clock' | 'markdown' | 'html' | 'timer' | 'weather' | string
   x?: number
   y?: number
   w?: number
@@ -84,6 +85,29 @@ export type Widget = {
   variable?: string
   showName?: boolean
   showDate?: boolean
+  location?: string
+  unit?: 'f' | 'c'
+  gradient?: boolean
+}
+
+export type WeatherEntry = {
+  fetchedAt?: number
+  name?: string
+  country?: string
+  code?: number
+  icon?: string
+  isDay?: boolean | null
+  label?: string
+  temp?: number
+  feels?: number | null
+  high?: number
+  low?: number
+  humidity?: number | null
+  windSpeed?: number | null
+  windDeg?: number | null
+  sunrise?: number | null
+  sunset?: number | null
+  error?: string
 }
 
 export type Panel = {
@@ -139,7 +163,11 @@ export async function deletePanel(id: string) {
 }
 
 export async function getPanelConfig(id: string) {
-  return apiFetch<Panel & { variables?: Record<string, string>; automations?: Automation[] }>(
+  return apiFetch<Panel & {
+    variables?: Record<string, string>
+    automations?: Automation[]
+    weather?: Record<string, WeatherEntry>
+  }>(
     `/v1/panels/${encodeURIComponent(id)}/config`,
   )
 }

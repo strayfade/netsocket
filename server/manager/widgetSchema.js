@@ -12,14 +12,16 @@ const MAX_ROW_SPAN = 12
 const MAX_WIDGETS = 100
 const MAX_VARIABLE_LENGTH = 128
 const MAX_AUTOMATION_ID_LENGTH = 128
+const MAX_LOCATION_LENGTH = 100
 
-const WIDGET_TYPES = Object.freeze(['button', 'clock', 'markdown', 'html', 'timer'])
+const WIDGET_TYPES = Object.freeze(['button', 'clock', 'markdown', 'html', 'timer', 'weather'])
 const VARIABLE_WIDGET_TYPES = Object.freeze(['markdown', 'html'])
 
 const DEFAULT_CLOCK_SIZE = Object.freeze({ w: 4, h: 2 })
 const DEFAULT_CONTENT_SIZE = Object.freeze({ w: 4, h: 2 })
 const DEFAULT_BUTTON_SIZE = Object.freeze({ w: 1, h: 1 })
 const DEFAULT_TIMER_SIZE = Object.freeze({ w: 4, h: 4 })
+const DEFAULT_WEATHER_SIZE = Object.freeze({ w: 4, h: 3 })
 
 const DEFAULT_SIZE_BY_TYPE = Object.freeze({
     button: DEFAULT_BUTTON_SIZE,
@@ -27,6 +29,7 @@ const DEFAULT_SIZE_BY_TYPE = Object.freeze({
     markdown: DEFAULT_CONTENT_SIZE,
     html: DEFAULT_CONTENT_SIZE,
     timer: DEFAULT_TIMER_SIZE,
+    weather: DEFAULT_WEATHER_SIZE,
 })
 
 // Kept for callers that still iterate "presets"; each type now has one default.
@@ -36,6 +39,7 @@ const TYPE_PRESETS = Object.freeze({
     markdown: Object.freeze([DEFAULT_CONTENT_SIZE]),
     html: Object.freeze([DEFAULT_CONTENT_SIZE]),
     timer: Object.freeze([DEFAULT_TIMER_SIZE]),
+    weather: Object.freeze([DEFAULT_WEATHER_SIZE]),
 })
 
 const WIDGET_STYLES = Object.freeze(['classic', 'minimal', 'soft', 'vivid', 'neon'])
@@ -58,6 +62,25 @@ const normalizeAutomationId = (value) => {
     if (value == null) return null
     const id = String(value).trim().slice(0, MAX_AUTOMATION_ID_LENGTH)
     return id || null
+}
+
+// Weather location query (OWM `q=`): city name ("Manhattan, US") or "lat,lon".
+// Letters (any script), digits, and a small separator set only — the string
+// ends up inside an upstream query URL, so anything shell/URL-ish is refused.
+const LOCATION_ALLOWED_RE = /^[\p{L}\p{N} ,.\-'/_°]+$/u
+const normalizeLocation = (value) => {
+    if (typeof value !== 'string') return null
+    const collapsed = value.replace(/\s+/g, ' ').trim().slice(0, MAX_LOCATION_LENGTH)
+    if (!collapsed || !LOCATION_ALLOWED_RE.test(collapsed)) return null
+    return collapsed
+}
+
+// 'f' | 'c'; anything unrecognized (including missing) falls back to 'f'.
+const normalizeWeatherUnit = (value) => {
+    if (value == null || value === '') return 'f'
+    if (typeof value !== 'string') return 'f'
+    const unit = value.trim().toLowerCase()
+    return (unit === 'c' || unit === 'celsius') ? 'c' : 'f'
 }
 
 const normalizeWidgetStyle = (value) => {
@@ -100,6 +123,15 @@ const validateWidget = (entry, index) => {
     if (type === 'clock') {
         // Default: show date. Persist only an explicit false.
         if (entry.showDate === false) widget.showDate = false
+    }
+    if (type === 'weather') {
+        const location = normalizeLocation(entry.location)
+        if (!location) throw new Error('location_required')
+        widget.location = location
+        // Defaults: °F and gradient on. Persist only the non-defaults.
+        const unit = normalizeWeatherUnit(entry.unit)
+        if (unit === 'c') widget.unit = 'c'
+        if (entry.gradient === false) widget.gradient = false
     }
     if (VARIABLE_WIDGET_TYPES.includes(type)) {
         const variable = normalizeVariable(entry.variable)
@@ -162,8 +194,12 @@ module.exports = {
     DEFAULT_CONTENT_SIZE,
     DEFAULT_BUTTON_SIZE,
     DEFAULT_TIMER_SIZE,
+    DEFAULT_WEATHER_SIZE,
+    MAX_LOCATION_LENGTH,
     normalizeVariable,
     normalizeAutomationId,
+    normalizeLocation,
+    normalizeWeatherUnit,
     normalizeWidgetStyle,
     validateWidget,
     validateWidgetList,

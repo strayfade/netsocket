@@ -735,7 +735,7 @@ const sendSpa = (req, res) => {
 app.get("/dashboard", sendSpa)
 app.get("/automate", sendSpa)
 app.get("/panels", sendSpa)
-app.get('/v1/dashboard/summary', (req, res) => {
+app.get('/v1/dashboard/summary', async (req, res) => {
     if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
     try {
         const { buildDashboardSummary } = require('./manager/dashboardSummary.js')
@@ -754,6 +754,9 @@ app.get('/v1/dashboard/summary', (req, res) => {
             const entry = varList.find((v) => v && v.name === name)
             summary.variables[name] = entry ? entry.value : ''
         }
+        // Weather widget data (hourly-cached per location+unit server-side).
+        summary.weather = await require('./manager/weatherService.js')
+            .snapshotForWidgets(summary.layout.widgets)
         return res.status(200).json(summary)
     } catch (e) {
         log(`dashboard-summary: ${e}`, logColors.Error)
@@ -781,7 +784,7 @@ app.put('/v1/dashboard/layout', (req, res) => {
         return res.status(200).json(require('./manager/dashboardLayout.js').replaceLayout(widgets, options))
     } catch (e) {
         const code = typeof e.message === 'string' && e.message ? e.message : 'invalid_layout'
-        const status = ['invalid_layout', 'invalid_widget', 'invalid_type', 'variable_required', 'automation_required', 'too_many_widgets', 'invalid_widget_style'].includes(code) ? 400 : 500
+        const status = ['invalid_layout', 'invalid_widget', 'invalid_type', 'variable_required', 'automation_required', 'location_required', 'too_many_widgets', 'invalid_widget_style'].includes(code) ? 400 : 500
         if (status === 500) log(`dashboard-layout-put: ${e}`, logColors.Error)
         return res.status(status).json({ error: code })
     }

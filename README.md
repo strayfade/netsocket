@@ -84,9 +84,11 @@ npm start
   - **Run button** — runs one allowlisted automation. Add from the Dashboard editor or a panel's edit dialog.
   - **Clock**.
   - **Markdown / HTML** — bound to a Variable name. Store text with the **Variables/Set Variable** node (values persist across restarts and push live updates). Markdown is rendered safely; HTML is sandboxed with scripts blocked.
-  - Every widget type can use any size from **1x1** through **4x4**.
-  - On the **Dashboard**, press **Edit layout** and drag widgets by their handle; sizes come from fixed presets.
-  - Upgrading from older versions migrates existing layouts automatically (`stats`/`weather` widgets are dropped — you'll get a one-time toast listing what was removed).
+  - **Timer** — countdown with wheels and a done chime.
+  - **Weather** — current conditions from OpenWeatherMap with a condition + time-of-day gradient background. Set your free API key under Preferences → Weather (the key never leaves the server; snapshots refresh hourly per location). When placing it, choose a location (city or `lat,lon`), °F/°C, and whether the gradient is on.
+  - Every widget type can use any size from **1x1** up to the full grid.
+  - On the **Dashboard**, press **Edit layout** and drag widgets anywhere; drag their corners to resize.
+  - Upgrading from older versions migrates existing layouts automatically (legacy `stats`/`weather` widgets are dropped — the new Weather widget needs a location the old one never had; you'll get a one-time toast listing what was removed).
 ### Wall panels (touch surfaces)
   - Open the **Panels** tab (`/panels`) and create a panel per room. There are no panel tokens: wall devices just stay signed in to your netsocket account.
   - Open `/panel/<id>` on the wall device and sign in once (remember-me keeps it signed in).

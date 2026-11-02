@@ -100,9 +100,9 @@ describe('panelApi', () => {
         assert.equal(res.body.error, 'name_required');
     });
 
-    it('hides unknown panels from unauthenticated callers (404, not 401)', () => {
+    it('hides unknown panels from unauthenticated callers (404, not 401)', async () => {
         const res = mockRes();
-        panelApi.handleGetPanelConfig(
+        await panelApi.handleGetPanelConfig(
             reqWith({ params: { panelId: 'missing' } }),
             res,
             { store, auth: noSessionAuth, graphRoot }
@@ -110,11 +110,11 @@ describe('panelApi', () => {
         assert.equal(res.statusCode, 404);
     });
 
-    it('serves config to sessions and rejects anonymous callers', () => {
+    it('serves config to sessions and rejects anonymous callers', async () => {
         store.createPanel({ name: 'Kitchen' });
 
         const ok = mockRes();
-        panelApi.handleGetPanelConfig(
+        await panelApi.handleGetPanelConfig(
             reqWith({ params: { panelId: 'kitchen' } }),
             ok,
             { store, auth: adminAuth, graphRoot }
@@ -123,11 +123,12 @@ describe('panelApi', () => {
         assert.equal(ok.body.panel.id, 'kitchen');
         assert.equal(ok.body.automations.length, 1);
         assert.equal(ok.body.automations[0].title, 'Porch Light');
+        assert.deepEqual(ok.body.weather, {});
         assert.equal(typeof ok.body.now, 'number');
         assert.ok(Math.abs(ok.body.now - Date.now()) < 5000);
 
         const anon = mockRes();
-        panelApi.handleGetPanelConfig(
+        await panelApi.handleGetPanelConfig(
             reqWith({ params: { panelId: 'kitchen' } }),
             anon,
             { store, auth: noSessionAuth, graphRoot }
@@ -135,7 +136,7 @@ describe('panelApi', () => {
         assert.equal(anon.statusCode, 401);
     });
 
-    it('exposes only bound variable values in panel config', () => {
+    it('exposes only bound variable values in panel config', async () => {
         store.createPanel({
             name: 'Kitchen',
             widgets: ['clock', { type: 'markdown', variable: 'briefing' }],
@@ -145,13 +146,59 @@ describe('panelApi', () => {
             { name: 'secret_notes', value: 'do not leak' },
         ];
         const res = mockRes();
-        panelApi.handleGetPanelConfig(
+        await panelApi.handleGetPanelConfig(
             reqWith({ params: { panelId: 'kitchen' } }),
             res,
             { store, auth: adminAuth, graphRoot, varList }
         );
         assert.equal(res.statusCode, 200);
         assert.deepEqual(res.body.variables, { briefing: '# Morning' });
+    });
+
+    it('carries weather snapshots for the panel widgets in config', async () => {
+        store.createPanel({
+            name: 'Kitchen',
+            widgets: [
+                { type: 'clock', x: 0, y: 0, w: 4, h: 2 },
+                { type: 'weather', x: 4, y: 0, w: 4, h: 3, location: 'Oslo', unit: 'c' },
+            ],
+        });
+        let seenWidgets = null;
+        const res = mockRes();
+        await panelApi.handleGetPanelConfig(
+            reqWith({ params: { panelId: 'kitchen' } }),
+            res,
+            {
+                store,
+                auth: adminAuth,
+                graphRoot,
+                weatherService: {
+                    snapshotForWidgets: async (widgets) => {
+                        seenWidgets = widgets;
+                        return { 'Oslo|c': { temp: 12 } };
+                    },
+                },
+            }
+        );
+        assert.equal(res.statusCode, 200);
+        assert.deepEqual(res.body.weather, { 'Oslo|c': { temp: 12 } });
+        assert.ok(seenWidgets.some((w) => w.type === 'weather' && w.location === 'Oslo'));
+
+        const broken = mockRes();
+        await panelApi.handleGetPanelConfig(
+            reqWith({ params: { panelId: 'kitchen' } }),
+            broken,
+            {
+                store,
+                auth: adminAuth,
+                graphRoot,
+                weatherService: {
+                    snapshotForWidgets: async () => { throw new Error('boom'); },
+                },
+            }
+        );
+        assert.equal(broken.statusCode, 200);
+        assert.deepEqual(broken.body.weather, {});
     });
 
     it('executes any runnable node; rejects non-runnable and validates input', async () => {

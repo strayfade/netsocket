@@ -43,6 +43,9 @@ describe('panel SPA surfaces', () => {
             'panel-edit-grid',
             'panel-layout-edit-toggle',
             'panel-add-widget-open',
+            'panel-dialog-location',
+            'panel-dialog-unit',
+            'panel-dialog-gradient',
         ]) {
             assert.match(markup, new RegExp(`id="${id}"`));
         }

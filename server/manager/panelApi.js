@@ -17,6 +17,7 @@ const STORE_ERRORS = new Set([
     'invalid_layout',
     'variable_required',
     'automation_required',
+    'location_required',
     'too_many_widgets',
     'invalid_automation_ids',
     'invalid_device_ids',
@@ -149,7 +150,7 @@ const resolvePanelVariables = (panel, varList) => {
     return values
 }
 
-const handleGetPanelConfig = (req, res, deps = {}) => {
+const handleGetPanelConfig = async (req, res, deps = {}) => {
     const store = deps.store || panelStore
     const access = resolveAccess(req, req.params?.panelId, deps)
     if (access.error === 'not_found') return res.status(404).json({ error: 'not_found' })
@@ -157,10 +158,20 @@ const handleGetPanelConfig = (req, res, deps = {}) => {
     store.touchLastSeen(access.panel.id)
     const graphRoot = deps.graphRoot !== undefined ? deps.graphRoot : getDefaultGraphRoot()
     const varList = deps.varList !== undefined ? deps.varList : require('../utils/vars').getVarsSnapshot()
+    const publicView = store.publicPanelView(access.panel)
+    // Weather widget snapshots (hourly-cached per location+unit server-side).
+    const weatherService = deps.weatherService || require('./weatherService')
+    let weather = {}
+    try {
+        weather = await weatherService.snapshotForWidgets(publicView.widgets, deps)
+    } catch {
+        weather = {}
+    }
     return res.status(200).json({
-        panel: store.publicPanelView(access.panel),
+        panel: publicView,
         automations: resolvePanelAutomations(access.panel, graphRoot),
         variables: resolvePanelVariables(access.panel, varList),
+        weather,
         now: (deps.serverTime || require('./serverTime')).getNtpNow(),
     })
 }

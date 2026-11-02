@@ -22,6 +22,7 @@
         });
         var editingWidgets = [];
         var panelVariables = {};
+        var panelWeather = {};
 
         function panelUrl(panelId) {
             return window.location.origin + '/panel/' + encodeURIComponent(panelId);
@@ -103,12 +104,18 @@
             showNameFieldId: 'panel-dialog-show-name-field',
             showDateId: 'panel-dialog-show-date',
             showDateFieldId: 'panel-dialog-show-date-field',
+            locationId: 'panel-dialog-location',
+            locationFieldId: 'panel-dialog-location-field',
+            unitId: 'panel-dialog-unit',
+            unitFieldId: 'panel-dialog-unit-field',
+            gradientId: 'panel-dialog-gradient',
+            gradientFieldId: 'panel-dialog-gradient-field',
             cancelId: 'panel-dialog-cancel',
             cancelTopId: 'panel-dialog-cancel-top',
             addBtnId: 'panel-dialog-add',
             getWidgets: function () { return editingWidgets; },
             setWidgets: function (next) { editingWidgets = next; },
-            getLiveContext: function () { return { variables: panelVariables, automations: allAutomations }; },
+            getLiveContext: function () { return { variables: panelVariables, automations: allAutomations, weather: panelWeather }; },
             onSave: patchPanelWidgets,
             fetchAutomations: async function () {
                 try {
@@ -152,6 +159,7 @@
             return {
                 automations: cfg.automations || allAutomations,
                 variables: cfg.variables || {},
+                weatherMap: cfg.weather || {},
                 onRun: function (item, btn) { runPreviewAutomation(panelId, item, btn); },
                 renderMarkdown: window.renderAgentMarkdown
                     ? window.renderAgentMarkdown.bind(window)
@@ -253,6 +261,7 @@
 
             var viewport = document.createElement('div');
             viewport.className = 'panel-preview-viewport';
+            viewport.setAttribute('inert', '');
             var scaleEl = document.createElement('div');
             scaleEl.className = 'panel-preview-scale';
             var gridEl = document.createElement('div');
@@ -326,10 +335,18 @@
                 var widgets = Array.isArray(data.panel.widgets) ? data.panel.widgets : [];
                 previewConfigs[panelId] = {
                     variables: (data.variables && typeof data.variables === 'object') ? data.variables : {},
+                    weather: (data.weather && typeof data.weather === 'object') ? data.weather : {},
                     automations: Array.isArray(data.automations) ? data.automations : [],
                     layoutKey: JSON.stringify(widgets),
                 };
                 paintPreview(entry, panelId, widgets);
+                if (editingPanelId === panelId) {
+                    panelWeather = previewConfigs[panelId].weather;
+                    if (window.Widgets && typeof window.Widgets.refreshWeatherCards === 'function') {
+                        var editGrid = document.getElementById('panel-edit-grid');
+                        if (editGrid) window.Widgets.refreshWeatherCards(editGrid, panelWeather);
+                    }
+                }
             } catch (e) {
                 hidePreviewLoading(entry, true);
             }
@@ -419,6 +436,9 @@
                     frame.srcdoc = value;
                 });
             });
+            if (window.Widgets && typeof window.Widgets.refreshWeatherCards === 'function') {
+                window.Widgets.refreshWeatherCards(entry.card, cfg.weather || {});
+            }
         }
 
         async function refreshPreviewConfig(panelId) {
@@ -432,6 +452,7 @@
                 var prev = previewConfigs[panelId];
                 previewConfigs[panelId] = {
                     variables: (data.variables && typeof data.variables === 'object') ? data.variables : {},
+                    weather: (data.weather && typeof data.weather === 'object') ? data.weather : {},
                     automations: Array.isArray(data.automations) ? data.automations : [],
                     layoutKey: key,
                 };
@@ -440,6 +461,13 @@
                     if (entry) paintPreview(entry, panelId, widgets);
                 } else {
                     refreshPreviewVars(panelId);
+                }
+                if (editingPanelId === panelId) {
+                    panelWeather = previewConfigs[panelId].weather;
+                    if (window.Widgets && typeof window.Widgets.refreshWeatherCards === 'function') {
+                        var editGrid = document.getElementById('panel-edit-grid');
+                        if (editGrid) window.Widgets.refreshWeatherCards(editGrid, panelWeather);
+                    }
                 }
             } catch (e) { /* ignore, keep stale preview */ }
         }
@@ -517,7 +545,7 @@
             stylePicker.value = panel.widgetStyle || 'classic';
             document.getElementById('panel-edit-grid').setAttribute('data-widget-style', stylePicker.value);
             editingWidgets = (panel.widgets || []).map(function (w) {
-                return {
+                var out = {
                     id: w.id,
                     type: w.type,
                     x: w.x || 0,
@@ -529,10 +557,17 @@
                     showName: w.showName === true,
                     showDate: w.showDate === false ? false : undefined,
                 };
+                if (w.location != null) out.location = w.location;
+                if (w.unit === 'c') out.unit = 'c';
+                if (w.gradient === false) out.gradient = false;
+                return out;
             });
             var cached = previewConfigs[panel.id];
             panelVariables = cached && cached.variables
                 ? Object.assign({}, cached.variables)
+                : {};
+            panelWeather = cached && cached.weather
+                ? Object.assign({}, cached.weather)
                 : {};
             devicePicker.setSelected(panel.deviceIds || []);
 

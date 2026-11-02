@@ -2,6 +2,7 @@ import {
   Bell,
   Bug,
   Cloud,
+  CloudSun,
   GitBranch,
   House,
   KeyRound,
@@ -32,6 +33,7 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
   MCP: Plug,
   'Notification Received': Bell,
   'Philips Hue': Lightbulb,
+  Weather: CloudSun,
   Webhook: Webhook,
 }
 
@@ -45,6 +47,7 @@ export const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   MCP: 'Programmatic graph access over MCP and WebMCP.',
   'Notification Received': 'Secret shared with companion apps that forward notifications.',
   'Philips Hue': 'Bridge address and app credentials for Hue nodes.',
+  Weather: 'OpenWeatherMap key powering the Weather widget on dashboards and panels.',
   Webhook: 'Secrets used by webhook triggers and alert senders.',
 }
 

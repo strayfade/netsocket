@@ -216,10 +216,173 @@ describe('widgets render module', () => {
             Widgets.renderContent({ id: 'x', type: 'stats', x: 0, y: 0, w: 1, h: 1 }, {}, doc),
             null
         );
-        assert.equal(
-            Widgets.renderContent({ id: 'x', type: 'weather', x: 0, y: 0, w: 1, h: 1 }, {}, doc),
-            null
+    });
+
+    // --- Weather ------------------------------------------------------------
+
+    const wxNowSec = () => Math.floor(Date.now() / 1000);
+    const wxEntry = (over = {}) => Object.assign({
+        fetchedAt: Date.now(),
+        name: 'Manhattan',
+        country: 'US',
+        code: 800,
+        icon: '01d',
+        isDay: true,
+        label: 'clear sky',
+        temp: 72,
+        feels: 74,
+        high: 78,
+        low: 60,
+        humidity: 50,
+        windSpeed: 5,
+        windDeg: 90,
+        sunrise: wxNowSec() - 3600,
+        sunset: wxNowSec() + 3600,
+    }, over);
+
+    it('picks weather layout variants from the grid box', () => {
+        assert.equal(Widgets.wxLayoutFor(1, 1), 'micro');
+        assert.equal(Widgets.wxLayoutFor(1, 3), 'micro');
+        assert.equal(Widgets.wxLayoutFor(2, 2), 'micro');
+        assert.equal(Widgets.wxLayoutFor(2, 1), 'bar');
+        assert.equal(Widgets.wxLayoutFor(12, 1), 'bar');
+        assert.equal(Widgets.wxLayoutFor(4, 3), 'stack');
+        assert.equal(Widgets.wxLayoutFor(2, 3), 'stack');
+        assert.equal(Widgets.wxLayoutFor(6, 3), 'wide');
+        assert.equal(Widgets.wxLayoutFor(12, 2), 'wide');
+    });
+
+    it('maps OWM condition codes to palettes and Material ligatures', () => {
+        assert.equal(Widgets.wxConditionFor(800), 'clear');
+        assert.equal(Widgets.wxConditionFor(802), 'few-clouds');
+        assert.equal(Widgets.wxConditionFor(804), 'clouds');
+        assert.equal(Widgets.wxConditionFor(501), 'rain');
+        assert.equal(Widgets.wxConditionFor(300), 'rain');
+        assert.equal(Widgets.wxConditionFor(211), 'storm');
+        assert.equal(Widgets.wxConditionFor(601), 'snow');
+        assert.equal(Widgets.wxConditionFor(741), 'mist');
+        assert.equal(Widgets.wxConditionFor(-1), 'none');
+        assert.equal(Widgets.wxIconFor(800, true), 'clear_day');
+        assert.equal(Widgets.wxIconFor(800, false), 'clear_night');
+        assert.equal(Widgets.wxIconFor(802, false), 'partly_cloudy_night');
+        assert.equal(Widgets.wxIconFor(804, true), 'cloud');
+        assert.equal(Widgets.wxIconFor(500, true), 'rainy');
+        assert.equal(Widgets.wxIconFor(211, true), 'thunderstorm');
+        assert.equal(Widgets.wxIconFor(601, true), 'cloudy_snowing');
+        assert.equal(Widgets.wxIconFor(741, true), 'foggy');
+    });
+
+    it('buckets time of day from sunrise/sunset, falling back to Eastern hour', () => {
+        const entry = { sunrise: wxNowSec() - 3600, sunset: wxNowSec() + 3600 };
+        assert.equal(Widgets.wxTimeOfDay(entry, Date.now()), 'day');
+        // Inside the ±45 min dawn/dusk windows.
+        const dawn = { sunrise: wxNowSec() - 600, sunset: wxNowSec() + 6000 };
+        assert.equal(Widgets.wxTimeOfDay(dawn, Date.now()), 'dawn');
+        const dusk = { sunrise: wxNowSec() - 9000, sunset: wxNowSec() + 600 };
+        assert.equal(Widgets.wxTimeOfDay(dusk, Date.now()), 'dusk');
+        const night = { sunrise: wxNowSec() + 3600, sunset: wxNowSec() + 10000 };
+        assert.equal(Widgets.wxTimeOfDay(night, Date.now()), 'night');
+        // No sun times: hour-of-day in America/New_York (fixed UTC instants).
+        const noSun = {};
+        assert.equal(Widgets.wxTimeOfDay(noSun, Date.parse('2024-06-15T10:00:00Z')), 'dawn'); // 06:00 EDT
+        assert.equal(Widgets.wxTimeOfDay(noSun, Date.parse('2024-06-15T16:00:00Z')), 'day');  // 12:00 EDT
+        assert.equal(Widgets.wxTimeOfDay(noSun, Date.parse('2024-06-15T23:30:00Z')), 'dusk'); // 19:30 EDT
+        assert.equal(Widgets.wxTimeOfDay(noSun, Date.parse('2024-01-15T04:00:00Z')), 'night'); // 23:00 EST
+    });
+
+    it('renders a populated weather card from the snapshot map', () => {
+        const card = Widgets.renderContent(
+            { id: 'wx1', type: 'weather', x: 0, y: 0, w: 4, h: 3, location: 'Manhattan, US' },
+            { weatherMap: { 'Manhattan, US|f': wxEntry() } },
+            doc
         );
+        assert.equal(card.getAttribute('data-widget-kind'), 'weather');
+        assert.equal(card.getAttribute('data-wx-layout'), 'stack');
+        assert.equal(card.getAttribute('data-weather-key'), 'Manhattan, US|f');
+        assert.equal(card.getAttribute('data-wx-unit'), 'f');
+        assert.ok(card.className.includes('widget-weather--gradient'));
+        assert.equal(card.getAttribute('data-wx-state'), 'ok');
+        assert.equal(card.getAttribute('data-wx-condition'), 'clear');
+        assert.equal(card.getAttribute('data-wx-tod'), 'day');
+        assert.equal(card.querySelector('[data-wx-temp]').textContent, '72');
+        assert.equal(card.querySelector('[data-wx-icon]').textContent, 'clear_day');
+        assert.match(card.querySelector('[data-wx-name]').textContent, /Manhattan/);
+        assert.match(card.querySelector('[data-wx-label]').textContent, /Clear sky/);
+        assert.match(card.querySelector('[data-wx-high]').textContent, /H 78°F/);
+        assert.match(card.querySelector('[data-wx-wind]').textContent, /Wind 5 mph E/);
+        assert.ok(
+            !card.querySelector('[data-wx-name]').className.includes('shell-skeleton'),
+            'populated name carries no skeleton shimmer'
+        );
+        assert.ok(!card.querySelector('[data-wx-temp]').className.includes('shell-skeleton'));
+    });
+
+    it('honors metric + gradient-off weather widgets and shows error labels', () => {
+        const metric = Widgets.renderContent(
+            { id: 'wx2', type: 'weather', x: 0, y: 0, w: 12, h: 3, location: 'Oslo', unit: 'c', gradient: false },
+            { weatherMap: { 'Oslo|c': wxEntry({ temp: 22, windSpeed: 18 }) } },
+            doc
+        );
+        assert.equal(metric.getAttribute('data-wx-layout'), 'wide');
+        assert.equal(metric.getAttribute('data-wx-unit'), 'c');
+        assert.ok(!metric.className.includes('widget-weather--gradient'));
+        assert.equal(metric.querySelector('[data-wx-unit-char]').textContent, '°C');
+        assert.match(metric.querySelector('[data-wx-wind]').textContent, /Wind 18 km\/h/);
+
+        const missing = Widgets.renderContent(
+            { id: 'wx3', type: 'weather', x: 0, y: 0, w: 2, h: 1, location: 'Nowhere' },
+            {},
+            doc
+        );
+        assert.equal(missing.getAttribute('data-wx-layout'), 'bar');
+        assert.equal(missing.getAttribute('data-wx-state'), 'loading');
+        assert.match(missing.querySelector('[data-wx-label]').textContent, /Loading weather/);
+        assert.ok(missing.querySelector('[data-wx-temp]').className.includes('shell-skeleton'));
+
+        const failed = Widgets.renderContent(
+            { id: 'wx4', type: 'weather', x: 0, y: 0, w: 2, h: 1, location: 'Nowhere' },
+            { weatherMap: { 'Nowhere|f': { error: 'no_key' } } },
+            doc
+        );
+        assert.equal(failed.getAttribute('data-wx-state'), 'error');
+        assert.match(failed.querySelector('[data-wx-label]').textContent, /Preferences/);
+        assert.ok(!failed.className.includes('shell-skeleton'));
+        assert.ok(!failed.querySelector('[data-wx-temp]').className.includes('shell-skeleton'));
+        assert.ok(!failed.querySelector('[data-wx-name]').className.includes('shell-skeleton'));
+    });
+
+    it('refreshes weather cards in place from a newer snapshot map', () => {
+        const host = doc.createElement('div');
+        const card = Widgets.renderContent(
+            { id: 'wx5', type: 'weather', x: 0, y: 0, w: 4, h: 2, location: 'Oslo' },
+            {},
+            doc
+        );
+        host.appendChild(card);
+        doc.body.appendChild(host);
+        assert.equal(card.getAttribute('data-wx-state'), 'loading');
+        Widgets.refreshWeatherCards(host, { 'Oslo|f': wxEntry({ code: 500, label: 'light rain' }) });
+        assert.equal(card.getAttribute('data-wx-state'), 'ok');
+        assert.equal(card.getAttribute('data-wx-condition'), 'rain');
+        assert.equal(card.querySelector('[data-wx-temp]').textContent, '72');
+        // Missing key -> back to a labeled failure without a rebuild.
+        Widgets.refreshWeatherCards(host, { 'Oslo|f': { error: 'fetch_failed' } });
+        assert.equal(card.getAttribute('data-wx-state'), 'error');
+        assert.match(card.querySelector('[data-wx-label]').textContent, /unavailable/);
+    });
+
+    it('re-applies weather layout when a grid item is resized', () => {
+        const item = Widgets.createItem(
+            { id: 'wx6', type: 'weather', x: 0, y: 0, w: 2, h: 2, location: 'Oslo' },
+            {},
+            doc
+        );
+        const root = item.querySelector('[data-widget-kind="weather"]');
+        assert.equal(root.getAttribute('data-wx-layout'), 'micro');
+        item.setAttribute('gs-w', '8');
+        item.setAttribute('gs-h', '2');
+        Widgets.syncItemSize(item);
+        assert.equal(root.getAttribute('data-wx-layout'), 'wide');
     });
 
     it('looks up automations by stringified id', () => {

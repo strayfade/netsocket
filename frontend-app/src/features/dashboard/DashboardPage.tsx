@@ -59,6 +59,12 @@ const KIND_OPTIONS = [
   { value: 'markdown', label: 'Markdown' },
   { value: 'html', label: 'HTML' },
   { value: 'timer', label: 'Timer' },
+  { value: 'weather', label: 'Weather' },
+]
+
+const UNIT_OPTIONS = [
+  { value: 'f', label: '°F (imperial)' },
+  { value: 'c', label: '°C (metric)' },
 ]
 
 const DEFAULT_SIZES: Record<string, { w: number; h: number }> = {
@@ -67,6 +73,7 @@ const DEFAULT_SIZES: Record<string, { w: number; h: number }> = {
   markdown: { w: 4, h: 2 },
   html: { w: 4, h: 2 },
   timer: { w: 4, h: 4 },
+  weather: { w: 4, h: 3 },
 }
 
 type GridApi = NonNullable<NonNullable<typeof window.GridStack>['init']> extends (
@@ -81,6 +88,7 @@ export function DashboardPage() {
   const widgetsRef = useRef<Widget[]>([])
   const varsRef = useRef<Record<string, string>>({})
   const autosRef = useRef<Automation[]>([])
+  const weatherRef = useRef<Record<string, unknown>>({})
   const styleRef = useRef('classic')
   const editingRef = useRef(false)
 
@@ -96,6 +104,9 @@ export function DashboardPage() {
   const [automationId, setAutomationId] = useState('')
   const [showName, setShowName] = useState(false)
   const [showDate, setShowDate] = useState(true)
+  const [wxLocation, setWxLocation] = useState('')
+  const [wxUnit, setWxUnit] = useState('f')
+  const [wxGradient, setWxGradient] = useState(true)
 
   const automationOptions = useMemo(
     () =>
@@ -150,6 +161,7 @@ export function DashboardPage() {
       const item = window.Widgets!.createItem(widget, {
         automations: autosRef.current,
         variables: varsRef.current,
+        weatherMap: weatherRef.current,
         onRun: runAutomation,
         renderMarkdown: window.renderAgentMarkdown
           ? window.renderAgentMarkdown.bind(window)
@@ -174,7 +186,7 @@ export function DashboardPage() {
         float: true,
         draggable: { handle: '.widget-drag-handle' },
         disableResize: false,
-        resizable: { handles: 'e,se,s,sw,w' },
+        resizable: { handles: 'n,e,s,w,se,sw,ne,nw' },
         columnOpts: { breakpoints: [{ w: 640, c: 4 }] },
       },
       container,
@@ -249,6 +261,7 @@ export function DashboardPage() {
       const data = await getDashboardSummary()
       if (data.now != null) setNtpTime(data.now)
       varsRef.current = (data.variables as Record<string, string>) || {}
+      weatherRef.current = (data.weather as Record<string, unknown>) || {}
       const autos = Array.isArray(data.automations) ? data.automations : []
       autosRef.current = autos
       setAutomations(autos)
@@ -293,6 +306,7 @@ export function DashboardPage() {
           if (!alive) return
           if (data.now != null) setNtpTime(data.now)
           varsRef.current = (data.variables as Record<string, string>) || {}
+          weatherRef.current = (data.weather as Record<string, unknown>) || {}
           const autos = Array.isArray(data.automations) ? data.automations : []
           autosRef.current = autos
           setAutomations(autos)
@@ -407,6 +421,16 @@ export function DashboardPage() {
       widget.variable = variable.trim()
     }
     if (kind === 'clock' && !showDate) widget.showDate = false
+    if (kind === 'weather') {
+      const location = wxLocation.replace(/\s+/g, ' ').trim()
+      if (!location) {
+        toast('Enter a location')
+        return
+      }
+      widget.location = location.slice(0, 100)
+      if (wxUnit === 'c') widget.unit = 'c'
+      if (!wxGradient) widget.gradient = false
+    }
 
     const next = [...widgetsRef.current, widget]
     widgetsRef.current = next
@@ -417,6 +441,9 @@ export function DashboardPage() {
     setAutomationId('')
     setShowName(false)
     setShowDate(true)
+    setWxLocation('')
+    setWxUnit('f')
+    setWxGradient(true)
     rebuildGrid()
     void saveLayout(next)
   }
@@ -567,6 +594,42 @@ export function DashboardPage() {
                 <FieldLabel htmlFor="dialog-show-date">Show date</FieldLabel>
                 <Switch id="dialog-show-date" checked={showDate} onCheckedChange={setShowDate} />
               </FieldRow>
+            )}
+
+            {kind === 'weather' && (
+              <>
+                <Field>
+                  <FieldLabel htmlFor="dialog-wx-location">Location</FieldLabel>
+                  <Input
+                    id="dialog-wx-location"
+                    value={wxLocation}
+                    onChange={(e) => setWxLocation(e.target.value)}
+                    placeholder={'"Manhattan, US" or "47.61,-122.33"'}
+                    maxLength={100}
+                  />
+                  <FieldDescription>
+                    City name (optionally with country) or a lat,lon pair. Updates hourly from OpenWeatherMap.
+                  </FieldDescription>
+                </Field>
+                <Field>
+                  <FieldLabel>Temperature units</FieldLabel>
+                  <Combobox
+                    options={UNIT_OPTIONS}
+                    value={wxUnit}
+                    onValueChange={setWxUnit}
+                    placeholder="°F (imperial)"
+                    aria-label="Temperature units"
+                  />
+                </Field>
+                <FieldRow>
+                  <FieldLabel htmlFor="dialog-wx-gradient">Gradient background</FieldLabel>
+                  <Switch
+                    id="dialog-wx-gradient"
+                    checked={wxGradient}
+                    onCheckedChange={setWxGradient}
+                  />
+                </FieldRow>
+              </>
             )}
           </div>
 

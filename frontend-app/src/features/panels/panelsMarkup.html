@@ -2,7 +2,6 @@
         <div class="panels-header">
             <div>
                 <h1 class="shell-page-title" style="margin: 0;">Room panels</h1>
-                <p class="shell-page-subtitle" style="margin-bottom: 0;">Live previews with real data. Actions sit underneath each preview.</p>
             </div>
             <button class="shell-btn" id="new-panel-open" type="button"><span class="material-symbols-outlined" aria-hidden="true">add</span> New Panel</button>
         </div>
@@ -110,6 +109,7 @@
                     <option value="markdown">Markdown</option>
                     <option value="html">HTML</option>
                     <option value="timer">Timer</option>
+                    <option value="weather">Weather</option>
                 </select>
             </div>
             <div class="admin-field" id="panel-dialog-carousel-field">
@@ -140,6 +140,25 @@
                     <label class="admin-check" for="panel-dialog-show-date" style="margin:0">
                         <input type="checkbox" id="panel-dialog-show-date" checked>
                         Show date
+                    </label>
+                </div>
+                <div class="admin-field" id="panel-dialog-location-field" hidden>
+                    <label for="panel-dialog-location">Location</label>
+                    <input class="admin-input" id="panel-dialog-location" type="text" autocomplete="off" spellcheck="false"
+                        placeholder="&quot;Manhattan, US&quot; or &quot;47.61,-122.33&quot;" maxlength="100">
+                    <p class="shell-stat-sub" style="margin-top:6px">City name (optionally with country) or a <span class="shell-mono">lat,lon</span> pair.</p>
+                </div>
+                <div class="admin-field" id="panel-dialog-unit-field" hidden>
+                    <label for="panel-dialog-unit">Temperature units</label>
+                    <select class="admin-input" id="panel-dialog-unit">
+                        <option value="f">°F (imperial)</option>
+                        <option value="c">°C (metric)</option>
+                    </select>
+                </div>
+                <div class="admin-field" id="panel-dialog-gradient-field" hidden>
+                    <label class="admin-check" for="panel-dialog-gradient" style="margin:0">
+                        <input type="checkbox" id="panel-dialog-gradient" checked>
+                        Gradient background (colors follow conditions + time of day)
                     </label>
                 </div>
             </div>

@@ -6,6 +6,7 @@
     var grid = null;
     var lastLayoutKey = null;
     var liveVariables = {};
+    var liveWeather = {};
     var liveAutomations = [];
     var currentPanelId = '';
     var onResize = null;
@@ -83,6 +84,7 @@
         return {
             automations: liveAutomations,
             variables: liveVariables,
+            weatherMap: liveWeather,
             onRun: runAutomation,
             renderMarkdown: window.renderAgentMarkdown
                 ? window.renderAgentMarkdown.bind(window)
@@ -191,6 +193,7 @@
 
         var widgets = Array.isArray(panel.widgets) ? panel.widgets : [];
         liveVariables = data.variables && typeof data.variables === 'object' ? data.variables : {};
+        liveWeather = data.weather && typeof data.weather === 'object' ? data.weather : {};
         liveAutomations = Array.isArray(data.automations) ? data.automations : [];
         var key = JSON.stringify(widgets);
         if (key !== lastLayoutKey) {
@@ -200,6 +203,10 @@
             Object.keys(liveVariables).forEach(function (name) {
                 refreshVarContent(name, liveVariables[name]);
             });
+            // Weather cards update in place (server refreshes hourly per location).
+            if (window.Widgets && typeof window.Widgets.refreshWeatherCards === 'function') {
+                window.Widgets.refreshWeatherCards(document.getElementById('panel-grid'), liveWeather);
+            }
         }
     }
 
@@ -337,6 +344,7 @@
         }
         lastLayoutKey = null;
         liveVariables = {};
+        liveWeather = {};
         liveAutomations = [];
         currentPanelId = '';
     }
