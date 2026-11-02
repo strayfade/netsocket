@@ -43,5 +43,11 @@ export default defineConfig({
     outDir: path.resolve(rootDir, '../frontend/dist'),
     emptyOutDir: true,
     sourcemap: true,
+    // Android 9 kiosk WebViews are pinned at Chromium 74 (no updates via Play).
+    // Chrome 80 is where ?. and ?? landed, so keep the syntax ceiling at ES2019
+    // or the Panel page white-screens on those devices. Note public/ vendor and
+    // island scripts bypass Vite entirely - lower them separately (see the
+    // regeneration header in public/vendor/gridstack-all.js).
+    target: 'es2019',
   },
 })
