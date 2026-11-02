@@ -350,6 +350,7 @@ export class NetsocketLink {
       let text = ''
       let conversationId: string | null = null
       let deviceId: string | null = null
+      let excludeDevice = false
       if (typeof data === 'string') {
         text = data
       } else if (data && typeof data === 'object') {
@@ -358,9 +359,13 @@ export class NetsocketLink {
         conversationId = typeof d.conversationId === 'string' ? d.conversationId : null
         const rawDevice = d.deviceId ?? d.device_id
         deviceId = typeof rawDevice === 'string' && rawDevice ? rawDevice : null
+        // Alert node "Exclude Device": show unless we are the listed device.
+        excludeDevice = d.excludeDevice === true
       }
       // Only surface broadcasts and alerts targeted at this device.
-      if (text && (!deviceId || deviceId === this.deviceId)) {
+      const targeted = !deviceId
+        || (excludeDevice ? deviceId !== this.deviceId : deviceId === this.deviceId)
+      if (text && targeted) {
         this.onOverlay({ text, conversationId, deviceId, ts: Date.now() })
       }
     }

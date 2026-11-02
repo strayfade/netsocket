@@ -102,6 +102,60 @@ describe('alert device routing', () => {
         // No registered sockets → broadcast fallback to connected clients
         assert.equal(client.messages.length, 1)
     })
+
+    it('excludes the target device sockets and reaches every other client', async () => {
+        const excluded = makeClient()
+        const other = makeClient()
+        setWsServerConnectedClients([excluded, other])
+        registerDevice('phone-1', excluded)
+
+        await alert('everyone but phone', null, 'phone-1', true)
+
+        assert.equal(excluded.messages.length, 0)
+        assert.equal(other.messages.length, 1)
+        const payload = JSON.parse(other.messages[0])
+        assert.equal(payload.broadcastData.deviceId, 'phone-1')
+        assert.equal(payload.broadcastData.excludeDevice, true)
+    })
+
+    it('broadcasts to everyone when exclude has no device id to skip', async () => {
+        const a = makeClient()
+        const b = makeClient()
+        setWsServerConnectedClients([a, b])
+
+        await alert('no one to exclude', null, '', true)
+
+        assert.equal(a.messages.length, 1)
+        assert.equal(b.messages.length, 1)
+        const payload = JSON.parse(a.messages[0])
+        assert.equal(payload.broadcastData.deviceId, null)
+        assert.equal('excludeDevice' in payload.broadcastData, false)
+    })
+
+    it('reaches all clients when the excluded device has no registered sockets', async () => {
+        const a = makeClient()
+        const b = makeClient()
+        setWsServerConnectedClients([a, b])
+
+        await alert('excluded device offline', null, 'missing-device', true)
+
+        assert.equal(a.messages.length, 1)
+        assert.equal(b.messages.length, 1)
+        assert.equal(JSON.parse(a.messages[0]).broadcastData.excludeDevice, true)
+    })
+
+    it('keeps conversation routing authoritative over exclude mode', async () => {
+        const conversationClient = makeClient()
+        const deviceClient = makeClient()
+        setWsServerConnectedClients([conversationClient, deviceClient])
+        registerConversation('conv-1', conversationClient)
+        registerDevice('phone-1', deviceClient)
+
+        await alert('reply', 'conv-1', 'phone-1', true)
+
+        assert.equal(conversationClient.messages.length, 1)
+        assert.equal(deviceClient.messages.length, 0)
+    })
 })
 
 describe('Command Palette and Alert device pins', () => {
@@ -116,6 +170,7 @@ describe('Command Palette and Alert device pins', () => {
         const alertNode = getNodeMetadata('Notifiers/Alert')
         assert.ok(alertNode)
         assert.ok(alertNode.inputs.some((input) => input.name === 'Device ID'))
+        assert.ok(alertNode.inputs.some((input) => input.name === 'Exclude Device'))
     })
 })
 

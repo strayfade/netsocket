@@ -44,6 +44,19 @@ describe('alert history', () => {
         assert.deepEqual(getRecentAlerts(null).map((e) => e.text), ['public'])
     })
 
+    it('hides exclude-device alerts from the excluded device only', async () => {
+        await alert('everyone but phone', null, 'phone-1', true)
+        await alert('for everyone', null, '')
+
+        const excluded = getRecentAlerts('phone-1')
+        assert.deepEqual(excluded.map((e) => e.text), ['for everyone'])
+
+        const other = getRecentAlerts('g2-1')
+        assert.deepEqual(other.map((e) => e.text), ['for everyone', 'everyone but phone'])
+        assert.equal(other[1].excludeDevice, true)
+        assert.equal('excludeDevice' in other[0], false)
+    })
+
     it('caps history at MAX_ALERT_HISTORY', async () => {
         for (let i = 0; i < MAX_ALERT_HISTORY + 10; i++) {
             await alert(`alert ${i}`, null, '')

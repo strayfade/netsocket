@@ -159,7 +159,7 @@ const createPanelId = () => {
 
 const parseOverlayPayload = (broadcastData) => {
   if (typeof broadcastData === "string") {
-    return { text: broadcastData, conversationId: null, deviceId: null };
+    return { text: broadcastData, conversationId: null, deviceId: null, excludeDevice: false };
   }
   if (broadcastData && typeof broadcastData === "object") {
     const deviceIdRaw = broadcastData.deviceId ?? broadcastData.device_id ?? null;
@@ -169,14 +169,18 @@ const parseOverlayPayload = (broadcastData) => {
       text: String(broadcastData.text ?? broadcastData.message ?? ""),
       conversationId: broadcastData.conversationId ?? null,
       deviceId,
+      // Alert node "Exclude Device": the alert went to every device EXCEPT
+      // this listed one, so the local device should show it unless it matches.
+      excludeDevice: broadcastData.excludeDevice === true,
     };
   }
-  return { text: "", conversationId: null, deviceId: null };
+  return { text: "", conversationId: null, deviceId: null, excludeDevice: false };
 };
 
-const alertTargetsDevice = (localDeviceId, alertDeviceId) => {
+const alertTargetsDevice = (localDeviceId, alertDeviceId, excludeDevice = false) => {
   if (!alertDeviceId) return true;
   const local = String(localDeviceId || "").trim();
+  if (excludeDevice) return !local || local !== alertDeviceId;
   return Boolean(local) && local === alertDeviceId;
 };
 
@@ -779,7 +783,7 @@ export default function App() {
         onServerMessage: (payload) => {
           if (payload?.broadcastPurpose !== "overlay") return;
 
-          const { text, conversationId, deviceId } = parseOverlayPayload(payload.broadcastData);
+          const { text, conversationId, deviceId, excludeDevice } = parseOverlayPayload(payload.broadcastData);
           if (!text) return;
 
           if (conversationId && cancelledConversationIdsRef.current.has(conversationId)) {
@@ -791,7 +795,7 @@ export default function App() {
           const isPendingReply = Boolean(
             conversationId && pendingId && conversationId === pendingId
           );
-          if (!isPendingReply && !alertTargetsDevice(settingsRef.current?.deviceId, deviceId)) {
+          if (!isPendingReply && !alertTargetsDevice(settingsRef.current?.deviceId, deviceId, excludeDevice)) {
             return;
           }
           if (conversationId && pendingId && conversationId !== pendingId) return;

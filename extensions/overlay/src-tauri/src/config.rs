@@ -334,6 +334,7 @@ pub struct OverlayBroadcast {
     pub text: String,
     pub conversation_id: Option<String>,
     pub device_id: Option<String>,
+    pub exclude_device: bool,
 }
 
 pub fn parse_overlay_broadcast(parsed: &serde_json::Value) -> Option<OverlayBroadcast> {
@@ -346,6 +347,7 @@ pub fn parse_overlay_broadcast(parsed: &serde_json::Value) -> Option<OverlayBroa
             text: text.to_string(),
             conversation_id: None,
             device_id: None,
+            exclude_device: false,
         });
     }
     if let Some(obj) = data.as_object() {
@@ -373,16 +375,33 @@ pub fn parse_overlay_broadcast(parsed: &serde_json::Value) -> Option<OverlayBroa
             text,
             conversation_id,
             device_id,
+            // Alert node "Exclude Device": visible to everyone EXCEPT the
+            // listed device. Absent flag means a normal targeted alert.
+            exclude_device: obj
+                .get("excludeDevice")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
         });
     }
     None
 }
 
 /// Returns true when this device should display the alert.
-pub fn alert_targets_device(local_device_id: &str, alert_device_id: Option<&str>) -> bool {
+pub fn alert_targets_device(
+    local_device_id: &str,
+    alert_device_id: Option<&str>,
+    exclude_device: bool,
+) -> bool {
     match alert_device_id.map(str::trim).filter(|id| !id.is_empty()) {
         None => true,
-        Some(target) => !local_device_id.trim().is_empty() && target == local_device_id.trim(),
+        Some(target) => {
+            if exclude_device {
+                // A blank local id can never be the excluded UUID.
+                local_device_id.trim().is_empty() || target != local_device_id.trim()
+            } else {
+                !local_device_id.trim().is_empty() && target == local_device_id.trim()
+            }
+        }
     }
 }
 
@@ -475,16 +494,26 @@ mod tests {
 
     #[test]
     fn alert_targets_device_blank_means_all() {
-        assert!(alert_targets_device("abc", None));
-        assert!(alert_targets_device("abc", Some("")));
-        assert!(alert_targets_device("abc", Some("   ")));
+        assert!(alert_targets_device("abc", None, false));
+        assert!(alert_targets_device("abc", Some(""), false));
+        assert!(alert_targets_device("abc", Some("   "), false));
     }
 
     #[test]
     fn alert_targets_device_requires_match() {
-        assert!(alert_targets_device("device-a", Some("device-a")));
-        assert!(!alert_targets_device("device-a", Some("device-b")));
-        assert!(!alert_targets_device("", Some("device-a")));
+        assert!(alert_targets_device("device-a", Some("device-a"), false));
+        assert!(!alert_targets_device("device-a", Some("device-b"), false));
+        assert!(!alert_targets_device("", Some("device-a"), false));
+    }
+
+    #[test]
+    fn alert_targets_device_exclude_mode_inverts_match() {
+        assert!(!alert_targets_device("device-a", Some("device-a"), true));
+        assert!(alert_targets_device("device-a", Some("device-b"), true));
+        // A blank local id can never be the excluded device.
+        assert!(alert_targets_device("", Some("device-a"), true));
+        // Blank alert id excludes nobody.
+        assert!(alert_targets_device("device-a", None, true));
     }
 
     #[test]
@@ -501,6 +530,22 @@ mod tests {
         assert_eq!(broadcast.text, "hello");
         assert_eq!(broadcast.conversation_id.as_deref(), Some("c1"));
         assert_eq!(broadcast.device_id.as_deref(), Some("d1"));
+        assert!(!broadcast.exclude_device);
+    }
+
+    #[test]
+    fn parse_overlay_broadcast_reads_exclude_flag() {
+        let parsed = serde_json::json!({
+            "broadcastPurpose": "overlay",
+            "broadcastData": {
+                "text": "everyone but d1",
+                "deviceId": "d1",
+                "excludeDevice": true
+            }
+        });
+        let broadcast = parse_overlay_broadcast(&parsed).expect("parsed");
+        assert_eq!(broadcast.device_id.as_deref(), Some("d1"));
+        assert!(broadcast.exclude_device);
     }
 
     #[test]

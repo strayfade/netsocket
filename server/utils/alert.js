@@ -61,13 +61,17 @@ const sendToClient = (client, payload) => {
     client.send(typeof payload === 'string' ? payload : JSON.stringify(payload))
 }
 
-const pushHistory = (text, conversationId, deviceId) => {
-    alertHistory.push({
+const pushHistory = (text, conversationId, deviceId, excludeDevice = false) => {
+    const entry = {
         text: String(text ?? '').slice(0, MAX_ALERT_TEXT_LENGTH),
         conversationId: conversationId,
         deviceId: deviceId,
         ts: Date.now(),
-    })
+    }
+    // Key absent unless set, so history rows stay byte-identical for
+    // normal alerts.
+    if (excludeDevice) entry.excludeDevice = true
+    alertHistory.push(entry)
     if (alertHistory.length > MAX_ALERT_HISTORY) {
         alertHistory = alertHistory.slice(alertHistory.length - MAX_ALERT_HISTORY)
     }
@@ -75,15 +79,22 @@ const pushHistory = (text, conversationId, deviceId) => {
 
 /**
  * Recent alerts visible to a device: broadcast entries (blank device id)
- * plus entries targeted at that device. Conversation-targeted entries are
- * excluded — they belong to another session's reply flow.
+ * plus entries targeted at that device. Exclude-mode entries (sent to every
+ * device EXCEPT the listed one) are visible to everyone but that device.
+ * Conversation-targeted entries are excluded — they belong to another
+ * session's reply flow.
  * Returns newest-first.
  */
 const getRecentAlerts = (deviceId = null, limit = MAX_ALERT_HISTORY) => {
     const normalizedDeviceId = normalizeId(deviceId)
     const count = Number.isInteger(limit) ? Math.max(1, Math.min(limit, MAX_ALERT_HISTORY)) : MAX_ALERT_HISTORY
     return alertHistory
-        .filter((entry) => !entry.conversationId && (!entry.deviceId || entry.deviceId === normalizedDeviceId))
+        .filter((entry) => {
+            if (entry.conversationId) return false
+            if (!entry.deviceId) return true
+            if (entry.excludeDevice) return entry.deviceId !== normalizedDeviceId
+            return entry.deviceId === normalizedDeviceId
+        })
         .slice(-count)
         .reverse()
 }
@@ -122,16 +133,20 @@ const updateClipboard = async (content, deviceId = null) => {
     })
 }
 
-const alert = async (text, conversationId = null, deviceId = null) => {
+const alert = async (text, conversationId = null, deviceId = null, excludeDevice = false) => {
     const normalizedConversationId = normalizeId(conversationId)
     const normalizedDeviceId = normalizeId(deviceId)
-    pushHistory(text, normalizedConversationId, normalizedDeviceId)
+    // Exclude mode only ever applies to device routing: a conversation id
+    // owns the reply flow, and with no device id there is nobody to exclude.
+    const exclude = Boolean(excludeDevice) && !normalizedConversationId && !!normalizedDeviceId
+    pushHistory(text, normalizedConversationId, normalizedDeviceId, exclude)
     const message = {
         broadcastPurpose: "overlay",
         broadcastData: {
             text: text,
             conversationId: normalizedConversationId,
             deviceId: normalizedDeviceId,
+            ...(exclude ? { excludeDevice: true } : {}),
         },
     }
     const payload = JSON.stringify(message)
@@ -142,6 +157,18 @@ const alert = async (text, conversationId = null, deviceId = null) => {
             sendToClient(client, payload)
             conversationSockets.delete(normalizedConversationId)
         }
+        return
+    }
+
+    if (exclude) {
+        // Deliver to every connected client except the excluded device's
+        // registered sockets. Clients still re-check the excludeDevice flag
+        // locally (editor-role sockets are not device-registered).
+        const excluded = deviceSockets.get(normalizedDeviceId)
+        wsServerClients.forEach((client) => {
+            if (excluded && excluded.has(client)) return
+            sendToClient(client, payload)
+        })
         return
     }
 

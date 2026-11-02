@@ -755,7 +755,11 @@ fn handle_incoming_message(
     if let Some(broadcast) = parse_overlay_broadcast(parsed) {
         let local_device_id = settings.get().deviceId;
         let allow = broadcast.conversation_id.is_some()
-            || alert_targets_device(&local_device_id, broadcast.device_id.as_deref());
+            || alert_targets_device(
+                &local_device_id,
+                broadcast.device_id.as_deref(),
+                broadcast.exclude_device,
+            );
         if allow {
             handle_overlay_message(app, &broadcast.text);
             emit_to_renderer(app, "overlay:server-message", parsed.clone());
