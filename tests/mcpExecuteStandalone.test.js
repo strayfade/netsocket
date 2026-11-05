@@ -103,7 +103,7 @@ describe('MCP helpers', () => {
         assert.ok(math.some((node) => node.nodeType === 'Math/Add'))
     })
 
-    it('allows MCP access with bearer token, session, or when login is disabled', () => {
+    it('requires the MCP API token in every login state', () => {
         const { canAccessMcp } = require('../server/mcp/mount')
         const { createToken } = require('../server/utils/sessionAuth')
 
@@ -111,12 +111,73 @@ describe('MCP helpers', () => {
             canAccessMcp({ headers: { authorization: 'Bearer test-mcp-token' }, cookies: {} }),
             true
         )
+
+        // A session is no longer an alternative to the token, and login being
+        // off cannot waive it.
         const sessionToken = createToken({ rememberMe: false })
-        assert.equal(canAccessMcp({ cookies: { tk: sessionToken }, headers: {} }), true)
-        assert.equal(canAccessMcp({ socket: { remoteAddress: '203.0.113.10' }, headers: {}, cookies: {} }), false)
+        assert.equal(
+            canAccessMcp({
+                socket: { remoteAddress: '203.0.113.10' },
+                headers: {},
+                cookies: { tk: sessionToken },
+            }),
+            false
+        )
+        assert.equal(
+            canAccessMcp({ socket: { remoteAddress: '203.0.113.10' }, headers: {}, cookies: {} }),
+            false
+        )
 
         disableAuth()
-        assert.equal(canAccessMcp({ socket: { remoteAddress: '203.0.113.10' }, headers: {}, cookies: {} }), true)
+        assert.equal(
+            canAccessMcp({ socket: { remoteAddress: '203.0.113.10' }, headers: {}, cookies: {} }),
+            false
+        )
+        assert.equal(
+            canAccessMcp({
+                socket: { remoteAddress: '127.0.0.1' },
+                headers: { authorization: 'Bearer test-mcp-token' },
+                cookies: {},
+            }),
+            true
+        )
+    })
+
+    it('fails closed when no MCP API token is configured', () => {
+        const settingsManager = require('../server/manager/settingsManager')
+        const { canAccessMcp } = require('../server/mcp/mount')
+        const realSaveSettings = settingsManager.saveSettings
+        settingsManager.saveSettings = async () => {}
+        try {
+            settingsManager.setSetting('mcp.apiToken', '')
+            disableAuth()
+            assert.equal(
+                canAccessMcp({
+                    socket: { remoteAddress: '127.0.0.1' },
+                    headers: { authorization: 'Bearer whatever' },
+                    cookies: {},
+                }),
+                false
+            )
+        } finally {
+            settingsManager.saveSettings = realSaveSettings
+        }
+    })
+
+    it('ensures the MCP API token exists when login is disabled', async () => {
+        const settingsManager = require('../server/manager/settingsManager')
+        const { ensureMcpApiToken } = require('../server/mcp/token')
+        const realSaveSettings = settingsManager.saveSettings
+        settingsManager.saveSettings = async () => {}
+        try {
+            settingsManager.setSetting('mcp.apiToken', '')
+            disableAuth()
+            const token = await ensureMcpApiToken()
+            assert.ok(token)
+            assert.equal(settingsManager.getSetting('mcp.apiToken'), token)
+        } finally {
+            settingsManager.saveSettings = realSaveSettings
+        }
     })
 
     it('rejects LAN clients without credentials', () => {

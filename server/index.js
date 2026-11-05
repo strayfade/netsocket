@@ -1385,13 +1385,11 @@ const { killProcessOnPort } = require('./utils/killProcessOnPort');
         if (process.argv.includes('--skip-auth')) {
             log('--skip-auth is deprecated — login is now disabled by default; pass --enable-auth to require sign-in.', logColors.Warning)
         }
-        if (!authSkipped()) {
-            const existingMcpToken = settingsManager.getSetting('mcp.apiToken')
-            const mcpToken = await ensureMcpApiToken()
-            if (!existingMcpToken && mcpToken) {
-                log('MCP API token was auto-generated.', logColors.Warning)
-                log('Dashboard → Preferences → MCP API Token, or set NETSOCKET_MCP_TOKEN for Cursor.', logColors.Warning)
-            }
+        const existingMcpToken = settingsManager.getSetting('mcp.apiToken')
+        const mcpToken = await ensureMcpApiToken()
+        if (!existingMcpToken && mcpToken) {
+            log('MCP API token was auto-generated — MCP routes require it even when login is disabled.', logColors.Warning)
+            log('Dashboard → Preferences → MCP API Token, or set NETSOCKET_MCP_TOKEN for Cursor.', logColors.Warning)
         }
         constructedNodes = await require('./manager/nodeImporter').setupNodes()
         await require('./manager/subgraphStore').loadSubgraphs()

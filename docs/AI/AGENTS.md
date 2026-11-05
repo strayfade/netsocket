@@ -127,6 +127,8 @@ Add every new test file to the `test` and `test:watch` scripts in `package.json`
 - Use `safeRedirectPath` / `resolveRedirectTarget` patterns for redirects
 - Reject open redirects (`//`, absolute URLs, non-leading `/`)
 - Compare secrets with timing-safe equality (`tokensEqual` / `integrationSecretMatches`)
+- MCP routes require the configured API token in every login state: `canAccessMcp` in `server/mcp/mount.js`
+  must not short-circuit on `authSkipped()`, and `ensureMcpApiToken()` generates a token regardless of login
 
 ### Authentication Patterns
 ```js

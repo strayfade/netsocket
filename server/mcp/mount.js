@@ -1,16 +1,13 @@
 const { log, logColors } = require('../log')
-const { authSkipped, bearerTokenMatches, hasUserSession } = require('../utils/sessionAuth')
+const { bearerTokenMatches } = require('../utils/sessionAuth')
 const { getMcpApiToken } = require('./token')
 const { listNodeSummaries, getNodeInfo, executeMcpNode } = require('./handlers')
 const { listNodesForMcp } = require('../utils/netsocketMcpTools')
 const { createGraphContext } = require('./graphHandlers')
 const { createSystemHandlers } = require('./systemHandlers')
 
-const canAccessMcp = (req, res = null) => {
-    if (authSkipped()) return true
-    if (bearerTokenMatches(req, getMcpApiToken())) return true
-    return hasUserSession(req, res)
-}
+/** MCP is gated by the API token in every login state: the login flag can never waive it. */
+const canAccessMcp = (req) => bearerTokenMatches(req, getMcpApiToken())
 
 const mcpCors = (req, res, next) => {
     const allowed = process.env.MCP_ALLOWED_ORIGINS
@@ -33,10 +30,10 @@ const mcpCors = (req, res, next) => {
 }
 
 const requireMcpAuth = (req, res, next) => {
-    if (canAccessMcp(req, res)) return next()
+    if (canAccessMcp(req)) return next()
     return res.status(401).json({
         error: 'unauthorized',
-        hint: 'Provide Authorization: Bearer <token>. Get the token from Dashboard → Preferences → MCP API Token.',
+        hint: 'Provide Authorization: Bearer <token>. The MCP API token is required in every login state; get it from Dashboard → Preferences → MCP API Token.',
     })
 }
 
@@ -147,11 +144,10 @@ const mountMcpRoutes = (app, hooks = {}) => {
             transport: 'streamable-http',
             mcpEndpoint: '/mcp',
             auth: {
-                required: !authSkipped(),
-                methods: authSkipped() ? [] : ['bearer', 'session'],
+                required: true,
+                methods: ['bearer'],
                 header: 'Authorization: Bearer <token>',
                 preference: 'mcp.apiToken',
-                openWhenAuthSkipped: authSkipped(),
                 cursorExample: {
                     url: `http://${host}:${port}/mcp`,
                     headers: {
