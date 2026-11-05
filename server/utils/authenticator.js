@@ -9,7 +9,9 @@ require('../manager/nodePreferencesRegistry').addPref(
     'text',
     'abc',
     '<p>TOTP accounts are edited one at a time in Settings and stored as comma-separated <code>Issuer:Account:Secret</code> entries. <strong>Colon</strong> (<code>:</code>) separates issuer, display name, and the Base32 secret. Algorithm is always SHA1.</p>' +
-    '<p>Account keys used by the OTP node are <code>Issuer:Account</code> (e.g. <code>GitHub:strayfade</code>).</p>'
+    '<p>Account keys used by the OTP node are <code>Issuer:Account</code> (e.g. <code>GitHub:strayfade</code>).</p>',
+    null,
+    true
 );
 
 // Many real authenticator secrets are 80-bit (10 bytes) or other lengths under 128-bit.

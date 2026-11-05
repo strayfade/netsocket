@@ -146,6 +146,9 @@ const safeRedirect = safeRedirectPath(req.query.redirect);
 - Never commit `.env`, `data/`, `credentials.json`, tokens, or real secrets
 - Never log passwords, session tokens, API keys, OAuth tokens, or webhook payloads
 - When adding endpoints accepting secrets, require configured secrets and fail closed
+- Prefs whose stored value is itself a secret (tokens, Base32 TOTP seeds) must be registered with the `secret`
+  flag in `addPref`; MCP masks flagged prefs. The name heuristic in `server/mcp/systemHandlers.js` is only a
+  fallback for unflagged prefs - it is not the access-control boundary
 
 ### Input Validation and Execution Safety
 - Parse untrusted input at boundaries with `server/utils/inputParser`

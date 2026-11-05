@@ -22,7 +22,12 @@ const normalizeOptions = (options) => {
     return cleaned.length ? cleaned : undefined
 }
 
-const addPref = (category, id, displayName, type, defaultVal, description, options) => {
+/**
+ * `secret` marks a pref whose stored value is itself a secret (a token, a Base32 TOTP seed). Callers that
+ * expose prefs must mask flagged prefs even when the id matches no secret keyword — field semantics, not a
+ * name heuristic.
+ */
+const addPref = (category, id, displayName, type, defaultVal, description, options, secret = false) => {
     if (seenIds.has(id)) return
     seenIds.add(id)
     const entry = {
@@ -33,6 +38,7 @@ const addPref = (category, id, displayName, type, defaultVal, description, optio
         defaultVal,
         description: description != null && description !== '' ? String(description) : ''
     }
+    if (secret) entry.secret = true
     if (type === 'select') {
         const normalized = normalizeOptions(options)
         if (normalized) entry.options = normalized

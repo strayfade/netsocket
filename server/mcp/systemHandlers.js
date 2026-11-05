@@ -15,12 +15,17 @@ require('./webmcp')
 const SECRET_RE = /token|secret|password|passwd|api[_-]?key|clientkey|oauth|private|credential/i
 const CONNECT_SETTING = 'google.oauth.connect'
 
-const isSecretPref = (id) => SECRET_RE.test(String(id || ''))
+/**
+ * Masking is decided by field semantics first: an explicit `secret` flag always masks, and the name heuristic
+ * only covers prefs registered without the flag. A heuristic cannot be the access-control boundary for a field
+ * whose contents are secrets (e.g. `authentication.otp_accounts`, whose id matches no keyword but stores seeds).
+ */
+const isSecretPref = (pref) => pref?.secret === true || SECRET_RE.test(String(pref?.id || ''))
 
 const maskPrefValue = (pref, stored) => {
     const fallback = pref.defaultVal != null && pref.defaultVal !== '' ? String(pref.defaultVal) : ''
     const raw = stored !== undefined ? stored : fallback
-    if (isSecretPref(pref.id)) {
+    if (isSecretPref(pref)) {
         return { value: '***', configured: raw !== '' && raw != null }
     }
     return { value: raw, configured: raw !== '' && raw != null }
@@ -39,7 +44,7 @@ const listSettings = () => {
                 type: pref.type,
                 defaultVal: pref.defaultVal,
                 description: pref.description || '',
-                secret: isSecretPref(pref.id),
+                secret: isSecretPref(pref),
                 ...maskPrefValue(pref, settingsManager.getStoredValue(pref.id)),
             }
             if (Array.isArray(pref.options) && pref.options.length) entry.options = pref.options
@@ -64,7 +69,7 @@ const getSetting = (args = {}) => {
         id: pref.id,
         displayName: pref.displayName,
         type: pref.type,
-        secret: isSecretPref(pref.id),
+        secret: isSecretPref(pref),
         ...maskPrefValue(pref, settingsManager.getStoredValue(pref.id)),
     }
 }
@@ -99,7 +104,7 @@ const setSetting = async (args = {}, deps = {}) => {
     settingsManager.setSetting(name, value ?? '')
     await settingsManager.saveSettings()
     await sideEffects()
-    return { success: true, name, secret: isSecretPref(name), value: isSecretPref(name) ? '***' : String(value ?? '') }
+    return { success: true, name, secret: isSecretPref(pref), value: isSecretPref(pref) ? '***' : String(value ?? '') }
 }
 
 const LOG_LEVEL_TAGS = { info: 'INFO', warn: 'WARN', warning: 'WARN', error: 'ERROR' }

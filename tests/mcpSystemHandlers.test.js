@@ -70,6 +70,35 @@ describe('system handlers', () => {
         assert.equal(url.secret, false)
     })
 
+    it('masks prefs flagged secret even when the pref id matches no secret keyword', () => {
+        // Registering authenticator.js registers the pref; the id has no keyword but the value is Base32 seeds.
+        require('../server/utils/authenticator')
+        const { addPref, getPrefs } = require('../server/manager/nodePreferencesRegistry')
+        const { listSettings, getSetting } = createSystemHandlers({ getRoot: () => { throw new Error('unused') } })
+
+        settingsManager.setSetting('authentication.otp_accounts', 'Google:ada:JBSWY3DPEHPK3PXP')
+        const otp = listSettings().settings.find((entry) => entry.id === 'authentication.otp_accounts')
+        assert.ok(otp, 'authentication.otp_accounts pref is registered')
+        assert.equal(otp.secret, true)
+        assert.equal(otp.value, '***')
+        assert.equal(otp.configured, true)
+        assert.equal(getSetting({ name: 'authentication.otp_accounts' }).value, '***')
+
+        // The flag is general, not a hardcoded id list: an unflagged pref with a neutral id stays readable.
+        addPref('Test', 'test.neutral_value', 'Test neutral value', 'text', '', '')
+        addPref('Test', 'test.flagged_value', 'Test flagged value', 'text', '', '', null, true)
+        settingsManager.setSetting('test.neutral_value', 'plain-looking-value')
+        settingsManager.setSetting('test.flagged_value', 'plain-looking-value')
+        const settings = listSettings().settings
+        const neutral = settings.find((entry) => entry.id === 'test.neutral_value')
+        const flagged = settings.find((entry) => entry.id === 'test.flagged_value')
+        assert.equal(neutral.secret, false)
+        assert.equal(neutral.value, 'plain-looking-value')
+        assert.equal(flagged.secret, true)
+        assert.equal(flagged.value, '***')
+        assert.equal(getPrefs().find((entry) => entry.id === 'test.flagged_value').secret, true)
+    })
+
     it('gets and sets non-secret settings', async () => {
         const handlers = createSystemHandlers({ getRoot: () => { throw new Error('unused') } })
         let sideEffects = 0
