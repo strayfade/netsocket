@@ -1,0 +1,23 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "config.c"
+        "console.c"
+        "zb_coordinator.c"
+        "zb_devices.c"
+        "zb_zcl.c"
+        "cli.c"
+        "wifi_bridge.c"
+        "mqtt_bridge.c"
+    INCLUDE_DIRS "."
+    PRIV_REQUIRES
+        nvs_flash
+        esp_wifi
+        esp_netif
+        esp_event
+        esp_timer
+        mqtt
+        json
+        driver
+        vfs
+)

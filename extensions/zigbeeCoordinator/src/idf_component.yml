@@ -1,0 +1,12 @@
+## IDF Component Manager manifest.
+##
+## The Zigbee stack ships as a prebuilt library per chip/config, so it is pulled
+## from the Espressif component registry at build time instead of vendoring
+## ~55 MB of .a files into this repo. PlatformIO runs the component manager
+## during CMake configure (it sets IDF_COMPONENT_OVERWRITE_MANAGED_COMPONENTS).
+##
+## Version pinning: 2.1.0 is the first v2.x line we code against (the `ezbee/*`
+## API). 2.x needs IDF >= 5.2, which the pioarduino platform supplies (5.5.5).
+dependencies:
+  idf: ">=5.2"
+  espressif/esp-zigbee-lib: "~2.1.0"

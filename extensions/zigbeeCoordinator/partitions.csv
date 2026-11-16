@@ -1,0 +1,13 @@
+# Name,   Type, SubType, Offset,  Size, Flags
+# No OTA: the coordinator is flashed over USB while it sits on a shelf.
+#
+# nvs     - WiFi calibration/creds, our settings, AND the ESP-Zigbee datasets
+#           (the stack stores its network state in the "nvs" partition).
+# nvs is deliberately larger than the minimum because the Zigbee dataset for a
+# populated network plus WiFi creds is not tiny.
+# phy_init- WiFi RF calibration.
+# zb_fct  - Zigbee factory data partition (1 KiB, as in the SDK examples).
+nvs,        data, nvs,      ,     0x10000,
+phy_init,   data, phy,      ,     0x1000,
+factory,    app,  factory,  ,     1536K,
+zb_fct,     data, fat,      ,     1K,
