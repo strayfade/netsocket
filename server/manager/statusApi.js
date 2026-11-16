@@ -5,7 +5,7 @@ const { performWebRequest } = require('../utils/httpRequest')
 const vars = require('../utils/vars')
 
 /**
- * Device status snapshot for glanceable dashboards (Even G2 STATUS tab).
+ * Device status snapshot for glanceable device dashboards.
  *
  * The glasses send `{ lat, lon }` (phone fix, rounded to ~1km before it
  * leaves the device) and the server replies with a small snapshot:

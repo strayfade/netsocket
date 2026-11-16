@@ -41,8 +41,7 @@ const SETTING_ENDPOINT = 'aria.endpoint'
 const SETTING_API_KEY = 'aria.apiKey'
 const SETTING_PRESET = 'aria.preset'
 
-// Accept the host root with or without a trailing /api/v1, mirroring the
-// Even G2 companion (extensions/even-g2/src/net/aria.ts): users paste the
+// Accept the host root with or without a trailing /api/v1: users paste the
 // docs' base URL verbatim.
 const normalizeAriaEndpoint = (raw) => {
     const s = String(raw || '').trim().replace(/\/+$/, '')
