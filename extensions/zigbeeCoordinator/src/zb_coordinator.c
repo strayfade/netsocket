@@ -386,6 +386,12 @@ static bool app_signal_handler(const ezb_app_signal_t *signal)
         console_printf("EVT network formed panid=0x%04x channel=%u short=0x%04x extpan=%s",
                        info.panid, info.channel, info.short_addr, extpan);
 
+        /* Forming a PAN is not the same as being ready to accept joins: a
+         * freshly formed coordinator must also run BDB network steering. That
+         * is the step that makes it answer association requests; opening the
+         * network alone leaves it silent on the air. */
+        ezb_bdb_start_top_level_commissioning(EZB_BDB_MODE_NETWORK_STEERING);
+
         /* First formation: invite devices right away, so flashing and then
          * resetting the outlet is all a user has to do. */
         if (!s_auto_permit_done) {
@@ -556,6 +562,12 @@ static void zigbee_task(void *arg)
     config.platform_config.radio_config.radio_mode = ESP_ZIGBEE_RADIO_MODE_NATIVE;
 
     ESP_ERROR_CHECK(esp_zigbee_init(&config));
+
+    /* Centralized network: the coordinator is the trust center and hands out
+     * the standard well-known link key. With distributed security enabled the
+     * stack expects devices to derive their own keys and a normal joining
+     * device is rejected - the SDK's own commissioning setup disables it too. */
+    ezb_aps_secur_enable_distributed_security(false);
 
     if (create_endpoint() != ESP_OK) {
         ESP_LOGE(TAG, "endpoint registration failed, continuing without it");

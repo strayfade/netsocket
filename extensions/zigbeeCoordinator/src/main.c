@@ -31,9 +31,12 @@ static const char *TAG = "boot";
  *
  * The board shares one antenna front end between WiFi and 802.15.4 and gates it
  * behind two GPIOs (same pins as the Arduino variant: WIFI_ENABLE=3,
- * WIFI_ANT_CONFIG=14). Leaving them floating is the usual reason "Zigbee does
- * not work" on this board: the radio transmits into a disconnected antenna.
- * Level 0 selects the onboard ceramic antenna; use 1 for the u.FL connector.
+ * WIFI_ANT_CONFIG=14).
+ *
+ * GPIO3 is the switch POWER ENABLE and it is ACTIVE LOW: driving it high turns
+ * the RF switch off, which leaves the radio working only through leakage - the
+ * stack happily forms a PAN while nothing can actually associate. GPIO14 then
+ * selects the antenna: 0 = onboard ceramic, 1 = u.FL connector.
  */
 #define XIAO_RF_ENABLE_GPIO GPIO_NUM_3
 #define XIAO_RF_ANTENNA_GPIO GPIO_NUM_14
@@ -49,7 +52,11 @@ static void rf_frontend_init(void)
         .intr_type = GPIO_INTR_DISABLE,
     };
     ESP_ERROR_CHECK(gpio_config(&cfg));
-    gpio_set_level(XIAO_RF_ENABLE_GPIO, 1);
+
+    /* Active low: 0 powers the RF switch. Seeed's own example also waits
+     * before touching the select line. */
+    gpio_set_level(XIAO_RF_ENABLE_GPIO, 0);
+    vTaskDelay(pdMS_TO_TICKS(100));
     gpio_set_level(XIAO_RF_ANTENNA_GPIO, XIAO_RF_USE_EXTERNAL_ANTENNA ? 1 : 0);
 }
 

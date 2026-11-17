@@ -54,11 +54,12 @@ Zigbee outlet ──802.15.4──▶ ESP32-C6 (coordinator) ──USB CDC──
 - Connect the board with **one USB-C cable**. The XIAO has no UART bridge chip,
   so the console and the command protocol both live on the C6's native
   USB-Serial-JTAG port.
-- **RF switch:** the board gates its antenna behind GPIO3 (enable) and GPIO14
-  (onboard ceramic vs external u.FL). `src/main.c` drives GPIO3 high and GPIO14
-  low at boot. If you use the external antenna connector, set
-  `XIAO_RF_USE_EXTERNAL_ANTENNA` to 1. Leaving these pins alone is the most
-  common reason the radio appears dead on this board.
+- **RF switch:** the board gates its antenna behind GPIO3 and GPIO14. **GPIO3 is
+  active low** - pull it low to power the switch (driving it high leaves the
+  radio working only by leakage: the stack forms a network but nothing can
+  join). GPIO14 selects the antenna: low = onboard ceramic, high = external
+  u.FL. `src/main.c` handles both at boot; set
+  `XIAO_RF_USE_EXTERNAL_ANTENNA` to 1 if you use the connector.
 - Wi-Fi and 802.15.4 share the one radio. Coexistence is enabled in
   `sdkconfig.defaults`; expect occasional latency, not failure.
 
@@ -240,15 +241,34 @@ reports.
 
 ## Verification status
 
-`pio run` builds the full firmware cleanly (ESP-IDF 5.5.5, esp-zigbee-lib
-2.1.0, ~1.3 MB image, no compiler warnings), and
-`tests/zigbeeCoordinatorContract.test.js` round-trips the exact discovery/state
-payloads this firmware emits through the real server parser, store and command
-resolver.
+Verified on hardware (Seeed XIAO ESP32-C6, flashed with `pio run -t upload`):
 
-The radio path itself has **not** been exercised on hardware from this
-repository: flashing, pairing a real outlet and observing reports needs the
-board on a bench. Everything above the antenna is verified.
+- boots and runs the CLI on the USB-CDC port (`status`, `net info`, `dev list`
+  answer);
+- forms a Zigbee network (`panid=0x… channel=20 short=0x0000`), re-forms after
+  `net reset`, and keeps its network across reboots;
+- the flashed partition table is correct and the bootloader reports
+  `Loaded app from partition at offset 0x10000`;
+- `pio run` builds cleanly (ESP-IDF 5.5.5, esp-zigbee-lib 2.1.0, no warnings);
+- `tests/zigbeeCoordinatorContract.test.js` round-trips the exact
+  discovery/state payloads through the real server parser, store and command
+  resolver.
+
+Two board-level landmines were found the hard way and are fixed in the code:
+
+- the app partition must sit at **0x10000** (explicit offsets in
+  `partitions.csv`), otherwise PlatformIO flashes the app somewhere the
+  bootloader never looks and the chip silently boots nothing;
+- the RF switch enable **GPIO3 is active low**; driving it high leaves the radio
+  working only through leakage, which looks exactly like "network forms but
+  nothing can join".
+
+**Not yet verified:** device pairing, reports and the MQTT round trip. The only
+outlet available at bring-up was a DAYBETTER `EBE-CZW01-B`, which is a **Wi-Fi**
+socket (2.4 GHz BLE/Wi-Fi provisioning), not Zigbee - so it cannot join any
+Zigbee network. Those paths need a Zigbee device (Sonoff S26R2ZB, IKEA TRADFRI,
+SmartThings `GP-WOU019BBDWG`, Aqara, etc.).
+
 
 ## Layout
 
