@@ -1,13 +1,17 @@
 # Name,   Type, SubType, Offset,  Size, Flags
-# No OTA: the coordinator is flashed over USB while it sits on a shelf.
 #
+# Explicit offsets on purpose: with blank offsets the table generator starts the
+# first data partition at 0x9000, which pushes the app partition up to the next
+# 64 KiB boundary (0x20000) - but PlatformIO flashes the application image at
+# 0x10000. The bootloader then finds an empty app slot and the chip silently
+# boots nothing. Keeping the app at 0x10000 matches PlatformIO's assumption.
+#
+# factory - the application.
 # nvs     - WiFi calibration/creds, our settings, AND the ESP-Zigbee datasets
 #           (the stack stores its network state in the "nvs" partition).
-# nvs is deliberately larger than the minimum because the Zigbee dataset for a
-# populated network plus WiFi creds is not tiny.
 # phy_init- WiFi RF calibration.
 # zb_fct  - Zigbee factory data partition (1 KiB, as in the SDK examples).
-nvs,        data, nvs,      ,     0x10000,
-phy_init,   data, phy,      ,     0x1000,
-factory,    app,  factory,  ,     1536K,
-zb_fct,     data, fat,      ,     1K,
+factory,    app,  factory,  0x10000,   1536K,
+nvs,        data, nvs,      0x190000,  0x10000,
+phy_init,   data, phy,      0x1A0000,  0x1000,
+zb_fct,     data, fat,      0x1A1000,  1K,
