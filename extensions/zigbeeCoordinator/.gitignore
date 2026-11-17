@@ -3,3 +3,7 @@
 managed_components/
 sdkconfig.*
 sdkconfig.old
+
+# Editor files PlatformIO generates on first build.
+.vscode/
+.gitignore.optional
