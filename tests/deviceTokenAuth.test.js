@@ -279,6 +279,22 @@ describe('device token credentials', () => {
         assert.equal(auth.hasAdminAccess(reqWith({ cookies: { tk: 'not-a-session' } })), false);
     });
 
+    it('does not let the panel collection endpoint list panels anonymously', () => {
+        const panelApi = require('../server/manager/panelApi');
+        const store = { listPanels: () => [{ id: 'kd2', name: 'default' }] };
+
+        // authSkipped() is true here (login opt-in off), yet the collection
+        // endpoint must not answer a caller arriving from the launcher.
+        const anon = mockRes();
+        panelApi.handleListPanels(reqWith({ peer: GATEWAY_PEER }), anon, { store, auth });
+        assert.equal(anon.statusCode, 401);
+        assert.equal(anon.body, undefined, 'no panel inventory for anonymous callers');
+
+        const local = mockRes();
+        panelApi.handleListPanels(reqWith({ peer: '127.0.0.1' }), local, { store, auth });
+        assert.equal(local.statusCode, 200);
+    });
+
     it('throttles repeated device writes per credential', () => {
         auth.resetDeviceRateLimit();
         for (let i = 0; i < 3; i += 1) {

@@ -100,14 +100,23 @@ describe('panelApi', () => {
         assert.equal(res.body.error, 'name_required');
     });
 
-    it('hides unknown panels from unauthenticated callers (404, not 401)', async () => {
-        const res = mockRes();
+    it('rejects unauthenticated callers before revealing whether a panel exists', async () => {
+        const missing = mockRes();
         await panelApi.handleGetPanelConfig(
             reqWith({ params: { panelId: 'missing' } }),
-            res,
+            missing,
             { store, auth: noSessionAuth, graphRoot }
         );
-        assert.equal(res.statusCode, 404);
+        assert.equal(missing.statusCode, 401);
+
+        // An authenticated admin still gets not_found, so the editor can say so.
+        const admin = mockRes();
+        await panelApi.handleGetPanelConfig(
+            reqWith({ params: { panelId: 'missing' } }),
+            admin,
+            { store, auth: adminAuth, graphRoot }
+        );
+        assert.equal(admin.statusCode, 404);
     });
 
     it('serves config to sessions and rejects anonymous callers', async () => {

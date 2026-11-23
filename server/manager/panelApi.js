@@ -31,30 +31,34 @@ const storeErrorStatus = (code) => (STORE_ERRORS.has(code) ? 400 : 500)
 
 /**
  * Panels are gated on an admin session OR an approved device that has been
- * granted this panel (`panel.deviceIds`). Unknown panel ids resolve to
- * not_found (no auth oracle). Returns { panel } or { error }.
+ * granted this panel (`panel.deviceIds`). Authorization is checked BEFORE the
+ * panel lookup so an anonymous caller cannot probe which ids exist.
  */
 const resolveAccess = (req, panelId, deps = {}) => {
     const store = deps.store || panelStore
     const auth = deps.auth || sessionAuth
-    const panel = store.getPanel(panelId)
-    if (!panel) return { error: 'not_found' }
     const isAdmin = typeof auth.hasAdminAccess === 'function'
         ? auth.hasAdminAccess(req, null)
         : auth.canAccessPrivateApi(req, null)
-    if (isAdmin) return { panel }
     const deviceId = typeof auth.getApprovedDeviceId === 'function'
         ? auth.getApprovedDeviceId(req)
         : null
-    if (deviceId && store.verifyDeviceForPanel(deviceId, panelId)) {
-        return { panel, deviceId }
-    }
-    return { error: 'unauthorized' }
+    if (!isAdmin && !deviceId) return { error: 'unauthorized' }
+    const panel = store.getPanel(panelId)
+    if (!panel) return { error: 'not_found' }
+    if (isAdmin) return { panel }
+    if (!store.verifyDeviceForPanel(deviceId, panelId)) return { error: 'unauthorized' }
+    return { panel, deviceId }
 }
 
 const requireAdmin = (req, res, deps = {}) => {
     const auth = deps.auth || sessionAuth
-    if (!auth.canAccessPrivateApi(req, res)) {
+    // Admin-only panel management still must not ride authSkipped(): the
+    // launcher can expose this path, and every anonymous caller would pass.
+    const allowed = typeof auth.hasAdminAccess === 'function'
+        ? auth.hasAdminAccess(req, res)
+        : auth.canAccessPrivateApi(req, res)
+    if (!allowed) {
         res.sendStatus(401)
         return false
     }
