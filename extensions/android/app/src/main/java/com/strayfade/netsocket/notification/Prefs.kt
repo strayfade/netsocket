@@ -31,6 +31,16 @@ class Prefs(context: Context) {
         get() = prefs.getString(KEY_COMMAND_SECRET, "")?.trim().orEmpty()
         set(value) = prefs.edit { putString(KEY_COMMAND_SECRET, value.trim()) }
 
+    /**
+     * Approved-device credential for the HTTP routes that no longer accept a
+     * login-disabled server: panel config/execute and notification forwarding.
+     * Minted by the host over the encrypted device socket after approval, so
+     * it is never typed in and the kiosk never sees a login screen.
+     */
+    var deviceToken: String
+        get() = prefs.getString(KEY_DEVICE_TOKEN, "")?.trim().orEmpty()
+        set(value) = prefs.edit { putString(KEY_DEVICE_TOKEN, value.trim()) }
+
     var identityPublicKey: String
         get() = prefs.getString(KEY_IDENTITY_PUBLIC, "")?.trim().orEmpty()
         set(value) = prefs.edit { putString(KEY_IDENTITY_PUBLIC, value.trim()) }
@@ -121,6 +131,9 @@ class Prefs(context: Context) {
 
     fun endpointUrl(): String = buildEndpointUrl(host, port, useHttps, notificationSecret)
 
+    /** Device-authenticated notification endpoint: the token rides in a header, not the URL. */
+    fun deviceEndpointUrl(): String = buildDeviceEndpointUrl(host, port, useHttps)
+
     fun webSocketUrl(): String = buildWebSocketUrl(host, port, useHttps)
 
     /** Root site URL for the in-app browser (Features → Open netsocket). */
@@ -146,6 +159,7 @@ class Prefs(context: Context) {
         const val KEY_USE_HTTPS = "use_https"
         const val KEY_NOTIFICATION_SECRET = "notification_secret"
         const val KEY_COMMAND_SECRET = "command_secret"
+        const val KEY_DEVICE_TOKEN = "device_token"
         const val KEY_IDENTITY_PUBLIC = "identity_public_key"
         const val KEY_IDENTITY_PRIVATE = "identity_private_key"
         const val KEY_PINNED_SERVER = "pinned_server_identity_public_key"
@@ -184,6 +198,18 @@ class Prefs(context: Context) {
             val portPart = resolvePort(port, useHttps)?.let { ":$it" }.orEmpty()
             val secretPart = if (secret.isNotBlank()) "/${secret.trim().trim('/')}" else ""
             return "$scheme://$normalizedHost$portPart/v1/postNotification$secretPart"
+        }
+
+        /** Canonical device-token notification route (no secret in the path). */
+        fun buildDeviceEndpointUrl(
+            host: String,
+            port: String,
+            useHttps: Boolean
+        ): String {
+            val scheme = if (useHttps) "https" else "http"
+            val normalizedHost = normalizeHost(host)
+            val portPart = resolvePort(port, useHttps)?.let { ":$it" }.orEmpty()
+            return "$scheme://$normalizedHost$portPart/v1/postNotification"
         }
 
         /** Path devices handshake on. Keep in sync with the launcher gateway's

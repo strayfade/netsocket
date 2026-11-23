@@ -24,7 +24,10 @@ object NotificationForwarder {
             return
         }
 
-        val endpoint = prefs.endpointUrl()
+        val deviceToken = prefs.deviceToken
+        // Preferred: device-token auth on the canonical route. The legacy
+        // path-secret URL stays for hosts that have not been updated.
+        val endpoint = if (deviceToken.isNotBlank()) prefs.deviceEndpointUrl() else prefs.endpointUrl()
         val payload = JSONObject()
             .put("title", title)
             .put("textContent", textContent)
@@ -42,6 +45,9 @@ object NotificationForwarder {
                     doOutput = true
                     setRequestProperty("Content-Type", "application/json; charset=utf-8")
                     setRequestProperty("Accept", "application/json")
+                    if (deviceToken.isNotBlank()) {
+                        setRequestProperty("Authorization", "Bearer $deviceToken")
+                    }
                 }
 
                 OutputStreamWriter(connection.outputStream, Charsets.UTF_8).use { writer ->

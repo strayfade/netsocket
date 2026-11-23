@@ -27,11 +27,11 @@ import org.json.JSONObject
 /**
  * Wall-panel surface for an assigned netsocket panel.
  *
- * Authentication is the dashboard login session (shared WebView cookie jar —
- * sign in once via Features → Open netsocket) plus the standard host device
- * pairing (approve/deny) for grant discovery. Once approved, the app asks
- * the host which panels this device is granted and loads the shared kiosk
- * page (`/panel/:id`) in a WebView, exactly like a browser kiosk.
+ * Authentication is the device credential: after pairing is approved the host
+ * mints a token over the encrypted socket and this app injects it as the
+ * `ns_device` cookie before loading the kiosk page, so no login screen is ever
+ * shown. A dashboard login session in the shared WebView jar still works for
+ * older hosts that have no device-token support.
  */
 class PanelActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPanelBinding
@@ -133,6 +133,7 @@ class PanelActivity : AppCompatActivity() {
                     val panelId = loadedPanelId ?: return
                     needsPanelReload = false
                     val base = Prefs(this@PanelActivity).siteUrl().trimEnd('/')
+                    applyDeviceCookie(base)
                     view.loadUrl("$base/panel/$panelId")
                 } else if (path.startsWith("/panel/")) {
                     needsPanelReload = false
@@ -343,14 +344,30 @@ class PanelActivity : AppCompatActivity() {
             return
         }
         Prefs(this).selectedPanelId = grant.id
-        // Session cookie (shared WebView profile — sign in via Open netsocket)
-        // authenticates the kiosk page. After an in-WebView login the host
-        // lands on /dashboard, so bounce back to the panel once.
+        // Device token (approved-device credential) authenticates the kiosk page.
+        // Injected as the ns_device cookie so the panel renders with no login.
         needsPanelReload = true
         loadedPanelId = grant.id
         loading = false
         val base = Prefs(this).siteUrl().trimEnd('/')
+        applyDeviceCookie(base)
         binding.webView.loadUrl("$base/panel/${grant.id}")
         binding.statusText.visibility = View.GONE
+    }
+
+    /**
+     * Put the approved-device token into the WebView cookie jar as `ns_device`
+     * before a panel page loads. Same-origin fetches from the panel bootstrap
+     * then authenticate without a dashboard session; with no token (old host or
+     * unapproved device) the page falls back to the normal login flow.
+     */
+    private fun applyDeviceCookie(base: String) {
+        val token = Prefs(this).deviceToken
+        if (token.isBlank() || base.isBlank()) return
+        CookieManager.getInstance().apply {
+            setAcceptCookie(true)
+            setCookie(base, "ns_device=$token; Path=/")
+            flush()
+        }
     }
 }

@@ -446,6 +446,20 @@ object HostConnection {
                 if (!alertTargetsDevice(deviceId)) return
                 ClipboardBridge.writeContent(context, content)
             }
+            "deviceToken" -> {
+                // Approved-device HTTP credential, minted server-side and sent
+                // encrypted. Persist it so panel/notification calls authenticate
+                // without ever showing a login screen.
+                val token = message.optJSONObject("broadcastData")
+                    ?.optString("deviceToken")
+                    ?.trim()
+                    .orEmpty()
+                val context = appContext ?: return
+                if (token.isNotEmpty()) {
+                    Prefs(context).deviceToken = token
+                    Log.i(TAG, "Device token stored for HTTP routes")
+                }
+            }
             "deviceStatus" -> {
                 handleDeviceStatus(message.optJSONObject("broadcastData") ?: JSONObject())
             }
@@ -537,6 +551,7 @@ object HostConnection {
             }
             "denied" -> {
                 approved = false
+                appContext?.let { Prefs(it).deviceToken = "" }
                 updateState(
                     connected = false,
                     connecting = false,
