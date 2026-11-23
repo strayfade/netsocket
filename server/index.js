@@ -29,11 +29,17 @@ const {
     createToken,
     revokeToken,
     canAccessPrivateApi,
-    canAccessWithSessionOrIntegrationSecret,
     integrationSecretMatches,
     providedSecretMatches,
     isProtectedPagePath,
     requireUserSession,
+    requireApprovedDevice,
+    requireDeviceOrAdmin,
+    canAccessAsDeviceOrAdmin,
+    deviceRequestKey,
+    allowDeviceRequest,
+    getDeviceCookieOpts,
+    DEVICE_COOKIE_NAME,
     loginRateLimit,
     recordFailedLoginAttempt,
     clearLoginAttempts,
@@ -624,6 +630,22 @@ setOnPushLog(((line) => {
 // MARK: PostNotification
 const { onNewNotification } = require('./utils/receiveNotification')
 const { onGenericWebhook, onGitHubWebhook } = require('./utils/waitForWebhookEvents')
+/**
+ * Canonical notification forwarding: the device proves itself with its
+ * approved-device token, so the secret never has to travel in the URL.
+ */
+app.post("/v1/postNotification", requireApprovedDevice, (req, res) => {
+    if (!allowDeviceRequest(deviceRequestKey(req))) {
+        return res.status(429).json({ error: 'too_many_requests' })
+    }
+    onNewNotification(req.body)
+    // Payload is user data (may contain credentials); log the event only.
+    log('Received notification (device token)', logColors.Success)
+    return res.sendStatus(200)
+})
+
+// Legacy: pre-1.0.5 clients post a path secret instead. Kept until the fleet
+// updates, still fail-closed when no secret is configured, and logged as legacy.
 app.post("/v1/postNotification/:secret", async (req, res) => {
     const expectedSecret = settingsManager.getSetting('triggersNotification.secret')
     if (!providedSecretMatches(req.params.secret, expectedSecret)) {
@@ -633,7 +655,7 @@ app.post("/v1/postNotification/:secret", async (req, res) => {
         const notificationContent = req.body
         onNewNotification(notificationContent)
         // Payload is user data (may contain credentials); log the event only.
-        log('Received notification', logColors.Success)
+        log('Received notification (legacy path secret; switch the client to /v1/postNotification with a device token)', logColors.Warning)
         res.sendStatus(200);
     }
 })
@@ -812,9 +834,9 @@ app.post('/v1/dashboard/run', async (req, res) => {
     }
 })
 
-// MARK: Panels (room touch surfaces; session-gated, device grants for native clients)
+// MARK: Panels (room touch surfaces; admin session or a device granted the panel)
 const panelApi = require('./manager/panelApi.js')
-app.get('/panel/:panelId', requireUserSession, sendSpa)
+app.get('/panel/:panelId', requireDeviceOrAdmin, sendSpa)
 app.get('/v1/panels', (req, res) => panelApi.handleListPanels(req, res))
 app.post('/v1/panels', (req, res) => panelApi.handleCreatePanel(req, res))
 app.get('/v1/panels/:panelId/config', (req, res) => panelApi.handleGetPanelConfig(req, res))
@@ -899,9 +921,14 @@ app.post("/v1/triggers/command-palette", async (req, res) => {
 })
 
 app.post("/v1/postCommand", async (req, res) => {
-    const commandSecret = settingsManager.getSetting('triggersCommandPalette.secret')
-    if (!canAccessWithSessionOrIntegrationSecret(req, res, commandSecret)) {
-        return res.sendStatus(401)
+    // Command intake reaches the agent/automation path, so it requires an
+    // approved device or a dashboard admin - never the old shared
+    // x-socket-auth secret, and never authSkipped().
+    if (!canAccessAsDeviceOrAdmin(req, res)) {
+        return res.status(401).json({ error: 'device_required' })
+    }
+    if (!allowDeviceRequest(deviceRequestKey(req))) {
+        return res.status(429).json({ error: 'too_many_requests' })
     }
     const command = req.body?.command
     if (typeof command !== 'string' || !command.trim()) {
@@ -942,6 +969,49 @@ app.post('/v1/devices/:deviceId/approve', (req, res) => {
     broadcastDevicesChanged()
     log(`Device approved: ${updated.deviceId}`, logColors.Success)
     return res.status(200).json({ device: updated })
+})
+
+/**
+ * Reissue a device's HTTP credential. The old hashes are dropped first, so a
+ * leaked token stops working immediately; the new one is returned to this
+ * admin caller and pushed encrypted to any live socket for that device.
+ */
+app.post('/v1/devices/:deviceId/token', (req, res) => {
+    if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
+    const deviceId = deviceRegistry.normalizeDeviceId(req.params.deviceId)
+    if (!deviceId || !deviceRegistry.getDevice(deviceId)) return res.sendStatus(404)
+    deviceRegistry.revokeTokens(deviceId)
+    const issued = deviceRegistry.issueToken(deviceId, { label: 'rotated' })
+    if (!issued) return res.status(409).json({ error: 'device_not_approved' })
+    deviceAuth.forEachDeviceSocket(deviceId, (sock) => {
+        const session = deviceAuth.getSession(sock)
+        if (session?.sessionKey) {
+            deviceAuth.sendEncrypted(sock, {
+                broadcastPurpose: 'deviceToken',
+                broadcastData: { deviceId, deviceToken: issued.token },
+            })
+        }
+    })
+    log(`Device token rotated: ${deviceId}`, logColors.Warning)
+    return res.status(200).json({ deviceId, token: issued.token, tokenId: issued.tokenId })
+})
+
+/**
+ * Kiosk/WebView credential exchange: swap an approved device token for the
+ * `ns_device` cookie so existing relative fetches in the panel shell keep
+ * working. SameSite=Strict keeps other origins from riding the cookie.
+ */
+app.post('/v1/device/login', (req, res) => {
+    const token = req.body?.token
+    const deviceId = deviceRegistry.verifyDeviceToken(token)
+    if (!deviceId) return res.status(401).json({ error: 'device_not_approved' })
+    res.cookie(DEVICE_COOKIE_NAME, token, getDeviceCookieOpts())
+    return res.status(200).json({ deviceId })
+})
+
+app.post('/v1/device/logout', (req, res) => {
+    res.clearCookie(DEVICE_COOKIE_NAME, getDeviceCookieOpts())
+    return res.sendStatus(204)
 })
 
 app.post('/v1/devices/:deviceId/deny', (req, res) => {
@@ -1216,8 +1286,10 @@ app.get("/login", (req, res) => {
 });
 app.get("/documentation", (req, res) => sendSpa(req, res))
 app.get("/v1/session", (req, res) => {
-    if (authSkipped() || hasUserSession(req, res)) res.sendStatus(200);
-    else res.sendStatus(401);
+    // Guard probe, not an auth-state oracle: only a real session, an approved
+    // device, or a direct local-dev caller is told "OK".
+    if (canAccessAsDeviceOrAdmin(req, null)) return res.sendStatus(200);
+    return res.sendStatus(401);
 });
 
 const FULL_EXPORT_SCHEMA = 'netsocketFullExport'

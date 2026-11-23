@@ -103,6 +103,8 @@ Netsocket runs on users' machines and stores credentials, automation graphs, OAu
 - Preserve baseline headers from `securityHeaders` middleware.
 - WebSocket connections must validate a user session, a legacy integration secret, or complete the device pairing handshake (`deviceHello` / `deviceAuth`) before joining trusted clients. Approved devices use encrypted sessions; pending devices must not receive command privileges.
 - Device approve/deny/remove APIs under `/v1/devices*` are session-authenticated only (`canAccessPrivateApi`). Never expose them to integration secrets or unauthenticated clients.
+- Device-facing HTTP routes require an approved device or an admin session, never `authSkipped()`: `POST /v1/postCommand`, `GET|POST /v1/panels/:id/(config|execute)`, `GET /panel/:id`, `POST /v1/postNotification`. A device presents its token as `Authorization: Bearer <token>` or the `ns_device` cookie; only the SHA-256 hash lives in `devices.json` (`deviceRegistry.issueToken` / `verifyDeviceToken`). Because every internet request arrives through the launcher on a private peer, loopback is the only local-dev trust signal (`hasAdminAccess`).
+- Panel access is session-or-granted-device: an approved device may read/execute only panels whose `deviceIds` include it (`panelStore.verifyDeviceForPanel`). Listing/creating/updating/deleting panels stays admin-only.
 - Device identity keys and server identity material live under `DATA_DIR` (`devices.json`, `server-identity.json`). Treat them as sensitive credentials.
 - Keep JSON body limits intentional; do not raise limits without a documented reason.
 - Prefer same-origin relative paths for frontend API calls.

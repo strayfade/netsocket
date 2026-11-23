@@ -25,7 +25,7 @@ Netsocket is a self-hosted home-automation hub and nodegraph runtime. The server
 | `server/manager/dashboardSummary.js` | Dashboard counts + automation list + runnable allowlist | Hub backend |
 | `server/manager/widgetSchema.js` | Unified grid-widget schema, presets, validation, migration | Hub backend |
 | `server/manager/panelStore.js` | Room panels: grid layouts, automation allowlists, device grants | Panels |
-| `server/manager/panelApi.js` | Panel handlers (all session-gated) + device grant-discovery WS | Panels |
+| `server/manager/panelApi.js` | Panel handlers (session or granted device) + device grant-discovery WS | Panels |
 | `extensions/androidNotification` | Android companion app; Panel feature renders granted panels in a WebView | Panels |
 | `server/manager/dashboardLayout.js` | Dashboard grid layout (v2 schema with legacy migration) | Hub backend |
 | `server/utils/vars.js` | Variables: debounced persistence + change hooks | Hub backend |
@@ -161,6 +161,7 @@ const safeRedirect = safeRedirectPath(req.query.redirect);
 - Preserve baseline headers from `securityHeaders` middleware
 - WebSocket connections must validate a user session, legacy integration secret, or complete device pairing handshake
 - Device approve/deny/remove APIs are session-authenticated only
+- Device-facing HTTP routes (`POST /v1/postCommand`, `/v1/panels/:id/(config|execute)`, `GET /panel/:id`, `POST /v1/postNotification`) require an approved device token or an admin session and must never consult `authSkipped()`; loopback is the only local-dev trust signal
 - Device identity keys and server identity material live under `DATA_DIR`
 - Keep JSON body limits intentional; do not raise limits without documented reason
 - Prefer same-origin relative paths for frontend API calls

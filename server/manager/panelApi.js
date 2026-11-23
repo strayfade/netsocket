@@ -30,17 +30,26 @@ const STORE_ERRORS = new Set([
 const storeErrorStatus = (code) => (STORE_ERRORS.has(code) ? 400 : 500)
 
 /**
- * Panels are session-gated: every endpoint requires a dashboard login
- * session. Unknown panel ids resolve to not_found (no auth oracle).
- * Returns { panel } or { error }.
+ * Panels are gated on an admin session OR an approved device that has been
+ * granted this panel (`panel.deviceIds`). Unknown panel ids resolve to
+ * not_found (no auth oracle). Returns { panel } or { error }.
  */
 const resolveAccess = (req, panelId, deps = {}) => {
     const store = deps.store || panelStore
     const auth = deps.auth || sessionAuth
     const panel = store.getPanel(panelId)
     if (!panel) return { error: 'not_found' }
-    if (!auth.canAccessPrivateApi(req, null)) return { error: 'unauthorized' }
-    return { panel }
+    const isAdmin = typeof auth.hasAdminAccess === 'function'
+        ? auth.hasAdminAccess(req, null)
+        : auth.canAccessPrivateApi(req, null)
+    if (isAdmin) return { panel }
+    const deviceId = typeof auth.getApprovedDeviceId === 'function'
+        ? auth.getApprovedDeviceId(req)
+        : null
+    if (deviceId && store.verifyDeviceForPanel(deviceId, panelId)) {
+        return { panel, deviceId }
+    }
+    return { error: 'unauthorized' }
 }
 
 const requireAdmin = (req, res, deps = {}) => {

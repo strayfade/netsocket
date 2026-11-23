@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const { config } = require('../config')
@@ -26,6 +27,21 @@ let serverIdentity = null
 /** Cap unauthenticated pairing writes: any internet client can send deviceHello. */
 const MAX_DEVICES = 200
 const MAX_DEVICE_ID_LENGTH = 128
+
+/**
+ * Device HTTP credentials. A paired, approved device receives an opaque token
+ * over its authenticated WebSocket; only the SHA-256 of that token is stored
+ * here, so a copy of devices.json cannot be replayed as a device.
+ */
+const TOKEN_BYTES = 32
+const MAX_TOKENS_PER_DEVICE = 5
+/** lastUsedAt is telemetry only; avoid a disk write on every request. */
+const TOKEN_TOUCH_INTERVAL_MS = 60 * 1000
+
+const hashDeviceToken = (token) =>
+    crypto.createHash('sha256').update(String(token), 'utf8').digest('hex')
+
+const generateDeviceToken = () => crypto.randomBytes(TOKEN_BYTES).toString('base64url')
 
 /**
  * Display-only fields (name/platform) are echoed back to dashboards, so strip
@@ -128,6 +144,8 @@ const publicDeviceView = (device) => {
         lastSeenAt: device.lastSeenAt || null,
         approvedAt: device.approvedAt || null,
         deniedAt: device.deniedAt || null,
+        // Metadata only - token hashes never leave this module.
+        tokenCount: deviceTokens(device).length,
     }
 }
 
@@ -148,6 +166,82 @@ const getDevice = (deviceId) => {
 }
 
 const getDevicePublic = (deviceId) => publicDeviceView(getDevice(deviceId))
+
+/** Stored token records for a device (legacy entries have none). */
+const deviceTokens = (device) => (Array.isArray(device?.tokens) ? device.tokens : [])
+
+const hasToken = (deviceId) => deviceTokens(getDevice(deviceId)).length > 0
+
+/** Token metadata for dashboards: never exposes a hash or a plaintext token. */
+const listTokenMeta = (deviceId) => deviceTokens(getDevice(deviceId)).map((token) => ({
+    id: token.id,
+    label: token.label || '',
+    createdAt: token.createdAt || null,
+    lastUsedAt: token.lastUsedAt || null,
+}))
+
+/**
+ * Mint an HTTP credential for an approved device. The plaintext token is
+ * returned exactly once (delivered over the device's encrypted socket);
+ * devices.json keeps only the hash.
+ */
+const issueToken = (deviceId, { label = '' } = {}) => {
+    const device = getDevice(deviceId)
+    if (!device || device.status !== STATUS.APPROVED) return null
+    const token = generateDeviceToken()
+    const now = Date.now()
+    const entry = {
+        id: crypto.randomUUID(),
+        hash: hashDeviceToken(token),
+        label: sanitizeDisplayText(label, 64),
+        createdAt: now,
+        lastUsedAt: null,
+    }
+    const tokens = deviceTokens(device).slice(-(MAX_TOKENS_PER_DEVICE - 1))
+    tokens.push(entry)
+    device.tokens = tokens
+    device.updatedAt = now
+    persist()
+    return { token, tokenId: entry.id, deviceId: device.deviceId }
+}
+
+/** Drop every token for a device (denial, removal, or key rotation). */
+const revokeTokens = (deviceId) => {
+    const device = getDevice(deviceId)
+    if (!device) return false
+    if (!deviceTokens(device).length) return false
+    device.tokens = []
+    device.updatedAt = Date.now()
+    persist()
+    return true
+}
+
+/**
+ * Resolve a presented token to an approved device id, or null. Only approved
+ * devices with a matching hash pass; comparison is constant-time per hash.
+ */
+const verifyDeviceToken = (token) => {
+    if (typeof token !== 'string' || !token.length || token.length > 512) return null
+    const presented = Buffer.from(hashDeviceToken(token), 'hex')
+    const now = Date.now()
+    let touched = false
+    for (const device of Object.values(store.devices)) {
+        if (!device || device.status !== STATUS.APPROVED) continue
+        for (const entry of deviceTokens(device)) {
+            if (typeof entry?.hash !== 'string' || entry.hash.length !== presented.length * 2) continue
+            const stored = Buffer.from(entry.hash, 'hex')
+            if (stored.length !== presented.length) continue
+            if (!crypto.timingSafeEqual(stored, presented)) continue
+            if (!entry.lastUsedAt || now - entry.lastUsedAt > TOKEN_TOUCH_INTERVAL_MS) {
+                entry.lastUsedAt = now
+                touched = true
+            }
+            if (touched) persist()
+            return device.deviceId
+        }
+    }
+    return null
+}
 
 /**
  * Upsert a device hello. New devices start pending.
@@ -215,6 +309,9 @@ const upsertFromHello = ({
             ? ipAddress
             : existing.ipAddress,
         status,
+        // A device that rotates its identity key must be re-approved AND must
+        // present a token minted for the new key, so drop the old credentials.
+        tokens: keyChanged ? [] : deviceTokens(existing),
         updatedAt: now,
         lastSeenAt: now,
         approvedAt: status === STATUS.APPROVED ? existing.approvedAt : null,
@@ -256,6 +353,8 @@ const setStatus = (deviceId, status) => {
         device.approvedAt = null
         device.deniedAt = null
     }
+    // Only an approved device may hold HTTP credentials.
+    if (status !== STATUS.APPROVED) device.tokens = []
     persist()
     return publicDeviceView(device)
 }
@@ -302,6 +401,11 @@ module.exports = {
     setStatus,
     renameDevice,
     removeDevice,
+    issueToken,
+    verifyDeviceToken,
+    revokeTokens,
+    hasToken,
+    listTokenMeta,
     getServerIdentityPublicKey,
     signWithServerIdentity,
     publicDeviceView,

@@ -1,6 +1,7 @@
 const crypto = require('crypto')
 const cookie = require('cookie')
 const { getUsers, setUsers, flushUsersSync } = require('../manager/saveUsers.js')
+const deviceRegistry = require('../manager/deviceRegistry')
 
 /**
  * Login is opt-in: disabled by default on new installs and updates, so the
@@ -123,6 +124,13 @@ const hasUserSession = (req, res = null) => {
     return sessionIsValidAndTouch(req.cookies?.tk, res)
 }
 
+/**
+ * Session validity regardless of the login mode. Used by the device-facing
+ * routes so a dashboard that signed in still counts while login is opt-in off;
+ * a token can only be minted by /login, which is never launcher-whitelisted.
+ */
+const hasSessionCookie = (req, res = null) => sessionIsValidAndTouch(req.cookies?.tk, res)
+
 const generateRandomString = (length) => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
     let result = ''
@@ -227,6 +235,116 @@ const bearerTokenMatches = (req, expectedSecret) => {
     if (!token) return false
     return tokensEqual(token, expectedSecret)
 }
+
+/**
+ * Device credentials: an approved device presents its token either as
+ * `Authorization: Bearer <token>` (native clients) or as the `ns_device`
+ * cookie (kiosk WebViews, so existing relative fetches keep working).
+ */
+const DEVICE_COOKIE_NAME = 'ns_device'
+const deviceCookieOpts = {
+    httpOnly: true,
+    sameSite: 'strict',
+    path: '/',
+    secure: secureCookies,
+}
+
+const getDeviceCookieOpts = () => ({ ...deviceCookieOpts })
+
+const getDeviceTokenFromRequest = (req) => {
+    const bearer = getBearerTokenFromHeader(req)
+    if (bearer) return bearer
+    const fromCookie = req?.cookies?.[DEVICE_COOKIE_NAME]
+    return typeof fromCookie === 'string' && fromCookie.length ? fromCookie : null
+}
+
+/** Resolve this request's approved device id, or null. Never trusts authSkipped(). */
+const getApprovedDeviceId = (req) => {
+    const token = getDeviceTokenFromRequest(req)
+    if (!token) return null
+    return deviceRegistry.verifyDeviceToken(token)
+}
+
+const isLoopbackPeer = (req) => {
+    const address = normalizeClientAddress(getClientSocketAddress(req))
+    return address === '127.0.0.1' || address === '::1'
+}
+
+/**
+ * Admin access for the device-facing routes: a real login session, or a
+ * direct local-dev caller. `authSkipped()` is deliberately not enough on its
+ * own - every internet request arrives through the launcher on a private
+ * (non-loopback) address, so only a loopback peer is trusted as local.
+ */
+const hasAdminAccess = (req, res = null) => {
+    if (hasSessionCookie(req, res)) return true
+    return authSkipped() && isLoopbackPeer(req)
+}
+
+const canAccessAsDeviceOrAdmin = (req, res = null) =>
+    hasAdminAccess(req, res) || Boolean(getApprovedDeviceId(req))
+
+const sendDeviceAuthFailure = (res, code, message) => {
+    if (!res || typeof res.status !== 'function') return
+    const error = code === 403 ? 'device_not_approved' : 'device_required'
+    res.status(code).json({ error, message })
+}
+
+/** Routes only devices (and admins) may call: no shared secret, no authSkipped. */
+const requireApprovedDevice = (req, res, next) => {
+    if (!getDeviceTokenFromRequest(req)) {
+        sendDeviceAuthFailure(res, 401, 'Pair this device in the netsocket dashboard and send its token.')
+        return
+    }
+    if (!getApprovedDeviceId(req)) {
+        sendDeviceAuthFailure(res, 403, 'Device token unknown or revoked, or the device is not approved.')
+        return
+    }
+    next()
+}
+
+/** Device-or-admin gate for routes the dashboard also uses (panel shell, /v1/session). */
+const requireDeviceOrAdmin = (req, res, next) => {
+    if (canAccessAsDeviceOrAdmin(req, res)) return next()
+    const wantsHtml = typeof req.accepts === 'function' && req.accepts('html')
+    if (wantsHtml) {
+        const redirect = encodeURIComponent(safeRedirectPath(req.originalUrl || '/dashboard'))
+        return res.status(403).redirect(`/login?redirect=${redirect}`)
+    }
+    return sendDeviceAuthFailure(res, 401, 'An approved device or a dashboard session is required.')
+}
+
+/**
+ * Flood guard for the device write routes (command intake, notification
+ * forwarding). Tokens are 256-bit, so this is anti-flood rather than
+ * anti-guessing; it keys on the device when known, else the socket peer.
+ */
+const DEVICE_RATE_WINDOW_MS = 60 * 1000
+const DEVICE_RATE_MAX_REQUESTS = 60
+const deviceRateBuckets = new Map()
+
+const pruneDeviceRateBuckets = (now) => {
+    for (const [key, entry] of deviceRateBuckets) {
+        if (now - entry.windowStart > DEVICE_RATE_WINDOW_MS) deviceRateBuckets.delete(key)
+    }
+}
+
+const deviceRequestKey = (req) =>
+    getApprovedDeviceId(req) || `peer:${getClientSocketAddress(req) || 'unknown'}`
+
+const allowDeviceRequest = (key, limit = DEVICE_RATE_MAX_REQUESTS) => {
+    const now = Date.now()
+    if (deviceRateBuckets.size > 0) pruneDeviceRateBuckets(now)
+    let entry = deviceRateBuckets.get(key)
+    if (!entry || now - entry.windowStart > DEVICE_RATE_WINDOW_MS) {
+        entry = { windowStart: now, count: 0 }
+    }
+    entry.count += 1
+    deviceRateBuckets.set(key, entry)
+    return entry.count <= limit
+}
+
+const resetDeviceRateLimit = () => deviceRateBuckets.clear()
 
 const canAccessWithSessionOrIntegrationSecret = (req, res, expectedSecret) => {
     if (authSkipped()) return true
@@ -363,6 +481,20 @@ module.exports = {
     providedSecretMatches,
     getBearerTokenFromHeader,
     bearerTokenMatches,
+    DEVICE_COOKIE_NAME,
+    deviceCookieOpts,
+    getDeviceCookieOpts,
+    getDeviceTokenFromRequest,
+    getApprovedDeviceId,
+    isLoopbackPeer,
+    hasAdminAccess,
+    hasSessionCookie,
+    canAccessAsDeviceOrAdmin,
+    requireApprovedDevice,
+    requireDeviceOrAdmin,
+    deviceRequestKey,
+    allowDeviceRequest,
+    resetDeviceRateLimit,
     isLanAddress,
     isLanClient,
     getClientSocketAddress,

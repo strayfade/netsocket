@@ -98,6 +98,7 @@ The repository is organized as follows:
 ### Transport Hardening
 - WebSockets require session/auth or device pairing
 - Device APIs (approve/deny) require session auth
+- Device-facing HTTP routes (`postCommand`, panel config/execute, panel shell, `postNotification`) require an approved device token or an admin session
 
 ## 6. Node Authoring Rules (from NODES.md)
 
@@ -219,9 +220,17 @@ const result = await runMcpAgent({
 
 ### Webhook Handling
 ```js
+// Canonical: the forwarding device authenticates with its approved-device
+// token (Authorization: Bearer <token> or the ns_device cookie).
+app.post('/v1/postNotification', requireApprovedDevice, (req, res) => {
+  onNewNotification(req.body);
+  res.sendStatus(200);
+});
+
+// Legacy (pre-1.0.5 clients): path secret, kept until the fleet updates.
 app.post('/v1/postNotification/:secret', async (req, res) => {
   const expectedSecret = settingsManager.getSetting('triggersNotification.secret');
-  if (!expectedSecret || req.params.secret !== expectedSecret) {
+  if (!providedSecretMatches(req.params.secret, expectedSecret)) {
     return res.sendStatus(403);
   }
   await onNewNotification(notificationContent);
