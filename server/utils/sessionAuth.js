@@ -265,6 +265,19 @@ const getApprovedDeviceId = (req) => {
     return deviceRegistry.verifyDeviceToken(token)
 }
 
+/**
+ * Panel-scoped kiosk token for this request, or null. Wall browsers have no
+ * device keypair, so their token authorizes exactly one panel.
+ */
+const getPanelKioskId = (req) => {
+    const token = getDeviceTokenFromRequest(req)
+    if (!token) return null
+    // Lazy require: panelStore holds the panel records and does not require
+    // sessionAuth, but keeping this out of module load avoids a cycle with
+    // panelApi (which requires both).
+    return require('../manager/panelStore').verifyKioskToken(token)
+}
+
 const isLoopbackPeer = (req) => {
     const address = normalizeClientAddress(getClientSocketAddress(req))
     return address === '127.0.0.1' || address === '::1'
@@ -486,6 +499,7 @@ module.exports = {
     getDeviceCookieOpts,
     getDeviceTokenFromRequest,
     getApprovedDeviceId,
+    getPanelKioskId,
     isLoopbackPeer,
     hasAdminAccess,
     hasSessionCookie,

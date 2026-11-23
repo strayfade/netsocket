@@ -37,6 +37,24 @@
             }
         }
 
+        /**
+         * Mint a panel-scoped kiosk token and copy a `/pair#<token>` link. Open
+         * it once on a wall browser: it trades the token for the ns_device
+         * cookie and lands on the panel, so the kiosk never sees a login page.
+         */
+        async function copyKioskLink(panelId, btn) {
+            try {
+                var res = await api('/v1/panels/' + encodeURIComponent(panelId) + '/token', { method: 'POST' });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                var data = await res.json();
+                var url = window.location.origin + (data.path || ('/pair#' + data.token));
+                await navigator.clipboard.writeText(url);
+                ShellLogic.showToast('Kiosk link copied - open it once on the wall device');
+            } catch (e) {
+                ShellLogic.showToast('Could not create a kiosk link');
+            }
+        }
+
         async function api(path, options) {
             var res = await fetch(path, Object.assign({ credentials: 'same-origin' }, options || {}));
             if (res.status === 401) {
@@ -307,6 +325,13 @@
             copy.textContent = 'Copy URL';
             copy.addEventListener('click', function () { copyPanelUrl(panel.id, copy); });
             actions.appendChild(copy);
+
+            var kiosk = document.createElement('button');
+            kiosk.type = 'button';
+            kiosk.className = 'shell-btn shell-btn-secondary';
+            kiosk.textContent = 'Kiosk link';
+            kiosk.addEventListener('click', function () { copyKioskLink(panel.id, kiosk); });
+            actions.appendChild(kiosk);
 
             var del = document.createElement('button');
             del.type = 'button';

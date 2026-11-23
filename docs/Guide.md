@@ -98,7 +98,7 @@ The repository is organized as follows:
 ### Transport Hardening
 - WebSockets require session/auth or device pairing
 - Device APIs (approve/deny) require session auth
-- Device-facing HTTP routes (`postCommand`, panel config/execute, panel shell, `postNotification`) require an approved device token or an admin session
+- Device-facing HTTP routes (`postCommand`, panel config/execute, panel shell, `postNotification`) require an approved device token or an admin session; wall browsers use a panel-scoped kiosk token provisioned once via `/pair#<token>`
 
 ## 6. Node Authoring Rules (from NODES.md)
 

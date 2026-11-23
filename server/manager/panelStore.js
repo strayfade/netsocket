@@ -2,9 +2,22 @@
 
 const fs = require('fs')
 const path = require('path')
+const crypto = require('crypto')
 const { config } = require('../config')
 
 const PANELS_PATH = config.storage.panels
+
+/**
+ * Kiosk tokens: a wall browser has no device keypair, so it gets a token that
+ * is scoped to exactly one panel. Only the SHA-256 is stored, and the token is
+ * handed over once as a `/pair#<token>` link (fragment never reaches logs).
+ */
+const KIOSK_TOKEN_BYTES = 32
+const MAX_KIOSK_TOKENS_PER_PANEL = 5
+const KIOSK_TOKEN_TOUCH_INTERVAL_MS = 60 * 1000
+
+const hashKioskToken = (token) =>
+    crypto.createHash('sha256').update(String(token), 'utf8').digest('hex')
 
 const MAX_AUTOMATIONS_PER_PANEL = 100
 const MAX_DEVICES_PER_PANEL = 20
@@ -78,10 +91,12 @@ const load = () => {
             panel.widgetStyle = style || DEFAULT_WIDGET_STYLE
             migrated = true
         }
-        // Drop legacy per-panel token material (auth is sessions + device grants now).
+        // Drop legacy per-panel token material (auth is sessions + device grants
+        // + kiosk tokens now).
         delete panel.tokenHash
         delete panel.deviceTokens
         delete panel.revoked
+        if (!Array.isArray(panel.kioskTokens)) panel.kioskTokens = []
         // All automations are now allowed on every panel; drop legacy allowlist.
         if (panel.automationIds !== undefined) {
             if (Array.isArray(panel.automationIds) && panel.automationIds.length) migrated = true
@@ -261,6 +276,8 @@ const publicPanelView = (panel) => {
             : [],
         automationIds: Array.isArray(panel.automationIds) ? [...panel.automationIds] : [],
         deviceIds: Array.isArray(panel.deviceIds) ? [...panel.deviceIds] : [],
+        // Metadata only; hashes never leave this module.
+        kioskTokenCount: Array.isArray(panel.kioskTokens) ? panel.kioskTokens.length : 0,
         createdAt: panel.createdAt || null,
         updatedAt: panel.updatedAt || null,
         lastSeenAt: panel.lastSeenAt || null,
@@ -393,6 +410,71 @@ const panelsForDevice = (deviceId) => {
         .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 }
 
+const kioskTokens = (panel) => (Array.isArray(panel?.kioskTokens) ? panel.kioskTokens : [])
+
+/** Issue a kiosk token scoped to one panel. Plaintext is returned once. */
+const issueKioskToken = (panelId, { label = '' } = {}) => {
+    const panel = getPanel(panelId)
+    if (!panel) return null
+    const token = crypto.randomBytes(KIOSK_TOKEN_BYTES).toString('base64url')
+    const now = Date.now()
+    const entry = {
+        id: crypto.randomUUID(),
+        hash: hashKioskToken(token),
+        label: String(label || '').trim().slice(0, 64),
+        createdAt: now,
+        lastUsedAt: null,
+    }
+    const list = kioskTokens(panel).slice(-(MAX_KIOSK_TOKENS_PER_PANEL - 1))
+    list.push(entry)
+    panel.kioskTokens = list
+    panel.updatedAt = now
+    persist()
+    return { token, tokenId: entry.id, panelId: panel.id }
+}
+
+/** Panel id a kiosk token is scoped to, or null. Constant-time per hash. */
+const verifyKioskToken = (token) => {
+    if (typeof token !== 'string' || !token.length || token.length > 512) return null
+    const presented = Buffer.from(hashKioskToken(token), 'hex')
+    const now = Date.now()
+    let touched = false
+    for (const panel of Object.values(store.panels)) {
+        for (const entry of kioskTokens(panel)) {
+            if (typeof entry?.hash !== 'string' || entry.hash.length !== presented.length * 2) continue
+            const stored = Buffer.from(entry.hash, 'hex')
+            if (stored.length !== presented.length) continue
+            if (!crypto.timingSafeEqual(stored, presented)) continue
+            if (!entry.lastUsedAt || now - entry.lastUsedAt > KIOSK_TOKEN_TOUCH_INTERVAL_MS) {
+                entry.lastUsedAt = now
+                touched = true
+            }
+            if (touched) persist()
+            return panel.id
+        }
+    }
+    return null
+}
+
+/** Drop every kiosk token for a panel (revokes provisioned wall browsers). */
+const revokeKioskTokens = (panelId) => {
+    const panel = getPanel(panelId)
+    if (!panel) return false
+    if (!kioskTokens(panel).length) return false
+    panel.kioskTokens = []
+    panel.updatedAt = Date.now()
+    persist()
+    return true
+}
+
+/** Token metadata for the dashboard: never exposes hashes or plaintext. */
+const listKioskTokenMeta = (panelId) => kioskTokens(getPanel(panelId)).map((token) => ({
+    id: token.id,
+    label: token.label || '',
+    createdAt: token.createdAt || null,
+    lastUsedAt: token.lastUsedAt || null,
+}))
+
 const touchLastSeen = (panelId) => {
     const panel = getPanel(panelId)
     if (!panel) return
@@ -421,6 +503,10 @@ module.exports = {
     updatePanel,
     deletePanel,
     verifyDeviceForPanel,
+    issueKioskToken,
+    verifyKioskToken,
+    revokeKioskTokens,
+    listKioskTokenMeta,
     panelsForDevice,
     touchLastSeen,
     normalizePanelId,

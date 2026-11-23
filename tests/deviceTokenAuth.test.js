@@ -60,11 +60,14 @@ describe('device token credentials', () => {
             '../server/config',
             '../server/manager/deviceRegistry',
             '../server/utils/sessionAuth',
+            '../server/manager/panelStore',
+            '../server/manager/panelApi',
         ]) {
             delete require.cache[require.resolve(mod)];
         }
         registry = require('../server/manager/deviceRegistry');
         auth = require('../server/utils/sessionAuth');
+        require('../server/manager/panelStore').resetForTests();
     };
 
     beforeEach(() => {
@@ -295,8 +298,7 @@ describe('device token credentials', () => {
         assert.equal(local.statusCode, 200);
     });
 
-    it('throttles repeated device writes per credential', () => {
-        auth.resetDeviceRateLimit();
+    it('throttles repeated device writes per credential', () => {        auth.resetDeviceRateLimit();
         for (let i = 0; i < 3; i += 1) {
             assert.equal(auth.allowDeviceRequest('dev-1', 3), true, `request ${i + 1} allowed`);
         }
@@ -304,5 +306,49 @@ describe('device token credentials', () => {
         assert.equal(auth.allowDeviceRequest('dev-2', 3), true, 'a different device has its own bucket');
         auth.resetDeviceRateLimit();
         assert.equal(auth.allowDeviceRequest('dev-1', 3), true, 'reset clears buckets');
+    });
+
+    it('keeps a rotated token usable for the grace window, then expires it', () => {
+        register('dev-1');
+        approve('dev-1');
+        const first = registry.issueToken('dev-1');
+
+        registry.retireTokens('dev-1', { graceMs: 60 * 1000 });
+        assert.equal(registry.verifyDeviceToken(first.token), 'dev-1', 'offline device keeps working during grace');
+        assert.equal(registry.hasCurrentToken('dev-1'), false, 'a retired token triggers reissue on next connect');
+
+        const second = registry.issueToken('dev-1');
+        assert.equal(registry.verifyDeviceToken(second.token), 'dev-1');
+        assert.equal(registry.hasCurrentToken('dev-1'), true);
+
+        registry.retireTokens('dev-1', { graceMs: 0 });
+        assert.equal(registry.verifyDeviceToken(first.token), null, 'hard retire kills the old token');
+        assert.equal(registry.verifyDeviceToken(second.token), null, 'and the rotates one too');
+    });
+
+    it('scopes a kiosk token to its own panel and nothing else', () => {
+        const panelStore = require('../server/manager/panelStore');
+        const panelApi = require('../server/manager/panelApi');
+        panelStore.createPanel({ name: 'Kitchen' });
+        panelStore.createPanel({ name: 'Office' });
+
+        const issued = panelStore.issueKioskToken('kitchen');
+        assert.equal(panelStore.verifyKioskToken(issued.token), 'kitchen');
+        assert.equal(panelStore.verifyKioskToken('not-a-token'), null);
+
+        const withCookie = (panelId) => reqWith({
+            cookies: { [auth.DEVICE_COOKIE_NAME]: issued.token },
+            params: { panelId },
+        });
+
+        const own = panelApi.resolveAccess(withCookie('kitchen'), 'kitchen');
+        assert.equal(own.panel.id, 'kitchen');
+        assert.equal(own.kiosk, true);
+
+        const other = panelApi.resolveAccess(withCookie('office'), 'office');
+        assert.equal(other.error, 'unauthorized', 'a kiosk token cannot open another panel');
+
+        assert.equal(panelStore.revokeKioskTokens('kitchen'), true);
+        assert.equal(panelStore.verifyKioskToken(issued.token), null);
     });
 });

@@ -36,6 +36,7 @@ const {
     requireApprovedDevice,
     requireDeviceOrAdmin,
     canAccessAsDeviceOrAdmin,
+    hasAdminAccess,
     deviceRequestKey,
     allowDeviceRequest,
     getDeviceCookieOpts,
@@ -836,6 +837,7 @@ app.post('/v1/dashboard/run', async (req, res) => {
 
 // MARK: Panels (room touch surfaces; admin session or a device granted the panel)
 const panelApi = require('./manager/panelApi.js')
+const panelStore = require('./manager/panelStore')
 app.get('/panel/:panelId', requireDeviceOrAdmin, sendSpa)
 app.get('/v1/panels', (req, res) => panelApi.handleListPanels(req, res))
 app.post('/v1/panels', (req, res) => panelApi.handleCreatePanel(req, res))
@@ -843,6 +845,31 @@ app.get('/v1/panels/:panelId/config', (req, res) => panelApi.handleGetPanelConfi
 app.patch('/v1/panels/:panelId', (req, res) => panelApi.handleUpdatePanel(req, res))
 app.delete('/v1/panels/:panelId', (req, res) => panelApi.handleDeletePanel(req, res))
 app.post('/v1/panels/:panelId/execute', (req, res) => panelApi.handlePanelExecute(req, res))
+
+/**
+ * Kiosk provisioning for wall browsers (no device keypair): mint a token scoped
+ * to this panel and return the `/pair#<token>` path. The token rides in the URL
+ * fragment, which browsers never send to the server, so it stays out of logs.
+ */
+app.post('/v1/panels/:panelId/token', (req, res) => {
+    // Admin only: this path matches the whitelisted ^/v1/panels/ POST rule, so
+    // canAccessPrivateApi (true while login is off) would let anyone mint one.
+    if (!hasAdminAccess(req, res)) return res.sendStatus(401)
+    const issued = panelStore.issueKioskToken(req.params?.panelId, { label: 'wall kiosk' })
+    if (!issued) return res.status(404).json({ error: 'not_found' })
+    return res.status(200).json({
+        panelId: issued.panelId,
+        token: issued.token,
+        path: `/pair#${issued.token}`,
+    })
+})
+
+/** Revoke every kiosk token for a panel (re-provision its wall browsers). */
+app.delete('/v1/panels/:panelId/token', (req, res) => {
+    if (!hasAdminAccess(req, res)) return res.sendStatus(401)
+    if (!panelStore.revokeKioskTokens(req.params?.panelId)) return res.status(404).json({ error: 'not_found' })
+    return res.sendStatus(204)
+})
 
 // MARK: NTP-backed time for clock widgets (EST/EDT); session-gated
 app.get('/v1/time', (req, res) => serverTime.handleGetServerTime(req, res))
@@ -972,15 +999,22 @@ app.post('/v1/devices/:deviceId/approve', (req, res) => {
 })
 
 /**
- * Reissue a device's HTTP credential. The old hashes are dropped first, so a
- * leaked token stops working immediately; the new one is returned to this
- * admin caller and pushed encrypted to any live socket for that device.
+ * Rotation grace: a token being replaced stays valid this long, so a device
+ * that is offline when you rotate is not locked out. It picks up the new
+ * token on its next authenticated connect.
+ */
+const TOKEN_ROTATION_GRACE_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Reissue a device's HTTP credential. Old hashes are retired (not deleted) for
+ * the grace window; the new token is returned to this admin caller and pushed
+ * encrypted to any live socket for that device.
  */
 app.post('/v1/devices/:deviceId/token', (req, res) => {
     if (!canAccessPrivateApi(req, res)) return res.sendStatus(401)
     const deviceId = deviceRegistry.normalizeDeviceId(req.params.deviceId)
     if (!deviceId || !deviceRegistry.getDevice(deviceId)) return res.sendStatus(404)
-    deviceRegistry.revokeTokens(deviceId)
+    deviceRegistry.retireTokens(deviceId, { graceMs: TOKEN_ROTATION_GRACE_MS })
     const issued = deviceRegistry.issueToken(deviceId, { label: 'rotated' })
     if (!issued) return res.status(409).json({ error: 'device_not_approved' })
     deviceAuth.forEachDeviceSocket(deviceId, (sock) => {
@@ -997,16 +1031,26 @@ app.post('/v1/devices/:deviceId/token', (req, res) => {
 })
 
 /**
- * Kiosk/WebView credential exchange: swap an approved device token for the
- * `ns_device` cookie so existing relative fetches in the panel shell keep
- * working. SameSite=Strict keeps other origins from riding the cookie.
+ * Kiosk/WebView credential exchange: swap a token for the `ns_device` cookie so
+ * existing relative fetches in the panel shell keep working. Accepts an
+ * approved-device token or a panel-scoped kiosk token (wall browsers, which
+ * never complete a device handshake). SameSite=Strict keeps other origins from
+ * riding the cookie.
  */
 app.post('/v1/device/login', (req, res) => {
-    const token = req.body?.token
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : ''
+    if (!token) return res.status(400).json({ error: 'token_required' })
     const deviceId = deviceRegistry.verifyDeviceToken(token)
-    if (!deviceId) return res.status(401).json({ error: 'device_not_approved' })
-    res.cookie(DEVICE_COOKIE_NAME, token, getDeviceCookieOpts())
-    return res.status(200).json({ deviceId })
+    if (deviceId) {
+        res.cookie(DEVICE_COOKIE_NAME, token, getDeviceCookieOpts())
+        return res.status(200).json({ deviceId })
+    }
+    const panelId = require('./manager/panelStore').verifyKioskToken(token)
+    if (panelId) {
+        res.cookie(DEVICE_COOKIE_NAME, token, getDeviceCookieOpts())
+        return res.status(200).json({ panelId })
+    }
+    return res.status(401).json({ error: 'device_not_approved' })
 })
 
 app.post('/v1/device/logout', (req, res) => {
@@ -1284,6 +1328,52 @@ app.get("/login", (req, res) => {
     }
     return sendSpa(req, res)
 });
+
+/**
+ * Provisioning page for wall browsers: it reads the token from the URL fragment
+ * (never sent to the server), trades it for the ns_device cookie, then replaces
+ * the location with the panel so the token disappears from history.
+ */
+const PAIR_PAGE_HTML = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pair panel</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+         background: #000; color: #e7e7e7; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 34rem; padding: 1.5rem; text-align: center; }
+  code { background: #1c1c1c; padding: .15rem .4rem; border-radius: .3rem; font-size: .9em; }
+</style></head>
+<body><main id="m"><p>Pairing panel&hellip;</p></main>
+<script>
+(async function () {
+  var out = document.getElementById('m');
+  var token = (location.hash || '').replace(/^#/, '').trim();
+  if (!token) {
+    out.innerHTML = '<p>No pairing code in this link. Use the <strong>Kiosk link</strong> button in the netsocket panel list.</p>';
+    return;
+  }
+  try {
+    var res = await fetch('/v1/device/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token }),
+      credentials: 'same-origin'
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    try { history.replaceState(null, '', location.pathname); } catch (e) { /* ignore */ }
+    var target = data.panelId ? '/panel/' + encodeURIComponent(data.panelId) : '/dashboard';
+    location.replace(target);
+  } catch (e) {
+    out.innerHTML = '<p>Pairing failed (' + String(e.message || e) + ').</p>' +
+      '<p>Generate a fresh <strong>Kiosk link</strong> in the netsocket panel list and open it on this device.</p>';
+  }
+})();
+</script></body></html>`;
+
+app.get("/pair", (req, res) => res.type('html').send(PAIR_PAGE_HTML))
 app.get("/documentation", (req, res) => sendSpa(req, res))
 app.get("/v1/session", (req, res) => {
     // Guard probe, not an auth-state oracle: only a real session, an approved

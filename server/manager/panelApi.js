@@ -43,12 +43,17 @@ const resolveAccess = (req, panelId, deps = {}) => {
     const deviceId = typeof auth.getApprovedDeviceId === 'function'
         ? auth.getApprovedDeviceId(req)
         : null
-    if (!isAdmin && !deviceId) return { error: 'unauthorized' }
+    const kioskPanelId = typeof auth.getPanelKioskId === 'function'
+        ? auth.getPanelKioskId(req)
+        : null
+    if (!isAdmin && !deviceId && !kioskPanelId) return { error: 'unauthorized' }
     const panel = store.getPanel(panelId)
     if (!panel) return { error: 'not_found' }
     if (isAdmin) return { panel }
-    if (!store.verifyDeviceForPanel(deviceId, panelId)) return { error: 'unauthorized' }
-    return { panel, deviceId }
+    if (deviceId && store.verifyDeviceForPanel(deviceId, panelId)) return { panel, deviceId }
+    // A kiosk token authorizes exactly the panel it was issued for.
+    if (kioskPanelId && String(kioskPanelId) === String(panel.id)) return { panel, kiosk: true }
+    return { error: 'unauthorized' }
 }
 
 const requireAdmin = (req, res, deps = {}) => {

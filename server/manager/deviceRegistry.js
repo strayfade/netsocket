@@ -183,9 +183,10 @@ const listTokenMeta = (deviceId) => deviceTokens(getDevice(deviceId)).map((token
 /**
  * Mint an HTTP credential for an approved device. The plaintext token is
  * returned exactly once (delivered over the device's encrypted socket);
- * devices.json keeps only the hash.
+ * devices.json keeps only the hash. `expiresAt` lets rotation retire a token
+ * gracefully instead of cutting off a device that is currently offline.
  */
-const issueToken = (deviceId, { label = '' } = {}) => {
+const issueToken = (deviceId, { label = '', expiresAt = null } = {}) => {
     const device = getDevice(deviceId)
     if (!device || device.status !== STATUS.APPROVED) return null
     const token = generateDeviceToken()
@@ -196,14 +197,43 @@ const issueToken = (deviceId, { label = '' } = {}) => {
         label: sanitizeDisplayText(label, 64),
         createdAt: now,
         lastUsedAt: null,
+        expiresAt: typeof expiresAt === 'number' ? expiresAt : null,
     }
-    const tokens = deviceTokens(device).slice(-(MAX_TOKENS_PER_DEVICE - 1))
+    const tokens = deviceTokens(device)
+        .filter((existing) => !existing.expiresAt || existing.expiresAt > now)
+        .slice(-(MAX_TOKENS_PER_DEVICE - 1))
     tokens.push(entry)
     device.tokens = tokens
     device.updatedAt = now
     persist()
     return { token, tokenId: entry.id, deviceId: device.deviceId }
 }
+
+/**
+ * Rotation: every current token keeps working for `graceMs` so a device that
+ * is offline at rotation time is not locked out; it picks up the replacement
+ * on its next authenticated connect. `graceMs: 0` expires them immediately.
+ */
+const retireTokens = (deviceId, { graceMs = 0 } = {}) => {
+    const device = getDevice(deviceId)
+    if (!device) return false
+    const tokens = deviceTokens(device)
+    if (!tokens.length) return false
+    const now = Date.now()
+    const expiresAt = now + Math.max(0, graceMs)
+    for (const token of tokens) token.expiresAt = expiresAt
+    device.updatedAt = now
+    persist()
+    return true
+}
+
+/**
+ * True when the device holds a token that is current (not retired). After a
+ * rotation every old token carries an expiry, so this turns false and the next
+ * authenticated connect is handed the replacement.
+ */
+const hasCurrentToken = (deviceId) =>
+    deviceTokens(getDevice(deviceId)).some((token) => !token.expiresAt)
 
 /** Drop every token for a device (denial, removal, or key rotation). */
 const revokeTokens = (deviceId) => {
@@ -232,6 +262,7 @@ const verifyDeviceToken = (token) => {
             const stored = Buffer.from(entry.hash, 'hex')
             if (stored.length !== presented.length) continue
             if (!crypto.timingSafeEqual(stored, presented)) continue
+            if (entry.expiresAt && entry.expiresAt <= now) continue
             if (!entry.lastUsedAt || now - entry.lastUsedAt > TOKEN_TOUCH_INTERVAL_MS) {
                 entry.lastUsedAt = now
                 touched = true
@@ -404,7 +435,9 @@ module.exports = {
     issueToken,
     verifyDeviceToken,
     revokeTokens,
+    retireTokens,
     hasToken,
+    hasCurrentToken,
     listTokenMeta,
     getServerIdentityPublicKey,
     signWithServerIdentity,

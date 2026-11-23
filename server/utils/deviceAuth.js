@@ -298,7 +298,7 @@ const handleDeviceAuth = (socket, message) => {
     // Approved devices get an HTTP credential for the endpoints that no longer
     // trust "login is disabled" (postCommand, panels, notification forwarding).
     // Delivered encrypted, exactly once; only the hash is persisted server-side.
-    if (session.approved && !deviceRegistry.hasToken(session.deviceId)) {
+    if (session.approved && !deviceRegistry.hasCurrentToken(session.deviceId)) {
         const issued = deviceRegistry.issueToken(session.deviceId, {
             label: `ws:${session.platform || 'device'}`,
         })
@@ -344,7 +344,7 @@ const notifyDeviceSockets = (deviceId, statusPayload) => {
             })
             // Approval while connected also delivers the HTTP credential, over
             // the already-derived session key (never in the plaintext status).
-            if (session.approved && session.sessionKey && !deviceRegistry.hasToken(session.deviceId)) {
+            if (session.approved && session.sessionKey && !deviceRegistry.hasCurrentToken(session.deviceId)) {
                 const issued = deviceRegistry.issueToken(session.deviceId, {
                     label: `ws:${session.platform || 'device'}`,
                 })
