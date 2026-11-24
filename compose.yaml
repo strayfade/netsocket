@@ -5,15 +5,38 @@ services:
     container_name: netsocket
     ports:
       - 4675:4675
+    # Unprivileged: the node types that needed to spawn shell/JS (System/Run
+    # Command, Debugging/Run Javascript) were removed on 2026-11-24. 568:568 is
+    # the uid/gid the TrueNAS "apps" dataset uses, so the bind-mount deploy and
+    # a fresh named volume both work.
+    user: "568:568"
     environment:
       - PORT=4675
       - HOSTNAME=0.0.0.0
       - DATA_DIR=/netsocket/data
+      - HOME=/tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     volumes:
       - netsocket-data:/netsocket/data
     depends_on:
-      - mosquitto
+      perms:
+        condition: service_completed_successfully
+      mosquitto:
+        condition: service_started
     restart: always
+  # One-shot, root, exits immediately: hands the data volume to the app uid so
+  # the server never needs to run as root (and a fresh volume is not root-owned).
+  perms:
+    image: alpine:3.20
+    container_name: netsocket-perms
+    user: "0:0"
+    command: ["sh", "-c", "chown -R 568:568 /data"]
+    volumes:
+      - netsocket-data:/data
+    restart: "no"
   mosquitto:
     image: eclipse-mosquitto:2
     container_name: netsocket-mosquitto

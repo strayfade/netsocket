@@ -359,6 +359,16 @@ const allowDeviceRequest = (key, limit = DEVICE_RATE_MAX_REQUESTS) => {
 
 const resetDeviceRateLimit = () => deviceRateBuckets.clear()
 
+/**
+ * Flood guard for credential endpoints (`/login`, `/v1/device/login`). It runs
+ * regardless of the login mode: a disabled login screen is not a reason to
+ * accept unbounded requests, and the device login endpoint is public by design.
+ * Keyed by peer + scope so one caller cannot exhaust another's budget.
+ */
+const AUTH_RATE_MAX_ATTEMPTS = 20
+const allowAuthAttempt = (req, scope, limit = AUTH_RATE_MAX_ATTEMPTS) =>
+    allowDeviceRequest(`auth:${scope}:${getClientSocketAddress(req) || 'unknown'}`, limit)
+
 const canAccessWithSessionOrIntegrationSecret = (req, res, expectedSecret) => {
     if (authSkipped()) return true
     if (hasUserSession(req, res)) return true
@@ -508,6 +518,7 @@ module.exports = {
     requireDeviceOrAdmin,
     deviceRequestKey,
     allowDeviceRequest,
+    allowAuthAttempt,
     resetDeviceRateLimit,
     isLanAddress,
     isLanClient,

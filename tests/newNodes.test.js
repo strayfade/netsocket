@@ -21,7 +21,6 @@ const {
 const { decodeJwt, verifyJwtSignature } = require('../server/utils/jwtTools')
 const { checkThrottle, resetAllThrottles } = require('../server/utils/throttleState')
 const { signWebhookPayload } = require('../server/utils/httpRequest')
-const { runCommand } = require('../server/utils/runCommand')
 
 describe('jsonTools', () => {
     it('filters arrays by key and operator', () => {
@@ -150,20 +149,3 @@ describe('httpRequest helpers', () => {
     })
 })
 
-describe('runCommand', () => {
-    it('runs a command and returns stdout', async () => {
-        const command = process.platform === 'win32' ? 'cmd /c echo hello' : 'echo hello'
-        const result = await runCommand({ command, timeoutMs: 5000 })
-        assert.equal(result.ok, true)
-        assert.match(result.stdout.trim(), /hello/)
-    })
-
-    it('times out invalid long-running commands', async () => {
-        const command = process.platform === 'win32'
-            ? 'ping -n 6 127.0.0.1'
-            : 'sleep 5'
-        const result = await runCommand({ command, timeoutMs: 500 })
-        assert.equal(result.ok, false)
-        assert.notEqual(result.exitCode, 0)
-    })
-})

@@ -95,7 +95,7 @@ Netsocket runs on users' machines and stores credentials, automation graphs, OAu
 - Parse untrusted input at boundaries with `server/utils/inputParser` (`number`, `string`, `bool`, `json`).
 - Validate types explicitly (`typeof x === 'string'`) for request bodies and WebSocket messages.
 - Wrap external I/O (HTTP, filesystem, device APIs, Google) in `try/catch`; return `false` from `NodeFunction` on failure where appropriate.
-- Do not expand execution surfaces casually. `Debugging/Run Javascript` uses `vm.runInNewContext` with a timeout; do not remove sandboxing or timeouts.
+- Do not expand execution surfaces casually. `System/Run Command` and `Debugging/Run Javascript` were **removed** on 2026-11-24: on the token-authenticated MCP surface they turned a leaked bearer token into shell/JS execution, and the container ran as root. If either comes back it must be opt-in (`NETSOCKET_ENABLE_ADMIN_NODES=1`), sandboxed, and never reachable through `/mcp`.
 - Avoid `eval` outside existing node-import machinery in `nodeImporter.js`.
 
 ### HTTP and transport hardening

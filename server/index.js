@@ -39,6 +39,7 @@ const {
     hasAdminAccess,
     deviceRequestKey,
     allowDeviceRequest,
+    allowAuthAttempt,
     getDeviceCookieOpts,
     DEVICE_COOKIE_NAME,
     loginRateLimit,
@@ -1038,6 +1039,9 @@ app.post('/v1/devices/:deviceId/token', (req, res) => {
  * riding the cookie.
  */
 app.post('/v1/device/login', (req, res) => {
+    if (!allowAuthAttempt(req, 'device-login')) {
+        return res.status(429).json({ error: 'too_many_requests' })
+    }
     const token = typeof req.body?.token === 'string' ? req.body.token.trim() : ''
     if (!token) return res.status(400).json({ error: 'token_required' })
     const deviceId = deviceRegistry.verifyDeviceToken(token)
@@ -1277,6 +1281,11 @@ app.get("/v1/auth-state", (req, res) => {
 });
 
 app.post("/login", loginRateLimit, async (req, res) => {
+    // Peer-scoped flood guard: applies even when login is disabled, and does not
+    // depend on the per-IP login bucket (which is a no-op while auth is skipped).
+    if (!allowAuthAttempt(req, 'login')) {
+        return res.status(429).json({ error: 'too_many_requests' })
+    }
     const { username, password, passwordConfirm, rememberMe } = req.body || {};
     const persistSession = parseRememberMe(rememberMe);
     if (typeof username !== "string" || typeof password !== "string") {

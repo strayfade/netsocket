@@ -154,7 +154,7 @@ const safeRedirect = safeRedirectPath(req.query.redirect);
 - Parse untrusted input at boundaries with `server/utils/inputParser`
 - Validate types explicitly (`typeof x === 'string'`) for request bodies and WebSocket messages
 - Wrap external I/O in `try/catch`; return `false` from `NodeFunction` on failure
-- **Critical**: Do not remove sandboxing or timeouts from `Debugging/Run Javascript` nodes
+- **Critical**: `System/Run Command` and `Debugging/Run Javascript` were removed on 2026-11-24 - they let a leaked MCP token execute shell/JS and the container ran as root. Any reintroduction must be opt-in, sandboxed, and off the `/mcp` surface.
 - Avoid `eval` outside existing node-import machinery in `nodeImporter.js`
 
 ### HTTP and Transport Hardening

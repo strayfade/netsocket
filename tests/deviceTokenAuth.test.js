@@ -298,6 +298,19 @@ describe('device token credentials', () => {
         assert.equal(local.statusCode, 200);
     });
 
+    it('throttles credential endpoints per peer and per scope', () => {
+        auth.resetDeviceRateLimit();
+        const gw = () => reqWith({ peer: GATEWAY_PEER });
+        for (let i = 0; i < 3; i += 1) {
+            assert.equal(auth.allowAuthAttempt(gw(), 'device-login', 3), true, `attempt ${i + 1}`);
+        }
+        assert.equal(auth.allowAuthAttempt(gw(), 'device-login', 3), false, 'fourth attempt on the same peer+scope is throttled');
+        assert.equal(auth.allowAuthAttempt(gw(), 'login', 3), true, 'a different scope has its own bucket');
+        assert.equal(auth.allowAuthAttempt(reqWith({ peer: '10.0.0.5' }), 'device-login', 3), true, 'a different peer has its own bucket');
+        auth.resetDeviceRateLimit();
+        assert.equal(auth.allowAuthAttempt(gw(), 'device-login', 3), true, 'reset clears buckets');
+    });
+
     it('throttles repeated device writes per credential', () => {        auth.resetDeviceRateLimit();
         for (let i = 0; i < 3; i += 1) {
             assert.equal(auth.allowDeviceRequest('dev-1', 3), true, `request ${i + 1} allowed`);
