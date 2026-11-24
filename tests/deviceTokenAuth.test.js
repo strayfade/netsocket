@@ -262,6 +262,8 @@ describe('device token credentials', () => {
 
         assert.equal(auth.getDeviceCookieOpts().sameSite, 'strict');
         assert.equal(auth.getDeviceCookieOpts().httpOnly, true);
+        assert.equal(auth.getDeviceCookieOpts().secure, true, 'Secure is on by default; COOKIE_SECURE=0 opts out');
+        assert.equal(auth.sessionCookieOpts.secure, true, 'the session cookie inherits the same default');
         assert.equal(auth.DEVICE_COOKIE_NAME, 'ns_device');
 
         // The Exchange handler is exercised through the same verifier it calls.

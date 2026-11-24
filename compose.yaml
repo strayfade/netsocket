@@ -15,6 +15,10 @@ services:
       - HOSTNAME=0.0.0.0
       - DATA_DIR=/netsocket/data
       - HOME=/tmp
+      # Cookies are Secure by default since 2026-11-24. Set COOKIE_SECURE=0 only
+      # if a client must reach this instance over plain HTTP (a LAN kiosk on
+      # http://); leaving it unset also turns on trust-proxy attribution, so the
+      # per-IP login limiter sees the real visitor rather than the gateway.
     security_opt:
       - no-new-privileges:true
     cap_drop:

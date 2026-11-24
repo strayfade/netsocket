@@ -25,7 +25,16 @@ const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000
 const LOGIN_RATE_MAX_ATTEMPTS = 10
 const loginAttemptsByIp = new Map()
 
-const secureCookies = process.env.COOKIE_SECURE === '1'
+/**
+ * Cookies carry `Secure` unless the operator explicitly opts out for plain-HTTP
+ * LAN access (`COOKIE_SECURE=0`). Secure used to be opt-IN, so on this
+ * deployment (which terminates TLS at Cloudflare/the launcher) both the
+ * session cookie and the kiosk `ns_device` cookie were issued without Secure
+ * and could cross the wire in cleartext. Opting in also enables
+ * `app.set('trust proxy', 1)` in server/index.js, so the per-IP login limiter
+ * keys on the real visitor instead of the gateway address.
+ */
+const secureCookies = process.env.COOKIE_SECURE !== '0'
 
 const baseCookieOpts = {
     httpOnly: true,

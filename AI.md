@@ -101,6 +101,7 @@ Netsocket runs on users' machines and stores credentials, automation graphs, OAu
 ### HTTP and transport hardening
 
 - Preserve baseline headers from `securityHeaders` middleware.
+- Cookies carry `Secure` unless `COOKIE_SECURE=0` is set explicitly. It used to be opt-in, which left the session cookie and the kiosk `ns_device` cookie unprotected on an HTTPS-fronted deployment. Enabling it also turns on `app.set('trust proxy', 1)` (server/index.js), so `req.ip` and the per-IP login limiter see the real visitor behind the gateway.
 - WebSocket connections must validate a user session, a legacy integration secret, or complete the device pairing handshake (`deviceHello` / `deviceAuth`) before joining trusted clients. Approved devices use encrypted sessions; pending devices must not receive command privileges.
 - Device approve/deny/remove APIs under `/v1/devices*` are session-authenticated only (`canAccessPrivateApi`). Never expose them to integration secrets or unauthenticated clients.
 - Device-facing HTTP routes require an approved device or an admin session, never `authSkipped()`: `POST /v1/postCommand`, `GET|POST /v1/panels/:id/(config|execute)`, `GET /panel/:id`, `POST /v1/postNotification`. A device presents its token as `Authorization: Bearer <token>` or the `ns_device` cookie; only the SHA-256 hash lives in `devices.json` (`deviceRegistry.issueToken` / `verifyDeviceToken`). Because every internet request arrives through the launcher on a private peer, loopback is the only local-dev trust signal (`hasAdminAccess`).
